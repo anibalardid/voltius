@@ -30,15 +30,9 @@ import { getSettingsNav } from "@/components/settings/settingsNav";
 import { useLocaleStore } from "@/stores/localeStore";
 import { useShortcutStore, formatShortcut } from "@/stores/shortcutStore";
 import { useVaultStore } from "@/stores/vaultStore";
-import { useTeamStore } from "@/stores/teamStore";
-import { useTeamSessionStore } from "@/stores/teamSessionStore";
-import type { ActiveSession } from "@/stores/teamSessionStore";
-import { joinTeamSessionAndOpenTab } from "@/services/teamSessionJoin";
 import { useToggleSettings } from "@/hooks/useToggleSettings";
 import { parseQuickConnect, type QuickConnectIntent } from "@/services/quickConnect";
 import { launchHost, launchQuickConnect, launchLocalShell } from "@/services/launch";
-import { sessionDisplayName } from "@/services/teamSharing";
-import { isJoinInput, resolveJoinInput } from "@/services/resolveJoinInput";
 import { computeSectionBoundaries } from "./omniSections";
 import {
   selectRecentHosts,
@@ -66,19 +60,15 @@ type OmniItem =
   | { kind: "identity"; identity: Identity }
   | { kind: "action"; id: string; label: string; icon: string; description?: string; keybinding?: string }
   | { kind: "snippet"; snippet: Snippet }
-  | { kind: "team-session"; session: ActiveSession; alreadyIn: boolean }
   | { kind: "toggle"; id: string; label: string; icon: string; description?: string; keywords?: string[]; value: boolean; onToggle: (v: boolean) => void }
   | { kind: "quick-connect"; intent: Exclude<QuickConnectIntent, null> }
-  | { kind: "join-code"; id: string; label: string; icon: string; code: string }
-  | { kind: "join-code-prompt"; id: string; label: string; icon: string }
   | { kind: "local-shell"; shell: ShellOption | null };
 
-type Category = "all" | "snippets" | "marketplace" | "settings" | "join";
+type Category = "all" | "snippets" | "marketplace" | "settings";
 
 function getCategoryBadges(t: (key: string) => string): { category: Category; prefix: string; label: string }[] {
   return [
     { category: "all",         prefix: "",      label: t("omni.categoryBadges.all") },
-    { category: "join",        prefix: "join ", label: t("omni.categoryBadges.join") },
     { category: "snippets",    prefix: "> ",    label: t("omni.categoryBadges.snippets") },
     { category: "marketplace", prefix: "m> ",   label: t("omni.categoryBadges.marketplace") },
     { category: "settings",    prefix: "@ ",    label: t("omni.categoryBadges.settings") },
@@ -89,16 +79,14 @@ function detectCategory(raw: string): { category: Category; query: string } {
   if (raw.startsWith("m> "))   return { category: "marketplace", query: raw.slice(3) };
   if (raw.startsWith("> "))    return { category: "snippets",    query: raw.slice(2) };
   if (raw.startsWith("@ "))    return { category: "settings",    query: raw.slice(2) };
-  if (raw.startsWith("join ")) return { category: "join",        query: raw.slice(5) };
   return { category: "all", query: raw };
 }
 
 
-function VaultBadge({ vaultId, vaults, teams }: { vaultId: string | undefined; vaults: import("@/stores/vaultStore").Vault[]; teams: import("@/stores/teamStore").Team[] }) {
+function VaultBadge({ vaultId, vaults }: { vaultId: string | undefined; vaults: import("@/stores/vaultStore").Vault[] }) {
   const effectiveId = vaultId ?? "personal";
-  const vault = vaults.find((v) => v.id === effectiveId || v.teamId === effectiveId);
-  const team = !vault ? teams.find((t) => t.id === effectiveId) : undefined;
-  const name = vault?.name ?? team?.name ?? "Personal";
+  const vault = vaults.find((v) => v.id === effectiveId);
+  const name = vault?.name ?? "Personal";
   const isPersonal = effectiveId === "personal";
   return (
     <span
@@ -131,13 +119,6 @@ export default function OmniSearch({ onClose }: OmniSearchProps) {
   const identities = useIdentityStore((s) => s.identities);
   const keys = useKeyStore((s) => s.keys);
   const vaults = useVaultStore((s) => s.vaults);
-  const teams = useTeamStore((s) => s.teams);
-  const { activeSessions: teamSessions, fetchActiveSessions } = useTeamSessionStore();
-  const mpConnections = useTeamSessionStore((s) => s.connections);
-  const myMpSessionIds = useMemo(
-    () => new Set(Object.values(mpConnections).map((c) => c.multiplayerSessionId)),
-    [mpConnections],
-  );
   const omniCommandsMap = usePluginStore((s) => s.omniCommands);
   const pluginCommands = useMemo(() => [...omniCommandsMap.values()], [omniCommandsMap]);
   const shortcuts = useShortcutStore((s) => s.shortcuts);
@@ -177,7 +158,6 @@ export default function OmniSearch({ onClose }: OmniSearchProps) {
   );
 
   useEffect(() => { inputRef.current?.focus(); }, []);
-  useEffect(() => { fetchActiveSessions().catch(() => {}); }, [fetchActiveSessions]);
 
   const { category, query: q } = useMemo(() => {
     const parsed = detectCategory(query);
@@ -229,22 +209,8 @@ export default function OmniSearch({ onClose }: OmniSearchProps) {
         .map((s): OmniItem => ({ kind: "snippet", snippet: s }));
     }
     if (category === "marketplace") return [];
-    if (category === "join") {
-      if (isJoinInput(q)) {
-        return [{ kind: "join-code", id: "", label: "", icon: "", code: query.trim() }];
-      }
-      const sessionItems = teamSessions
-        .filter((s) => !q || sessionDisplayName(s).toLowerCase().includes(q))
-        .map((s): OmniItem => ({ kind: "team-session", session: s, alreadyIn: myMpSessionIds.has(s.id) }));
-      return [...sessionItems, { kind: "join-code-prompt", id: "", label: "", icon: "" }];
-    }
 
     const result: OmniItem[] = [];
-
-    // A valid invite code cannot also be a host, so it outranks quick-connect.
-    if (isJoinInput(query)) {
-      result.push({ kind: "join-code", id: "", label: "", icon: "", code: query.trim() });
-    }
 
     // Local shells are surfaced by the dedicated Local section below, so skip
     // the redundant local Quick Connect row.
@@ -258,13 +224,6 @@ export default function OmniSearch({ onClose }: OmniSearchProps) {
       ...activeSessions
         .filter((s) => !q || sessionMatchesQuery(s, q))
         .map((s): OmniItem => ({ kind: "session", session: s, connection: connectionById.get(s.connectionId) })),
-    );
-
-    // Active team sessions
-    result.push(
-      ...teamSessions
-        .filter((s) => !q || sessionDisplayName(s).toLowerCase().includes(q))
-        .map((s): OmniItem => ({ kind: "team-session", session: s, alreadyIn: myMpSessionIds.has(s.id) })),
     );
 
     // Recent (only when no query)
@@ -371,7 +330,7 @@ export default function OmniSearch({ onClose }: OmniSearchProps) {
     }
 
     return result;
-  }, [category, q, query, activeSessions, recentConnections, connections, activeConnectionIds, keys, identities, connectionById, pluginCommands, settingsItems, snippets, shortcuts, teamSessions, myMpSessionIds, toggleItems, shells, nav, t]);
+  }, [category, q, query, activeSessions, recentConnections, connections, activeConnectionIds, keys, identities, connectionById, pluginCommands, settingsItems, snippets, shortcuts, toggleItems, shells, nav, t]);
 
   const shellNeedsPath = useMemo(() => {
     const shown = items
@@ -468,44 +427,6 @@ export default function OmniSearch({ onClose }: OmniSearchProps) {
       } else if (item.kind === "toggle") {
         item.onToggle(!item.value);
         // Stay in palette so the user can see the updated state
-      } else if (item.kind === "team-session") {
-        const { session, alreadyIn } = item;
-        if (alreadyIn) {
-          const localId = Object.entries(useTeamSessionStore.getState().connections).find(
-            ([, v]) => v.multiplayerSessionId === session.id,
-          )?.[0];
-          if (localId) {
-            setActive(localId);
-            setActiveNav("terminal");
-          }
-        } else {
-          (async () => {
-            await joinTeamSessionAndOpenTab({
-              sessionId: session.id,
-              connectionName: sessionDisplayName(session),
-            });
-            setSidebarOpen(false);
-          })().catch(console.error);
-        }
-        onClose();
-      } else if (item.kind === "join-code-prompt") {
-        inputRef.current?.focus();
-        setTimeout(() => {
-          if (inputRef.current) {
-            inputRef.current.setSelectionRange(inputRef.current.value.length, inputRef.current.value.length);
-          }
-        }, 0);
-      } else if (item.kind === "join-code") {
-        (async () => {
-          const { sessionId, inviteToken } = await resolveJoinInput(item.code);
-          await joinTeamSessionAndOpenTab({
-            sessionId,
-            connectionName: "Shared Terminal",
-            inviteToken,
-          });
-          setSidebarOpen(false);
-        })().catch(console.error);
-        onClose();
       } else if (item.kind === "local-shell") {
         launchLocalShell(item.shell?.path);
         onClose();
@@ -576,7 +497,7 @@ export default function OmniSearch({ onClose }: OmniSearchProps) {
             style={{ color: isSelected ? "var(--t-accent)" : "var(--t-text-primary)" }}>
             {sessionLabel(item.session)}
           </span>
-          <VaultBadge vaultId={item.connection?.vault_id} vaults={vaults} teams={teams} />
+          <VaultBadge vaultId={item.connection?.vault_id} vaults={vaults} />
           <span className="text-xs shrink-0 text-(--t-text-dim)">
             {item.session.status}
           </span>
@@ -602,7 +523,7 @@ export default function OmniSearch({ onClose }: OmniSearchProps) {
               {conn.name || `${conn.username}@${conn.host}`}
             </span>
           </div>
-          <VaultBadge vaultId={conn.vault_id} vaults={vaults} teams={teams} />
+          <VaultBadge vaultId={conn.vault_id} vaults={vaults} />
           <span className="text-xs shrink-0 group-hover/row:hidden text-(--t-text-muted)">
             ssh, {conn.username}
           </span>
@@ -648,7 +569,7 @@ export default function OmniSearch({ onClose }: OmniSearchProps) {
               {item.key.name}
             </span>
           </div>
-          <VaultBadge vaultId={item.key.vault_id} vaults={vaults} teams={teams} />
+          <VaultBadge vaultId={item.key.vault_id} vaults={vaults} />
           {item.key.key_type && (
             <span className="text-xs font-mono shrink-0 px-1.5 py-0.5 rounded-sm bg-(--t-bg-elevated) text-(--t-accent)">
               {item.key.key_type}
@@ -675,7 +596,7 @@ export default function OmniSearch({ onClose }: OmniSearchProps) {
               {item.identity.name ?? item.identity.username}
             </span>
           </div>
-          <VaultBadge vaultId={item.identity.vault_id} vaults={vaults} teams={teams} />
+          <VaultBadge vaultId={item.identity.vault_id} vaults={vaults} />
           <span className="text-xs shrink-0 text-(--t-text-muted)">
             {item.identity.username}
           </span>
@@ -736,7 +657,7 @@ export default function OmniSearch({ onClose }: OmniSearchProps) {
               {snippetSearchText(item.snippet)}
             </p>
           </div>
-          <VaultBadge vaultId={item.snippet.vault_id} vaults={vaults} teams={teams} />
+          <VaultBadge vaultId={item.snippet.vault_id} vaults={vaults} />
           {item.snippet.tags.length > 0 && (
             <span className="text-[10px] shrink-0 text-(--t-text-muted)">
               {item.snippet.tags[0]}
@@ -789,99 +710,6 @@ export default function OmniSearch({ onClose }: OmniSearchProps) {
                 transform: isOn ? "translateX(1.067rem)" : "translateX(0)",
               }}
             />
-          </div>
-        </button>
-      );
-    }
-
-    if (item.kind === "team-session") {
-      const { session, alreadyIn } = item;
-      return (
-        <button
-          key={`ts-${session.id}`}
-          data-idx={idx}
-          onClick={() => selectItem(item)}
-          onMouseEnter={() => setSelected(idx)}
-          className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors"
-          style={{ background: baseBg }}
-        >
-          <div
-            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: "color-mix(in srgb, var(--t-accent) 80%, #000)", color: "#fff" }}
-          >
-            <Icon icon="lucide:radio" width={13} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <span className="text-sm font-medium truncate"
-              style={{ color: isSelected ? "var(--t-accent)" : "var(--t-text-primary)" }}>
-              {sessionDisplayName(session)}
-            </span>
-          </div>
-          <span className="text-xs shrink-0 text-(--t-text-dim)">
-            {t("omni.participantCount", { count: session.participant_count })}
-          </span>
-          <span
-            className="text-xs shrink-0 px-1.5 py-0.5 rounded-sm font-medium"
-            style={{
-              background: alreadyIn ? "color-mix(in srgb, var(--t-accent) 20%, transparent)" : "var(--t-bg-elevated)",
-              color: alreadyIn ? "var(--t-accent)" : "var(--t-text-dim)",
-            }}
-          >
-            {alreadyIn ? t("omni.resume") : t("omni.join")}
-          </span>
-        </button>
-      );
-    }
-
-    // join-code-prompt — always visible in join mode to surface the invite code flow
-    if (item.kind === "join-code-prompt") {
-      return (
-        <button
-          key="join-code-prompt"
-          data-idx={idx}
-          onClick={() => selectItem(item)}
-          onMouseEnter={() => setSelected(idx)}
-          className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors"
-          style={{ background: baseBg }}
-        >
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-(--t-bg-toolbar)">
-            <Icon icon="lucide:link" width={13} className="text-(--t-text-muted)" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <span className="text-sm font-medium"
-              style={{ color: isSelected ? "var(--t-accent)" : "var(--t-text-primary)" }}>
-              {t("omni.joinCodePrompt.title")}
-            </span>
-            <p className="text-xs mt-0.5 text-(--t-text-dim)">
-              {t("omni.joinCodePrompt.subtitle")}
-            </p>
-          </div>
-        </button>
-      );
-    }
-
-    // join-code (an invite code, typed directly or via "join " prefix)
-    if (item.kind === "join-code") {
-      return (
-        <button
-          key="join-code"
-          data-idx={idx}
-          onClick={() => selectItem(item)}
-          onMouseEnter={() => setSelected(idx)}
-          className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors"
-          style={{ background: baseBg }}
-        >
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-(--t-bg-toolbar)">
-            <Icon icon="lucide:log-in" width={13} className="text-(--t-accent)" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <span className="text-sm font-medium"
-              style={{ color: isSelected ? "var(--t-accent)" : "var(--t-text-primary)" }}>
-              {t("omni.joinCodeEntered.title")}
-            </span>
-            <p className="text-xs mt-0.5 font-mono truncate text-(--t-text-dim)">
-              {item.code}
-            </p>
           </div>
         </button>
       );
@@ -1127,8 +955,6 @@ export default function OmniSearch({ onClose }: OmniSearchProps) {
           ) : (
             <>
               {category === "settings" && sectionHeader(t("omni.sections.settings"), false)}
-              {category === "join" && items[0]?.kind === "join-code" && sectionHeader(t("omni.sections.joinByInviteCode"), false)}
-              {category === "join" && items[0]?.kind !== "join-code" && sectionHeader(t("omni.sections.teamSessions"), false)}
               {items.map((item) => renderItem(item, runningIdx++))}
             </>
           )}
@@ -1137,7 +963,6 @@ export default function OmniSearch({ onClose }: OmniSearchProps) {
             <p className="px-4 py-6 text-sm text-center text-(--t-text-dim)">
               {category === "snippets" ? t("omni.emptyState.noSnippets") :
                category === "marketplace" ? t("omni.emptyState.marketplaceComingSoon") :
-               category === "join" ? (q ? t("omni.emptyState.noSessionsMatch", { query: q }) : t("omni.emptyState.noActiveTeamSessions")) :
                t("omni.emptyState.noResultsFor", { query: q || query })}
             </p>
           )}

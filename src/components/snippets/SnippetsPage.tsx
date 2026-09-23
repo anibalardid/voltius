@@ -9,7 +9,6 @@ import { useSessionStore } from "@/stores/sessionStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useVaultStore } from "@/stores/vaultStore";
 import { useLayoutStore } from "@/stores/layoutStore";
-import { useSyncPrefsStore } from "@/stores/syncPrefsStore";
 import { usePermissions } from "@/hooks/usePermission";
 import { useAccessibleVaultIds, useScopedVaultId } from "@/hooks/useAccessibleVaultIds";
 import { useDragSelection } from "@/hooks/useDragSelection";
@@ -55,7 +54,7 @@ import { FolderEditPanel } from "@/components/folders/FolderEditPanel";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import type { Snippet, Folder, SnippetFormData, Connection } from "@/types";
 import type { SortMode } from "@/components/shared/ToolbarViewControls";
-import { buildTeamVaultTransferPlan, type TransferOperation } from "@/services/teamVaultPermissions";
+import { buildTeamVaultTransferPlan, type TransferOperation } from "@/services/vaultTransferPlan";
 import { useSnippetRecentStore, type RecentSnippetExecution, type RecentTarget } from "@/stores/snippetRecentStore";
 import { selectRecentSnippetEntries } from "@/utils/snippetRecent";
 import { descendantFolders, itemsInFolderSubtree } from "@/utils/folderTree";
@@ -333,8 +332,6 @@ export function SnippetsPage() {
   const canCreate = selectedVaultIds.some((vid) => can("EDIT_SNIPPETS", vid));
 
   // Sync prefs (reactive)
-  const excludedIds = useSyncPrefsStore((s) => s.excludedIds);
-  const syncTypes = useSyncPrefsStore((s) => s.syncTypes);
 
   const activeSession = sessions.find((s) => s.id === activeSessionId);
   const activeConn = connections.find((c) => c.id === activeSession?.connectionId);
@@ -591,8 +588,6 @@ export function SnippetsPage() {
     const ids = [...selectedIdSet];
     const selectedSnippets = viewSnippets.filter((s) => selectedIdSet.has(s.id));
     const selectedSnippetFolderIds = selectedFolders.map((f) => f.id);
-    const { isObjectSynced } = useSyncPrefsStore.getState();
-    const allSynced = selectedSnippets.every((s) => isObjectSynced(s.id, "snippet"));
     const allCanEdit = selectedSnippets.every((s) => can("EDIT_SNIPPETS", s.vault_id ?? "personal"));
     const bulkVaultChildren = (operation: TransferOperation): ContextMenuItem[] => vaultOptions
       .filter((v) => [...selectedSnippets.map((s) => s.vault_id ?? "personal"), ...selectedFolders.map((f) => f.vault_id ?? "personal")].some((sourceVaultId) => sourceVaultId !== v.id))
@@ -641,19 +636,6 @@ export function SnippetsPage() {
         children: copyChildren,
       }] : []),
       {
-        label: allSynced ? t("snippets.page.bulk.disableCloudSync", { count: ids.length }) : t("snippets.page.bulk.enableCloudSync", { count: ids.length }),
-        icon: allSynced ? "lucide:cloud-off" : "lucide:cloud",
-        onClick: () => {
-          const store = useSyncPrefsStore.getState();
-          for (const s of selectedSnippets) {
-            const isSynced = store.isObjectSynced(s.id, "snippet");
-            if (allSynced && isSynced) store.toggleExcluded(s.id);
-            else if (!allSynced && !isSynced) store.toggleExcluded(s.id);
-          }
-        },
-        divider: true,
-      },
-      {
         label: t("snippets.page.bulk.exportSnippets", { count: ids.length }),
         icon: "lucide:upload",
         onClick: () => useUIStore.getState().openImportExport("export", { bulk: { snippets: ids } }),
@@ -668,7 +650,7 @@ export function SnippetsPage() {
       },
     ];
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedIdSet, viewSnippets, selectedFolders, excludedIds, syncTypes, can, vaultOptions, snippets, folders, t]);
+  }, [selectedIdSet, viewSnippets, selectedFolders, can, vaultOptions, snippets, folders, t]);
 
   // ── Injection ────────────────────────────────────────────────────────────
 
@@ -928,7 +910,6 @@ export function SnippetsPage() {
     const svid = s.vault_id ?? "personal";
     const canEdit = can("EDIT_SNIPPETS", svid);
     const otherVaults = vaultOptions.filter((v) => v.id !== svid);
-    const syncEnabled = useSyncPrefsStore.getState().isObjectSynced(s.id, "snippet");
     return (
       <SnippetCard
         key={s.id}
@@ -955,8 +936,6 @@ export function SnippetsPage() {
         canEdit={canEdit}
         onMoveToVault={canEdit ? (vaultId) => void handleMoveToVault(s, vaultId) : undefined}
         onCopyToVault={canEdit ? (vaultId) => void handleCopyToVault(s, vaultId) : undefined}
-        syncEnabled={syncEnabled}
-        onToggleSync={() => useSyncPrefsStore.getState().toggleExcluded(s.id)}
         onPointerDown={(e) => handleDragStart(e, s.id)}
       />
     );
@@ -976,7 +955,6 @@ export function SnippetsPage() {
             onDelete={(f) => setConfirmDeleteFolder(f)}
             onClose={folderEp.closeEdit}
             canEdit
-            syncObjectType="snippet"
             vaults={vaultOptions.filter((v) => v.id !== (editingFolder.vault_id ?? "personal"))}
             onMoveToVault={(vaultId) => void handleMoveFolderToVault(editingFolder, vaultId)}
             onCopyToVault={(vaultId) => void handleCopyFolderToVault(editingFolder, vaultId)}

@@ -1,4 +1,4 @@
-import { test, expect, vi, beforeEach, afterEach } from "vitest";
+import { test, expect, vi, beforeEach } from "vitest";
 
 const h = vi.hoisted(() => ({
   reconnect: vi.fn(async () => undefined),
@@ -20,10 +20,6 @@ vi.mock("./workspaceSnapshotStore", () => ({
   startWorkspaceSnapshotSync: vi.fn(),
 }));
 vi.mock("./toggleSettingsStore", () => ({ getToggle: () => true }));
-vi.mock("./liveSessionManifestCore", () => ({ resolveRemoteSessions: () => ({ closedIds: [] }) }));
-vi.mock("./crossDeviceSessionsStore", () => ({
-  useCrossDeviceSessionsStore: { getState: () => ({ manifests: {}, tombstones: {} }) },
-}));
 vi.mock("./sessionStore", () => ({
   useSessionStore: {
     getState: () => ({
@@ -47,42 +43,13 @@ vi.mock("./uiStore", () => ({
 vi.mock("@/services/local", () => ({ localConnect: vi.fn(async () => undefined) }));
 vi.mock("@/hooks/useTerminal", () => ({ setRestoreScrollOffset: vi.fn() }));
 
-const flush = () => new Promise((resolve) => setTimeout(resolve, 250));
-
 beforeEach(() => {
   vi.clearAllMocks();
   vi.resetModules(); // workspaceRestore is one-shot per module instance
 });
 
-afterEach(async () => {
-  const { resolveLoginSync } = await import("@/services/loginSyncGate");
-  resolveLoginSync();
-});
-
-/**
- * A switch lands here with the config dir wiped: reconnecting before the cloud
- * pull refills it finds no connection and errors every restored tab.
- */
-test("reconnect waits for the replace-sync that refills the wiped config dir", async () => {
-  const { setLoginSyncPending, resolveLoginSync } = await import("@/services/loginSyncGate");
-  const { restoreWorkspaceOnLaunch } = await import("./workspaceRestore");
-  setLoginSyncPending({ replace: true });
-
-  const restored = restoreWorkspaceOnLaunch();
-  await flush();
-
-  expect(h.restoreSessions).toHaveBeenCalled(); // tabs paint immediately
-  expect(h.reconnect).not.toHaveBeenCalled();
-
-  resolveLoginSync();
-  await restored;
-  expect(h.reconnect).toHaveBeenCalledWith("s1", { restore: true });
-});
-
 test("a normal launch reconnects without waiting on sync", async () => {
-  const { setLoginSyncPending } = await import("@/services/loginSyncGate");
   const { restoreWorkspaceOnLaunch } = await import("./workspaceRestore");
-  setLoginSyncPending(); // merge-mode: the local cache is already on disk
 
   await restoreWorkspaceOnLaunch();
 
@@ -90,9 +57,7 @@ test("a normal launch reconnects without waiting on sync", async () => {
 });
 
 test("a restored tab comes back under the name the user gave it", async () => {
-  const { setLoginSyncPending } = await import("@/services/loginSyncGate");
   const { restoreWorkspaceOnLaunch } = await import("./workspaceRestore");
-  setLoginSyncPending();
 
   await restoreWorkspaceOnLaunch();
 
@@ -103,9 +68,7 @@ test("a restored tab comes back under the name the user gave it", async () => {
 });
 
 test("a restored ssh tab the launch could not reach is handed to the reconnect loop", async () => {
-  const { setLoginSyncPending } = await import("@/services/loginSyncGate");
   const { restoreWorkspaceOnLaunch } = await import("./workspaceRestore");
-  setLoginSyncPending();
 
   await restoreWorkspaceOnLaunch();
 

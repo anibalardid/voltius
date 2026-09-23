@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { clearPersistedAccountUiState } from "@/stores/persistedAccountUiState";
 import { ACCOUNT_CACHE_KEYS } from "./accountCacheKeys";
+import { localDelete } from "./localStore";
 import { VaultLockedError, VaultUnreadableError } from "./vaultErrors";
 
 /**
@@ -115,8 +116,6 @@ export async function lockVault(): Promise<void> {
   pendingKey = null;
   unlocked = false;
   await invoke("secrets_lock");
-  const { onSessionEnd } = await import("@/services/teamDataManager");
-  onSessionEnd();
 }
 
 export async function getVaultStatus(): Promise<{ exists: boolean; path: string }> {
@@ -143,9 +142,9 @@ export async function resetVault(): Promise<void> {
   await invoke("secrets_lock");
   await invoke("vault_reset"); // deletes secrets.enc + connections.json + legacy vault.hold
 
-  // Clear all keychain entries so the app starts fresh
+  // Clear all account entries from the local store so the app starts fresh
   for (const key of ACCOUNT_CACHE_KEYS) {
-    await invoke("keychain_delete", { key }).catch(() => {});
+    await localDelete(key).catch(() => {});
   }
 }
 

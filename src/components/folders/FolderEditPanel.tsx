@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@iconify/react";
 import { useAutosave } from "@/hooks/useAutosave";
-import { useSyncPrefsStore } from "@/stores/syncPrefsStore";
 import { PanelShell, PanelHeader } from "@/components/shared/Panel";
 import { PanelActionsMenu } from "@/components/shared/PanelActionsMenu";
 import { VaultPicker } from "@/components/shared/VaultPicker";
@@ -19,8 +18,6 @@ interface FolderEditPanelProps {
   canEdit?: boolean;
   onMoveToVault?: (vaultId: string) => void;
   onCopyToVault?: (vaultId: string) => void;
-  /** Sync object type used to check per-object and global sync state. Defaults to "folder". */
-  syncObjectType?: string;
 }
 
 export function FolderEditPanel({
@@ -33,14 +30,10 @@ export function FolderEditPanel({
   canEdit,
   onMoveToVault,
   onCopyToVault,
-  syncObjectType = "folder",
 }: FolderEditPanelProps) {
   const { t } = useTranslation();
   const [name, setName]       = useState(folder.name);
   const [vaultId, setVaultId] = useState(folder.vault_id ?? "personal");
-  const isSynced     = useSyncPrefsStore((s) => s.isObjectSynced(folder.id, syncObjectType));
-  const toggleExcluded = useSyncPrefsStore((s) => s.toggleExcluded);
-  const isTypeSynced = useSyncPrefsStore((s) => s.isTypeSynced(syncObjectType));
 
   // Reset when switching to a different folder
   useEffect(() => {
@@ -75,11 +68,6 @@ export function FolderEditPanel({
   const panelActions = [
     ...(onExport ? [{ label: t("folders.card.exportFolder"), icon: "lucide:upload", onClick: onExport }] : []),
     ...vaultMenuItems(vaults, canEdit, onMoveToVault, onCopyToVault, t),
-    {
-      label: isSynced ? t("folders.card.disableCloudSync") : t("folders.card.enableCloudSync"),
-      icon: isSynced ? "lucide:cloud-off" : "lucide:cloud",
-      onClick: () => toggleExcluded(folder.id),
-    },
   ];
 
   return (
@@ -103,41 +91,6 @@ export function FolderEditPanel({
             onChange={(e) => { markDirty(); setName(e.target.value); }}
             onKeyDown={(e) => e.key === "Escape" && setName(folder.name)}
           />
-        </div>
-
-        {/* Cloud sync */}
-        <div className="flex flex-col gap-2">
-          <label className="text-xs font-bold uppercase tracking-widest text-(--t-text-dim)">{t("folders.editPanel.cloudSyncLabel")}</label>
-          <button
-            className={`flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors bg-(--t-bg-input) border border-(--t-border) ${isTypeSynced ? "cursor-pointer" : "cursor-default"}`}
-            style={{ opacity: isTypeSynced ? 1 : 0.5 }}
-            onClick={() => { if (isTypeSynced) toggleExcluded(folder.id); }}
-          >
-            <div className="flex items-center gap-2">
-              <Icon
-                icon={isSynced ? "lucide:cloud" : "lucide:cloud-off"}
-                width={15}
-                style={{ color: isSynced ? "var(--t-accent)" : "var(--t-text-dim)" }}
-              />
-              <span className="text-sm text-(--t-text-primary)">
-                {isSynced ? t("folders.editPanel.syncedToCloud") : t("folders.editPanel.notSynced")}
-              </span>
-            </div>
-            <div
-              className="w-8 h-4 rounded-full transition-colors relative"
-              style={{ background: isSynced ? "var(--t-accent)" : "var(--t-border-hover)" }}
-            >
-              <div
-                className="absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all"
-                style={{ left: isSynced ? "calc(100% - 14px)" : "2px" }}
-              />
-            </div>
-          </button>
-          {!isTypeSynced && (
-            <p className="text-xs text-(--t-text-dim)">
-              {t("folders.editPanel.syncDisabledGlobally")}
-            </p>
-          )}
         </div>
 
         {/* Meta */}

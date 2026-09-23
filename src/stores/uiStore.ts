@@ -1,8 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { pushSettingsChange, settingsStamp } from "./remoteApplyGuard";
 
-export type NavItem = "hosts" | "keychain" | "port-forwarding" | "snippets" | "known-hosts" | "members" | "logs" | "terminal";
+export type NavItem = "hosts" | "keychain" | "port-forwarding" | "snippets" | "known-hosts" | "logs" | "terminal";
 
 export type BuiltinRightPanelSection = "snippets" | "history" | "notes" | "themes" | "ports" | "sftp";
 /** Widened to allow plugin-contributed section IDs (prefixed with "plugin:") */
@@ -12,7 +11,7 @@ export type RightPanelSection = BuiltinRightPanelSection | (string & {});
  * section id it received from outside, and a type alone cannot be checked at
  * runtime.
  */
-export const SETTINGS_SECTIONS = ["appearance", "account", "sync", "plugins", "integrations", "terminal", "sftp", "portForwarding", "hosts", "shortcuts", "diagnostics", "about"] as const;
+export const SETTINGS_SECTIONS = ["appearance", "security", "plugins", "integrations", "terminal", "sftp", "portForwarding", "hosts", "shortcuts", "diagnostics", "about"] as const;
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
 
 export function isSettingsSection(value: string): value is SettingsSection {
@@ -76,7 +75,6 @@ export type KeychainPendingAction =
   | { action: "edit-key"; id: string }
   | { action: "edit-identity"; id: string }
   | null;
-export type CloudAuthMode = "signin" | "register";
 
 interface UIStore {
   sidebarOpen: boolean;
@@ -94,8 +92,6 @@ interface UIStore {
   notificationCenterOpen: boolean;
   /** Inbox entry a deep link asked for; the bell clears it once shown. */
   notificationFocusId: string | null;
-  cloudAuthOpen: boolean;
-  cloudAuthMode: CloudAuthMode;
   settingsSection: SettingsSection;
   /** Mobile drill-down page: null = section list, otherwise the open section. */
   settingsSubPage: SettingsSection | null;
@@ -120,8 +116,6 @@ interface UIStore {
   homePendingAction: HomePendingAction;
   portForwardingLayoutMode: LayoutMode;
   portForwardingSortMode: SortMode;
-  membersLayoutMode: LayoutMode;
-  membersSortMode: SortMode;
   snippetsLayoutMode: LayoutMode;
   prefsUpdatedAt: string;
   portForwardingPendingAction: PortForwardingPendingAction;
@@ -143,9 +137,6 @@ interface UIStore {
   setNotificationCenterOpen: (open: boolean) => void;
   openNotificationCenter: (focusId?: string | null) => void;
   clearNotificationFocus: () => void;
-  openCloudAuth: (mode?: CloudAuthMode) => void;
-  closeCloudAuth: () => void;
-  setCloudAuthMode: (mode: CloudAuthMode) => void;
   setSettingsSection: (section: SettingsSection) => void;
   setSettingsSubPage: (section: SettingsSection | null) => void;
   setSettingsPluginPageId: (id: string | null) => void;
@@ -170,21 +161,9 @@ interface UIStore {
   setPortForwardingSortMode: (v: SortMode) => void;
   setPortForwardingPendingAction: (action: PortForwardingPendingAction) => void;
   setKeychainPendingAction: (action: KeychainPendingAction) => void;
-  setMembersLayoutMode: (v: LayoutMode) => void;
-  setMembersSortMode: (v: SortMode) => void;
   setSnippetsLayoutMode: (v: LayoutMode) => void;
   snippetsPendingAction: SnippetsPendingAction;
   setSnippetsPendingAction: (action: SnippetsPendingAction) => void;
-  membersInvitePending: boolean;
-  openMembersInvite: () => void;
-  clearMembersInvitePending: () => void;
-  membersRolesPending: boolean;
-  openMembersRoles: () => void;
-  clearMembersRolesPending: () => void;
-  openMembersNav: () => void;
-  vaultSharePending: boolean;
-  openVaultSharePending: () => void;
-  clearVaultSharePending: () => void;
   whatsNewOpen: boolean;
   lastSeenChangelogVersion: string | null;
   openWhatsNew: () => void;
@@ -199,10 +178,9 @@ interface UIStore {
 export const useUIStore = create<UIStore>()(
   persist(
     (set) => {
-      /** A synced preference edit: stamp the section clock and push it. */
+      /** A preference edit: stamp the section clock. */
       const setPref = (patch: Partial<UIStore>) => {
-        set({ ...patch, prefsUpdatedAt: settingsStamp() });
-        pushSettingsChange();
+        set({ ...patch, prefsUpdatedAt: new Date().toISOString() });
       };
       return {
         sidebarOpen: true,
@@ -214,8 +192,6 @@ export const useUIStore = create<UIStore>()(
         settingsOpen: false,
         notificationCenterOpen: false,
         notificationFocusId: null as string | null,
-        cloudAuthOpen: false,
-        cloudAuthMode: "signin" as CloudAuthMode,
         settingsSection: "appearance" as SettingsSection,
         settingsSubPage: null as SettingsSection | null,
         settingsPluginPageId: null as string | null,
@@ -234,13 +210,8 @@ export const useUIStore = create<UIStore>()(
         portForwardingLayoutMode: "list" as LayoutMode,
         portForwardingSortMode: "newest" as SortMode,
         portForwardingPendingAction: null as PortForwardingPendingAction,
-        membersLayoutMode: "list" as LayoutMode,
-        membersSortMode: "role-asc" as SortMode,
         snippetsLayoutMode: "list" as LayoutMode,
         snippetsPendingAction: null as SnippetsPendingAction,
-        membersInvitePending: false,
-        membersRolesPending: false,
-        vaultSharePending: false,
         whatsNewOpen: false,
         lastSeenChangelogVersion: null as string | null,
         terminalPanelsRowOpen: false,
@@ -267,9 +238,6 @@ export const useUIStore = create<UIStore>()(
         setNotificationCenterOpen: (open) => set((s) => ({ notificationCenterOpen: open, notificationFocusId: open ? s.notificationFocusId : null })),
         openNotificationCenter: (focusId) => set({ notificationCenterOpen: true, notificationFocusId: focusId ?? null }),
         clearNotificationFocus: () => set({ notificationFocusId: null }),
-        openCloudAuth: (mode) => set({ cloudAuthOpen: true, cloudAuthMode: mode ?? "signin" }),
-        closeCloudAuth: () => set({ cloudAuthOpen: false }),
-        setCloudAuthMode: (mode) => set({ cloudAuthMode: mode }),
         // Selecting a builtin section must drop any plugin target, or
         // `settingsPluginPageId ?? settingsSection` would keep showing the plugin pane.
         setSettingsSection: (section) => set({ settingsSection: section, settingsPluginPageId: null }),
@@ -301,17 +269,8 @@ export const useUIStore = create<UIStore>()(
         setPortForwardingSortMode: (v) => setPref({ portForwardingSortMode: v }),
         setPortForwardingPendingAction: (action) => set({ portForwardingPendingAction: action }),
         setKeychainPendingAction: (action) => set({ keychainPendingAction: action }),
-        setMembersLayoutMode: (v) => setPref({ membersLayoutMode: v }),
-        setMembersSortMode: (v) => setPref({ membersSortMode: v }),
         setSnippetsLayoutMode: (v) => setPref({ snippetsLayoutMode: v }),
         setSnippetsPendingAction: (action) => set({ snippetsPendingAction: action }),
-        openMembersInvite: () => set({ activeNav: "members", homeView: false, membersInvitePending: true }),
-        clearMembersInvitePending: () => set({ membersInvitePending: false }),
-        openMembersRoles: () => set({ activeNav: "members", homeView: false, membersRolesPending: true }),
-        clearMembersRolesPending: () => set({ membersRolesPending: false }),
-        openMembersNav: () => set({ activeNav: "members", homeView: false }),
-        openVaultSharePending: () => set({ vaultSharePending: true }),
-        clearVaultSharePending: () => set({ vaultSharePending: false }),
         openWhatsNew: () => set({ whatsNewOpen: true }),
         closeWhatsNew: () => set({ whatsNewOpen: false }),
         markChangelogSeen: (version) => set({ lastSeenChangelogVersion: version }),
@@ -321,15 +280,21 @@ export const useUIStore = create<UIStore>()(
     },
     {
       name: "voltius-ui",
-      version: 1,
+      version: 2,
       // v0 → v1: plugin right-panel section ids became "${pluginId}:${sectionId}"
       // (namespaced). A persisted "plugin:<oldId>" selection from before that
       // change no longer matches any registered section — drop it back to the
       // default rather than leaving the panel blank after upgrade.
+      // v1 → v2: the cloud "account" and "sync" settings sections were removed;
+      // a persisted selection of either must land on a section that still exists.
       migrate: (persisted, version) => {
-        const state = persisted as { rightPanelSection?: string } | undefined;
+        const state = persisted as { rightPanelSection?: string; settingsSection?: string } | undefined;
         if (version < 1 && typeof state?.rightPanelSection === "string" && state.rightPanelSection.startsWith("plugin:")) {
           state.rightPanelSection = "themes";
+        }
+        if (version < 2) {
+          if (state?.settingsSection === "account") state.settingsSection = "security";
+          else if (state?.settingsSection === "sync") state.settingsSection = "appearance";
         }
         return state as unknown as UIStore;
       },
@@ -344,8 +309,6 @@ export const useUIStore = create<UIStore>()(
         keychainSortMode: state.keychainSortMode,
         portForwardingLayoutMode: state.portForwardingLayoutMode,
         portForwardingSortMode: state.portForwardingSortMode,
-        membersLayoutMode: state.membersLayoutMode,
-        membersSortMode: state.membersSortMode,
         snippetsLayoutMode: state.snippetsLayoutMode,
         rightPanelSection: state.rightPanelSection,
         prefsUpdatedAt: state.prefsUpdatedAt,

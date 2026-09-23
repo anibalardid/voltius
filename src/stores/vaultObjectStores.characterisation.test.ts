@@ -77,7 +77,6 @@ import { useFolderStore } from "./folderStore";
 import { useSnippetFolderStore } from "./snippetFolderStore";
 import { usePortForwardingStore } from "./portForwardingStore";
 import { useTeamStore } from "./teamStore";
-import { useSyncPrefsStore } from "./syncPrefsStore";
 import { useHistoryStore } from "./historyStore";
 
 type Bag = Record<string, unknown>;
@@ -335,34 +334,17 @@ describe("audit reporting", () => {
 
 describe("sync scheduling", () => {
   const byName = (n: string) => adapters.find((a) => a.name === n)!;
-
-  beforeEach(() => {
-    useSyncPrefsStore.setState({ syncTypes: {}, excludedIds: [] });
-  });
-
-  test.each(["connection", "identity", "key", "folder"])(
-    "%s honours the per-object sync preference on delete",
+  // The local stores persist directly; deleting an object must not reach for a
+  // sync engine that no longer exists.
+  test.each(["connection", "identity", "key", "folder", "snippet", "snippetFolder"])(
+    "%s does not schedule a sync on delete",
     async (name) => {
       const a = byName(name);
       seedLocal(a, [a.seed()]);
-      useSyncPrefsStore.setState({ excludedIds: ["x1"] });
       await a.remove("x1");
       await Promise.resolve();
       await Promise.resolve();
       expect(h.scheduleSync).not.toHaveBeenCalled();
-    },
-  );
-
-  test.each(["snippet", "snippetFolder"])(
-    "%s schedules a sync regardless of the per-object preference",
-    async (name) => {
-      const a = byName(name);
-      seedLocal(a, [a.seed()]);
-      useSyncPrefsStore.setState({ excludedIds: ["x1"] });
-      await a.remove("x1");
-      await Promise.resolve();
-      await Promise.resolve();
-      expect(h.scheduleSync).toHaveBeenCalled();
     },
   );
 });

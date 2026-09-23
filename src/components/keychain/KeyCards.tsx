@@ -8,7 +8,6 @@ import { TagBadge } from "@/components/shared/TagBadge";
 import type { LayoutMode } from "@/components/shared/ToolbarViewControls";
 import type { SshKey, Identity, VaultOption } from "@/types";
 import { useUIContributions } from "@/hooks/useUIContributions";
-import { useSyncPrefsStore } from "@/stores/syncPrefsStore";
 import type { ContextMenuItem } from "@/components/shared/ContextMenu";
 import { usePermissions } from "@/hooks/usePermission";
 import { vaultMenuItems } from "@/utils/vaultMenuItems";
@@ -176,7 +175,6 @@ function KeyCard({
     year: "numeric", month: "short", day: "numeric",
   });
   const contributions = useUIContributions("key.contextMenu", sshKey);
-  const isSynced = useSyncPrefsStore((s) => s.isObjectSynced(sshKey.id, "key"));
   const pinKey = useKeyStore((s) => s.pinKey);
   const pinKeyForTeam = useKeyStore((s) => s.pinKeyForTeam);
   const effPinned = useEffectivePinned(sshKey, "key");
@@ -219,15 +217,9 @@ function KeyCard({
       (vId) => onCopyToVault?.(sshKey, vId),
       t,
     ),
-    {
-      label: isSynced ? t("keychain.common.disableCloudSync") : t("keychain.common.enableCloudSync"),
-      icon: isSynced ? "lucide:cloud-off" : "lucide:cloud",
-      onClick: () => useSyncPrefsStore.getState().toggleExcluded(sshKey.id),
-      divider: true,
-    },
     ...clipboardMenuItems(t),
     ...(canEdit ? [{ label: t("common.action.delete"), icon: "lucide:trash-2", onClick: () => onDelete(sshKey.id), danger: true, divider: true, shortcut: getShortcutHint("delete") }] : []),
-  ], [canEdit, sshKey, contributions, vaults, isSynced, pinKey, pinKeyForTeam, effPinned, pinSource, isTeamVault, onEdit, onDelete, onExport, onMoveToVault, onCopyToVault, t]);
+  ], [canEdit, sshKey, contributions, vaults, pinKey, pinKeyForTeam, effPinned, pinSource, isTeamVault, onEdit, onDelete, onExport, onMoveToVault, onCopyToVault, t]);
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => onSectionPointerDown?.(e, sshKey.id),
@@ -253,13 +245,7 @@ function KeyCard({
       {isList ? (
         <>
           <KeyCardContent sshKey={sshKey} avatarSize={avatarSize} iconSize={iconSize} isList />
-          <div className="flex items-center gap-1 shrink-0">
-            {!isSynced && (
-              <span title={t("keychain.common.cloudSyncDisabledTitle")} className="text-(--t-text-dim) flex items-center">
-                <Icon icon="lucide:cloud-off" width={18} />
-              </span>
-            )}
-            {canEdit && <CardActionButton icon="lucide:pencil" title={t("common.action.edit")} onClick={() => onEdit(sshKey)} />}
+          <div className="flex items-center gap-1 shrink-0">            {canEdit && <CardActionButton icon="lucide:pencil" title={t("common.action.edit")} onClick={() => onEdit(sshKey)} />}
             {canEdit && <CardActionButton icon="lucide:trash-2" title={t("common.action.delete")} onClick={() => onDelete(sshKey.id)} danger />}
           </div>
         </>
@@ -276,13 +262,7 @@ function KeyCard({
                   <span className="shrink-0 px-1.5 py-0.5 rounded-md text-[11px] font-mono bg-(--t-bg-input) text-(--t-text-dim) border border-(--t-border)">
                     {sshKey.key_type}
                   </span>
-                )}
-                {!isSynced && (
-                  <span title={t("keychain.common.cloudSyncDisabledTitle")} className="shrink-0 text-(--t-text-dim) flex items-center">
-                    <Icon icon="lucide:cloud-off" width={14} />
-                  </span>
-                )}
-              </div>
+                )}              </div>
               <p className="text-xs truncate text-(--t-text-muted)">{t("keychain.cards.addedOn", { date: formattedDate })}</p>
             </div>
           </div>
@@ -433,7 +413,6 @@ function IdentityCard({
 }) {
   const { t } = useTranslation();
   const contributions = useUIContributions("identity.contextMenu", identity);
-  const isSynced = useSyncPrefsStore((s) => s.isObjectSynced(identity.id, "identity"));
   const pinIdentity = useIdentityStore((s) => s.pinIdentity);
   const pinIdentityForTeam = useIdentityStore((s) => s.pinIdentityForTeam);
   const effPinned = useEffectivePinned(identity, "identity");
@@ -482,15 +461,9 @@ function IdentityCard({
       (vId) => onCopyToVault?.(identity, vId),
       t,
     ),
-    {
-      label: isSynced ? t("keychain.common.disableCloudSync") : t("keychain.common.enableCloudSync"),
-      icon: isSynced ? "lucide:cloud-off" : "lucide:cloud",
-      onClick: () => useSyncPrefsStore.getState().toggleExcluded(identity.id),
-      divider: true,
-    },
     ...clipboardMenuItems(t),
     ...(canEdit ? [{ label: t("common.action.delete"), icon: "lucide:trash-2", onClick: () => onDelete(identity.id), danger: true, divider: true, shortcut: getShortcutHint("delete") }] : []),
-  ], [canEdit, identity, contributions, vaults, isSynced, pinIdentity, pinIdentityForTeam, effPinned, pinSource, isTeamVault, onEdit, onDelete, onMoveToVault, onCopyToVault, t]);
+  ], [canEdit, identity, contributions, vaults, pinIdentity, pinIdentityForTeam, effPinned, pinSource, isTeamVault, onEdit, onDelete, onMoveToVault, onCopyToVault, t]);
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => onSectionPointerDown?.(e, identity.id),
@@ -542,13 +515,7 @@ function IdentityCard({
               {identity.tags.slice(0, 3).map((tag) => <TagBadge key={tag} tag={tag} />)}
             </div>
           )}
-          <div className="flex items-center gap-1 shrink-0">
-            {!isSynced && (
-              <span title={t("keychain.common.cloudSyncDisabledTitle")} className="text-(--t-text-dim) flex items-center">
-                <Icon icon="lucide:cloud-off" width={18} />
-              </span>
-            )}
-            {canEdit && <CardActionButton icon="lucide:pencil" title={t("common.action.edit")} onClick={() => onEdit(identity)} />}
+          <div className="flex items-center gap-1 shrink-0">            {canEdit && <CardActionButton icon="lucide:pencil" title={t("common.action.edit")} onClick={() => onEdit(identity)} />}
             {canEdit && <CardActionButton icon="lucide:trash-2" title={t("common.action.delete")} onClick={() => onDelete(identity.id)} danger />}
           </div>
         </>
@@ -570,13 +537,7 @@ function IdentityCard({
                   <span className="shrink-0 px-1.5 py-0.5 rounded-md text-[11px] bg-(--t-bg-input) text-(--t-text-dim) border border-(--t-border)">
                     {t("keychain.cards.passwordBadge")}
                   </span>
-                )}
-                {!isSynced && (
-                  <span title={t("keychain.common.cloudSyncDisabledTitle")} className="shrink-0 text-(--t-text-dim) flex items-center">
-                    <Icon icon="lucide:cloud-off" width={14} />
-                  </span>
-                )}
-              </div>
+                )}              </div>
               <p className="text-xs truncate text-(--t-text-muted)">
                 {identity.name
                   ? `${identity.username} · ${t("keychain.cards.addedOn", { date: formattedDate })}`

@@ -1,10 +1,10 @@
 import { create } from "zustand";
-import {
-  listTeamObjectPrefs,
-  upsertTeamObjectPref,
-  type TeamObjectPrefRecord,
-} from "@/services/teamObjects";
 
+/**
+ * Local-only: team-object preferences are never loaded or persisted. The shape
+ * stays because the pin-source logic in the local stores reads it; with no team
+ * backend, `load` is a no-op and `setPinned` only updates the in-memory map.
+ */
 export interface TeamObjectPref {
   pinned: boolean | null;
 }
@@ -40,22 +40,9 @@ function teamDefaultPin(obj: PinnableTeamObject, objectType?: string): boolean {
 export const useTeamObjectPrefsStore = create<State>((set, get) => ({
   prefs: {},
 
-  load: async (teamId: string) => {
-    let records: TeamObjectPrefRecord[];
-    try {
-      records = await listTeamObjectPrefs(teamId);
-    } catch {
-      return;
-    }
-    const map: Record<string, TeamObjectPref> = {};
-    for (const r of records) {
-      map[r.object_id] = { pinned: r.pinned };
-    }
-    set((s) => ({ prefs: { ...s.prefs, [teamId]: map } }));
-  },
+  load: async (_teamId: string) => {},
 
   setPinned: async (teamId, objectId, pinned) => {
-    const prev = get().prefs[teamId]?.[objectId];
     set((s) => {
       const teamMap = { ...(s.prefs[teamId] ?? {}) };
       if (pinned === null) {
@@ -65,20 +52,6 @@ export const useTeamObjectPrefsStore = create<State>((set, get) => ({
       }
       return { prefs: { ...s.prefs, [teamId]: teamMap } };
     });
-    try {
-      await upsertTeamObjectPref(teamId, objectId, pinned);
-    } catch (err) {
-      set((s) => {
-        const teamMap = { ...(s.prefs[teamId] ?? {}) };
-        if (prev === undefined) {
-          delete teamMap[objectId];
-        } else {
-          teamMap[objectId] = prev;
-        }
-        return { prefs: { ...s.prefs, [teamId]: teamMap } };
-      });
-      throw err;
-    }
   },
 
   clearTeam: (teamId) =>

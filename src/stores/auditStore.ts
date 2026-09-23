@@ -1,8 +1,7 @@
 import { create } from "zustand";
 import i18n from "@/i18n";
-import { fetchAuditLogs, exportAuditLogs } from "@/services/auditService";
 import { fetchLocalAuditLogs, exportLocalAuditLogs } from "@/services/localAuditService";
-import type { AuditLog, AuditFilters } from "@/services/auditService";
+import type { AuditLog, AuditFilters } from "@/services/auditContext";
 import type { AuditContext } from "@/services/auditContext";
 
 export type LayoutMode = "timeline" | "list" | "horizontal";
@@ -43,7 +42,6 @@ function savedLayout(): LayoutMode {
 }
 
 async function fetchForContext(context: AuditContext, filters: AuditFilters): Promise<{ logs: AuditLog[]; total: number }> {
-  if (context.kind === "team") return fetchAuditLogs(context.teamId, context.vaultId, filters);
   return fetchLocalAuditLogs(context.vaultId, filters);
 }
 
@@ -52,7 +50,6 @@ async function exportForContext(
   filters: Omit<AuditFilters, "page" | "per_page">,
   format: "csv" | "json",
 ): Promise<Blob> {
-  if (context.kind === "team") return exportAuditLogs(context.teamId, context.vaultId, filters, format);
   return exportLocalAuditLogs(context.vaultId, filters, format);
 }
 

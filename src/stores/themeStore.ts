@@ -5,7 +5,6 @@ import { BUILT_IN_THEMES, DEFAULT_THEME_ID, DEFAULT_LIGHT_THEME_ID } from "@/the
 import type { AppTheme } from "@/themes/types";
 import { usePluginStore } from "@/stores/pluginStore";
 import { useUIStore } from "@/stores/uiStore";
-import { pushSettingsChange, remoteApplyTimestamp, settingsStamp } from "./remoteApplyGuard";
 import type { ThemeMode, GeoLocation, AutomationConfig, ThemePhase } from "@/services/themeAutomation";
 
 // `location` is deliberately absent: it is device-scoped, and theme.json is the
@@ -24,12 +23,8 @@ interface ThemeDiskState {
 }
 
 async function saveToDisk(state: ThemeDiskState): Promise<void> {
-  // Read the guard BEFORE the await: by the time theme_save resolves, the
-  // remote apply that triggered this write may already have finished.
-  const isLocalEdit = remoteApplyTimestamp() === null;
   try {
     await invoke("theme_save", { state: JSON.stringify(state) });
-    if (isLocalEdit) pushSettingsChange();
   } catch {}
 }
 
@@ -75,7 +70,7 @@ export const useThemeStore = create<ThemeStore>()(
       location: null,
       resolvedPhase: "dark",
       persist: () => {
-        const now = settingsStamp();
+        const now = new Date().toISOString();
         set({ updatedAt: now });
         const s = get();
         saveToDisk({

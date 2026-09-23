@@ -6,7 +6,6 @@ use crate::storage::config::{
     load_snippet_folders, load_snippets, save_snippet_folders, save_snippets, Snippet,
     SnippetFolder, SnippetFolderFormData, SnippetFormData,
 };
-use crate::vault_auth::check_vault_write;
 use chrono::Utc;
 use std::collections::HashSet;
 
@@ -79,7 +78,6 @@ pub fn snippet_update(id: String, data: SnippetFormData) -> Result<Snippet, Stri
     let snippet = find_mut(&mut snippets, &id)?;
     let now = Utc::now().to_rfc3339();
     let effective = retarget_vault(snippet, &data.vault_id, &now);
-    check_vault_write(std::slice::from_ref(&effective))?;
 
     // steps compare by serialized form, not by PartialEq, so it stays spelled out.
     let steps_changed = snippet.steps_differs(&data.steps);
@@ -184,7 +182,6 @@ pub fn snippet_folder_delete(id: String) -> Result<(), String> {
             .filter(|s| in_tree(&s.folder_id))
             .map(|s| s.vault_id.clone()),
     );
-    check_vault_write(&vaults.into_iter().collect::<Vec<_>>())?;
 
     // Saving is a whole-file rewrite, so skip it when the folder held nothing.
     let mut touched = 0;

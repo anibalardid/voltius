@@ -2,7 +2,6 @@ import { describe, expect, test } from "vitest";
 import i18n from "@/i18n";
 import { GUARDED, settingDef, settingDefs, TOGGLE_SECTION } from "./settingsManifest";
 import { TOGGLE_DEFS } from "@/stores/toggleSettingsStore";
-import { SYNC_OBJECT_TYPES } from "@/stores/syncPrefsStore";
 import { useThemeStore } from "@/stores/themeStore";
 import { BUILT_IN_THEMES } from "@/themes/presets";
 
@@ -11,15 +10,6 @@ describe("settingsManifest", () => {
     const keys = settingDefs().map((d) => d.key);
     for (const id of Object.keys(TOGGLE_DEFS)) {
       expect(keys).toContain(`toggles.${id}`);
-    }
-  });
-
-  test("génère une entrée booléenne par type synchronisable", () => {
-    for (const t of SYNC_OBJECT_TYPES) {
-      const def = settingDef(`sync.type.${t.id}`);
-      expect(def).toBeDefined();
-      expect(def!.type).toBe("boolean");
-      expect(def!.default).toBe(true);
     }
   });
 
@@ -125,7 +115,7 @@ describe("settingsManifest", () => {
 
   test("chaque entrée nomme une section réelle de l'écran Settings", () => {
     const sections = new Set([
-      "appearance", "account", "sync", "vaults", "plugins", "integrations",
+      "appearance", "security", "plugins", "integrations",
       "terminal", "sftp", "portForwarding", "hosts", "shortcuts", "diagnostics", "about",
     ]);
     for (const d of settingDefs()) expect(sections.has(d.section)).toBe(true);

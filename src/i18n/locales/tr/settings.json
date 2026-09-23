@@ -104,24 +104,14 @@
           "arayüz"
         ]
       },
-      "account": {
-        "label": "Hesap",
+      "security": {
+        "label": "Güvenlik",
         "keywords": [
-          "profil",
-          "oturum aç",
-          "giriş",
-          "kimlik doğrulama",
-          "login"
-        ]
-      },
-      "sync": {
-        "label": "Eşitleme",
-        "keywords": [
-          "yedekleme",
-          "bulut",
-          "gist",
-          "eşitleme",
-          "pro"
+          "ana parola",
+          "kilit",
+          "kasa",
+          "sil",
+          "parola"
         ]
       },
       "plugins": {

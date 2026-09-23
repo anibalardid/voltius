@@ -30,7 +30,6 @@ mod shell_integration;
 mod ssh;
 mod storage;
 mod terminal_kbd;
-mod vault_auth;
 
 use commands::http::HttpSseStreamManager;
 use docker::stream::DockerLogStreamManager;
@@ -595,20 +594,15 @@ pub fn run() {
             commands::vault::vault_status,
             commands::vault::vault_reset,
             commands::vault::config_wipe,
-            commands::vault::get_machine_fingerprint,
             commands::crypto::derive_keys,
             commands::crypto::derive_gist_key,
             commands::crypto::generate_keypair,
-            commands::crypto::wrap_user_secrets_cmd,
-            commands::crypto::unwrap_user_secrets_cmd,
-            commands::crypto::generate_user_secrets_cmd,
-            commands::team_crypto::derive_x25519_keypair,
-            commands::team_crypto::generate_session_key,
-            commands::team_crypto::x25519_wrap_key,
-            commands::team_crypto::x25519_unwrap_key,
             commands::keychain::keychain_get,
             commands::keychain::keychain_set,
             commands::keychain::keychain_delete,
+            commands::local_store::local_kv_get,
+            commands::local_store::local_kv_set,
+            commands::local_store::local_kv_delete,
             storage::secrets::secrets_unlock,
             storage::secrets::secrets_verify,
             storage::secrets::secrets_exists,
@@ -626,16 +620,12 @@ pub fn run() {
             commands::sync::backup_decrypt,
             commands::sync::state_export_raw,
             commands::sync::state_import,
-            commands::sync::encrypt_payload,
             commands::sync::theme_load,
             commands::sync::theme_save,
             commands::sync::settings_load,
             commands::sync::updater_get_auto,
             commands::sync::updater_set_auto,
             commands::sync::settings_save,
-            commands::sync::live_sessions_load,
-            commands::sync::live_sessions_save,
-            commands::sync::device_hostname,
             commands::ssh::ssh_connect,
             commands::ssh::ssh_disconnect,
             commands::ssh::ssh_send_input,

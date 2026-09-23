@@ -1,6 +1,5 @@
 import i18n from "@/i18n";
 import { useRecentPeopleStore, type RecentPerson } from "@/stores/recentPeopleStore";
-import { pushSettingsChange, settingsStamp } from "@/stores/remoteApplyGuard";
 import { lastWriteWins, type UserDataHandler } from "../handler";
 
 export const recentPeopleHandler: UserDataHandler = {
@@ -26,8 +25,7 @@ export const recentPeopleHandler: UserDataHandler = {
   },
 
   touch(): void {
-    useRecentPeopleStore.setState({ recentUpdatedAt: settingsStamp() });
-    pushSettingsChange();
+    useRecentPeopleStore.setState({ recentUpdatedAt: new Date().toISOString() });
   },
 
   describe(): string {

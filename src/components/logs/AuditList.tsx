@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import type { AuditLog } from "@/services/auditService";
+import type { AuditLog } from "@/services/auditContext";
 import { AuditEventRow } from "./AuditEventRow";
 
 interface Props {

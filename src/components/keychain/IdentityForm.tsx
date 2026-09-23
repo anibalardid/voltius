@@ -8,7 +8,6 @@ import { useKeyStore } from "@/stores/keyStore";
 import { useConnectionStore } from "@/stores/connectionStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useUIContributions } from "@/hooks/useUIContributions";
-import { useSyncPrefsStore } from "@/stores/syncPrefsStore";
 import { resolveVaultIdForSave } from "@/hooks/useWritableVaultIds";
 import {
   SecretInput,
@@ -145,8 +144,6 @@ export function IdentityForm({ initial, onSubmit, onClose, onDelete, flushRef, i
   const shell = useVaultObjectFormShell({ initial, folderType: "keychain", objectType: "identity", pin: pinIdentity });
   const { vaultId, pickVault, isPinned, togglePin } = shell;
   const contributions = useUIContributions("identity.panelActions", initial);
-  const { toggleExcluded, isObjectSynced } = useSyncPrefsStore();
-  const isSynced = initial ? isObjectSynced(initial.id, "identity") : true;
   const [name, setName] = useState(initial?.name ?? "");
   const [tags, setTags] = useState<string[]>(initial?.tags ?? []);
   const [username, setUsername] = useState(initial?.username ?? "");
@@ -262,10 +259,8 @@ export function IdentityForm({ initial, onSubmit, onClose, onDelete, flushRef, i
             contributions,
             vaults,
             canEdit,
-            isSynced,
             onMoveToVault,
             onCopyToVault,
-            onToggleSync: () => toggleExcluded(initial.id),
             onDelete: onDelete ? () => { onDelete(initial.id); onClose(); } : undefined,
           });
           return (

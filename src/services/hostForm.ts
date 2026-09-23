@@ -1,7 +1,6 @@
 import type { Connection, ConnectionFormData } from "@/types";
 import { useConnectionStore } from "@/stores/connectionStore";
 import { storeSecret, deleteSecret } from "@/services/vault";
-import { saveTeamVaultSecretForVault } from "@/services/teamVaultSecrets";
 
 /**
  * Persist a host from ConnectionForm output: create or update the connection and
@@ -27,21 +26,18 @@ export async function saveHostFromForm(
       const localKey = `password:${editing.id}`;
       if (password) {
         await storeSecret(localKey, password);
-        await saveTeamVaultSecretForVault(data.vault_id ?? editing.vault_id, localKey, password).catch(() => {});
       } else await deleteSecret(localKey).catch(() => {});
     }
     if (privateKey !== null) {
       const localKey = `key:${editing.id}`;
       if (privateKey) {
         await storeSecret(localKey, privateKey);
-        await saveTeamVaultSecretForVault(data.vault_id ?? editing.vault_id, localKey, privateKey).catch(() => {});
       } else await deleteSecret(localKey).catch(() => {});
     }
     if (passphrase !== null) {
       const localKey = `passphrase:${editing.id}`;
       if (passphrase) {
         await storeSecret(localKey, passphrase);
-        await saveTeamVaultSecretForVault(data.vault_id ?? editing.vault_id, localKey, passphrase).catch(() => {});
       } else await deleteSecret(localKey).catch(() => {});
     }
     return editing;
@@ -50,17 +46,14 @@ export async function saveHostFromForm(
     if (password && conn) {
       const localKey = `password:${conn.id}`;
       await storeSecret(localKey, password);
-      await saveTeamVaultSecretForVault(conn.vault_id, localKey, password).catch(() => {});
     }
     if (privateKey && conn) {
       const localKey = `key:${conn.id}`;
       await storeSecret(localKey, privateKey);
-      await saveTeamVaultSecretForVault(conn.vault_id, localKey, privateKey).catch(() => {});
     }
     if (passphrase && conn) {
       const localKey = `passphrase:${conn.id}`;
       await storeSecret(localKey, passphrase);
-      await saveTeamVaultSecretForVault(conn.vault_id, localKey, passphrase).catch(() => {});
     }
     return conn ?? null;
   }

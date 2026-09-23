@@ -37,16 +37,10 @@ describe("PluginAPI settings", () => {
     expect(() => bare.settings.list()).toThrow(/requires permission "settings:read"/);
     expect(() => bare.settings.set("toggles.scroll-minimap", false))
       .toThrow(/requires permission "settings:write"/);
-    await expect(bare.account.subscription()).rejects.toThrow(/requires permission "account:read"/);
-  });
-
-  test("account.subscription rend un palier", async () => {
-    const view = await api().account.subscription();
-    expect(typeof view.tier).toBe("string");
   });
 });
 
-describe("settings et account suivent le cycle de vie du plugin", () => {
+describe("settings suivent le cycle de vie du plugin", () => {
   afterEach(() => {
     try { unloadPlugin(PLUGIN_ID); } catch { /* noop */ }
   });
@@ -59,6 +53,5 @@ describe("settings et account suivent le cycle de vie du plugin", () => {
 
     const res = dead.settings.set("toggles.scroll-minimap", false);
     expect(res.ok).toBe(false);
-    await expect(dead.account.subscription()).rejects.toThrow(/disabled or unloaded/);
   });
 });

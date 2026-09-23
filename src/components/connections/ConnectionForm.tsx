@@ -17,7 +17,6 @@ import { useAutosave } from "@/hooks/useAutosave";
 import { auditContextForVaultId } from "@/services/auditContextResolver";
 import { reportAuditClientEvent } from "@/services/auditReporter";
 import { useUIContributions } from "@/hooks/useUIContributions";
-import { useSyncPrefsStore } from "@/stores/syncPrefsStore";
 import { resolveVaultIdForSave } from "@/hooks/useWritableVaultIds";
 import IdentitySelector from "./IdentitySelector";
 import KeySelector from "./KeySelector";
@@ -151,8 +150,6 @@ const ConnectionForm = forwardRef<ConnectionFormHandle, Props>(function Connecti
   const setActiveNav = useUIStore((s) => s.setActiveNav);
   const setConnectionDistro = useConnectionStore((s) => s.setDistro);
   const contributions = useUIContributions("connection.panelActions", initial);
-  const { toggleExcluded, isObjectSynced } = useSyncPrefsStore();
-  const isSynced = initial ? isObjectSynced(initial.id, "connection") : true;
 
   useEffect(() => {
     void loadIdentities();
@@ -364,13 +361,11 @@ const ConnectionForm = forwardRef<ConnectionFormHandle, Props>(function Connecti
     canEdit,
     contributions,
     vaults,
-    isSynced,
     pingDisabled,
     onConnect: () => onConnect?.(),
     onDuplicate: () => onDuplicate?.(),
     onMoveToVault,
     onCopyToVault,
-    onToggleSync: () => toggleExcluded(initial.id),
     onTogglePing: () => { markDirty(); setPingDisabled((v) => !v); },
     onDelete: onDelete ? () => onDelete() : undefined,
   }) : [];

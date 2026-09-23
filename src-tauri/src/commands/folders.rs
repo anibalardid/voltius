@@ -8,7 +8,6 @@ use crate::storage::config::{
     save_connections, save_folders, save_identities, save_keys, save_port_forwarding_rules, Folder,
     FolderFormData,
 };
-use crate::vault_auth::check_vault_write;
 use chrono::Utc;
 use std::collections::HashSet;
 
@@ -54,7 +53,6 @@ pub fn folder_update(id: String, data: FolderFormData) -> Result<Folder, String>
     let mut folders = load_folders()?;
     let folder = find_mut(&mut folders, &id)?;
     let effective = effective_vault(&data.vault_id, &folder.vault_id);
-    check_vault_write(std::slice::from_ref(&effective))?;
     let now = Utc::now().to_rfc3339();
     bump(
         &mut folder.clocks,
@@ -105,7 +103,6 @@ pub fn folder_delete(id: String, cascade: Option<bool>) -> Result<(), String> {
     vaults.extend(vaults_of(&identities, |i| in_tree(&i.folder_id)));
     vaults.extend(vaults_of(&keys, |k| in_tree(&k.folder_id)));
     vaults.extend(vaults_of(&rules, |r| in_tree(&r.folder_id)));
-    check_vault_write(&vaults.into_iter().collect::<Vec<_>>())?;
 
     // Each save is a whole-file rewrite, so skip the untouched types entirely.
     if cascade_tombstone(&mut connections, |c| in_tree(&c.folder_id), &now) > 0 {

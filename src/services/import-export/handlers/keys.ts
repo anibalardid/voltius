@@ -4,7 +4,6 @@ import type { DataTypeHandler } from "../handler";
 import type { ExportBundle, KeyExport } from "../formats";
 import type { ExportCtx, ImportCtx, ReloadFns } from "../context";
 import { liveInVault, selectionMethods } from "../context";
-import { saveTeamVaultSecretForVault } from "@/services/teamVaultSecrets";
 import { fetchKeySecrets, storeKeySecrets } from "../secretsLogic";
 
 export const keysHandler: DataTypeHandler = {
@@ -49,7 +48,6 @@ export const keysHandler: DataTypeHandler = {
         });
         await storeKeySecrets(key, saved.id, async (k, value) => {
           await storeSecret(k, value);
-          await saveTeamVaultSecretForVault(ctx.vault_id, k, value).catch(() => {});
         });
         if (key._eid) ctx.keyEidMap.set(key._eid, saved.id);
         imported++;

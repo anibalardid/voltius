@@ -11,32 +11,14 @@ import MobileSessionLayer from "./MobileSessionLayer";
 import MobileTerminalScreen from "./screens/MobileTerminalScreen";
 import MobileExtraKeysRow from "./MobileExtraKeysRow";
 import MobileTerminalPanelsRow from "./MobileTerminalPanelsRow";
-import MembersPage from "@/components/members/MembersPage";
 import MobileKeychainScreen from "./screens/MobileKeychainScreen";
 import MobilePortForwardingScreen from "./screens/MobilePortForwardingScreen";
 import MobileKnownHostsScreen from "./screens/MobileKnownHostsScreen";
 import MobileLogsScreen from "./screens/MobileLogsScreen";
 import MobileSftpScreen from "./panels/MobileSftpScreen";
-import MobileAccountPage from "./screens/MobileAccountPage";
-import MobilePanelHeader from "./panels/MobilePanelHeader";
-import MobileHeader from "./MobileHeader";
-import TeamVaultStatePanel from "@/components/team/TeamVaultStatePanel";
 import MobileSnippetTargetSheet from "./sheets/MobileSnippetTargetSheet";
 import MobileSnippetActionsSheet from "./sheets/MobileSnippetActionsSheet";
 import MobileSnippetsSheet from "./sheets/MobileSnippetsSheet";
-import type { MorePage } from "@/stores/mobileNavCore";
-import { useTranslation } from "react-i18next";
-import type { TFunction } from "i18next";
-
-function getMorePageTitles(t: TFunction): Record<MorePage, string> {
-  return {
-    "keychain": t("mobile.morePages.keychain"),
-    "port-forwarding": t("mobile.morePages.portForwarding"),
-    "known-hosts": t("mobile.morePages.knownHosts"),
-    "members": t("mobile.morePages.members"),
-    "logs": t("mobile.morePages.logs"),
-  };
-}
 import { useMobileNavStore } from "@/stores/mobileNavStore";
 import { useSessionStore } from "@/stores/sessionStore";
 import { useUIStore } from "@/stores/uiStore";
@@ -45,12 +27,9 @@ import { resolvePanelScreen } from "./mobilePanelDispatch";
 import { useAndroidBack } from "@/hooks/useAndroidBack";
 import { useVisualViewport } from "@/hooks/useVisualViewport";
 import { useHostPingPolling } from "@/hooks/useHostPingPolling";
-import { useBlockedTeamVault } from "@/hooks/useBlockedTeamVault";
 import { refitSession } from "@/hooks/useTerminal";
 
 export default function MobileShell() {
-  const { t } = useTranslation();
-  const MORE_PAGE_TITLES = getMorePageTitles(t);
   useAndroidBack();
   useHostPingPolling(); // desktop mounts this in MainPanel; the mobile shell doesn't
   const tab = useMobileNavStore((s) => s.tab);
@@ -74,14 +53,8 @@ export default function MobileShell() {
   };
   const resolvedPanel = resolvePanelScreen(top);
 
-  // A team vault that cannot show its contents replaces the vault's screens with
-  // the explanatory panel, the way MainPanel does on desktop (issue #70).
-  const blockedTeamVault = useBlockedTeamVault();
-
   // Terminal tab with sessions = immersive: hide the tab bar, give xterm every pixel.
-  // Never while the blocked panel is up — it covers the screens, so dropping the tab
-  // bar as well would leave the member no way off the vault at all.
-  const immersive = tab === "terminal" && hasSessions && !top && !blockedTeamVault;
+  const immersive = tab === "terminal" && hasSessions && !top;
   const terminalVisible = tab === "terminal" && !top;
   // SFTP tab is always-mounted (below) so its connections/cwd survive tab switches; this only gates visibility.
   const sftpVisible = !terminalVisible && tab === "sftp" && !top;
@@ -116,10 +89,7 @@ export default function MobileShell() {
           {/* Always-mounted sessions; visibility toggled so xterm survives tab switches */}
           <MobileSessionLayer visible={terminalVisible && hasSessions} />
           {/* Non-terminal tab content layers above the session layer when terminal isn't foreground */}
-          {/* Not while the vault is blocked: these screens list vault objects, and the
-              panel covers them anyway. The session and SFTP layers below stay mounted —
-              unmounting them would drop a live terminal or an SFTP connection. */}
-          {!terminalVisible && tab !== "sftp" && !blockedTeamVault && (
+          {!terminalVisible && tab !== "sftp" && (
             <div className="absolute inset-0 flex flex-col bg-(--t-bg-base)" style={{ overflow: "clip" }}>
               {tab === "hosts" && !top && <MobileHostsScreen />}
               {tab === "snippets" && !top && <MobileSnippetsScreen />}
@@ -144,25 +114,8 @@ export default function MobileShell() {
         {top?.kind === "more-page" && top.page === "port-forwarding" && <MobilePortForwardingScreen />}
         {top?.kind === "more-page" && top.page === "known-hosts" && <MobileKnownHostsScreen />}
         {top?.kind === "more-page" && top.page === "logs" && <MobileLogsScreen />}
-        {top?.kind === "more-page" && top.page === "members" && (
-          <div className="absolute inset-0 z-30 flex flex-col bg-(--t-bg-base)">
-            <MobilePanelHeader title={MORE_PAGE_TITLES.members} />
-            <div className="flex-1 overflow-hidden flex flex-col"><MembersPage /></div>
-          </div>
-        )}
         {resolvedPanel && renderMobileScreen(resolvedPanel.screenKind, resolvedPanel.props)}
         {top?.kind === "panel-sftp" && <MobileSftpScreen presetConnectionId={top.connectionId} />}
-        {top?.kind === "account" && <MobileAccountPage />}
-        {/* Above every screen and pushed page — all of them read vault objects this
-            member cannot see yet. MobileHeader rides along because it owns the vault
-            switcher: desktop leaves its sidebar uncovered, and this is the mobile
-            equivalent of that escape route. */}
-        {blockedTeamVault && (
-          <div className="absolute inset-0 z-40 flex flex-col bg-(--t-bg-base)">
-            <MobileHeader />
-            <TeamVaultStatePanel status={blockedTeamVault.status} teamId={blockedTeamVault.teamId} />
-          </div>
-        )}
       </div>
       {/* Hide the tab bar while a full-screen page is pushed — it would otherwise sit
           visible-but-covered under the overlay, and tapping a tab silently clears the stack. */}

@@ -5,7 +5,6 @@ import { AvatarTile } from "@/components/shared/AvatarTile";
 import { GLASS_BG, GLASS_BG_HOVER, GLASS_SHADOW, GLASS_SHADOW_HOVER } from "@/components/shared/BaseCard";
 import { CardActionButton } from "@/components/shared/CardActionButton";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/components/shared/ContextMenu";
-import { useSyncPrefsStore } from "@/stores/syncPrefsStore";
 import { vaultMenuItems } from "@/utils/vaultMenuItems";
 import { getShortcutHint } from "@/stores/shortcutStore";
 import { clipboardMenuItems } from "@/utils/clipboardMenuItems";
@@ -74,8 +73,6 @@ export function FolderCard({
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(folder.name);
   const { pos: ctxPos, open: openCtx, close: closeCtx } = useContextMenu();
-  const isSynced = useSyncPrefsStore((s) => s.isObjectSynced(folder.id, "folder"));
-  const toggleSync = useSyncPrefsStore((s) => s.toggleExcluded);
   const isSnippetFolder = folder.object_type === "snippet_folder";
   const folderType: "folder" | "snippet_folder" = isSnippetFolder ? "snippet_folder" : "folder";
   const pinFolder = useFolderStore((s) => s.pinFolder);
@@ -244,11 +241,6 @@ export function FolderCard({
           >
             <Icon icon={pinIcon} width={16} />
           </button>
-          {!isSynced && (
-            <span title={t("folders.card.cloudSyncDisabled")} className="text-(--t-text-dim) flex items-center">
-              <Icon icon="lucide:cloud-off" width={18} />
-            </span>
-          )}
           {canEdit && <CardActionButton icon="lucide:pencil" title={t("common.action.edit")} onClick={() => onEdit?.()} />}
           {canEdit && <CardActionButton icon="lucide:trash-2" title={t("common.action.delete")} onClick={() => onDelete(folder)} danger />}
         </div>
@@ -291,7 +283,6 @@ export function FolderCard({
             ...vaultMenuItems(vaults, canEdit, onMoveToVault, onCopyToVault, t),
             ...clipboardMenuItems(t),
             ...(canEdit ? [
-              { label: isSynced ? t("folders.card.disableCloudSync") : t("folders.card.enableCloudSync"), icon: isSynced ? "lucide:cloud-off" : "lucide:cloud", onClick: () => toggleSync(folder.id), divider: true as const },
               { label: t("folders.card.deleteFolder"), icon: "lucide:trash-2", onClick: () => onDelete(folder), danger: true as const, shortcut: getShortcutHint("delete") },
             ] : []),
             ]),

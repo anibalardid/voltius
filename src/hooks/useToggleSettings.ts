@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { TOGGLE_DEFS, useToggleSettingsStore, type ToggleId } from "@/stores/toggleSettingsStore";
-import { useSyncPrefsStore, SYNC_OBJECT_TYPES } from "@/stores/syncPrefsStore";
 import { usePluginRegistryStore } from "@/stores/pluginRegistryStore";
 import { useUpdaterPrefStore } from "@/stores/updaterPrefStore";
 import { getLoadedPlugins, setPluginActive } from "@/plugins/runtime";
@@ -22,7 +21,6 @@ export function useToggleSettings(): ToggleItem[] {
   const { t } = useTranslation();
   const values = useToggleSettingsStore((s) => s.values);
   const set = useToggleSettingsStore((s) => s.set);
-  const { syncTypes, setSyncType } = useSyncPrefsStore();
   // Subscribe to overrides so plugin toggle values stay live as they're flipped.
   const pluginOverrides = usePluginRegistryStore((s) => s.overrides);
   const setPluginEnabled = usePluginRegistryStore((s) => s.setEnabled);
@@ -49,15 +47,6 @@ export function useToggleSettings(): ToggleItem[] {
       value: values[id] ?? def.default,
       onToggle: (v: boolean) => set(id, v),
     })),
-    ...SYNC_OBJECT_TYPES.map((st) => ({
-      id: `sync-${st.id}`,
-      label: t("settings.sync.quickToggleLabel", { label: t(`settings.sync.objectType.${st.id}.label`) }),
-      icon: "lucide:cloud",
-      description: t("settings.nav.sync.label"),
-      keywords: ["sync", "cloud", "backup", st.id, st.label.toLowerCase()],
-      value: syncTypes[st.id] ?? true,
-      onToggle: (v: boolean) => setSyncType(st.id, v),
-    })),
     ...getLoadedPlugins().map((m) => ({
       id: `plugin:${m.id}`,
       label: m.name,
@@ -70,5 +59,5 @@ export function useToggleSettings(): ToggleItem[] {
         void setPluginEnabled(m.id, v);
       },
     })),
-  ], [t, values, set, syncTypes, setSyncType, pluginOverrides, setPluginEnabled, installedMeta, autoUpdate, setAutoUpdate]);
+  ], [t, values, set, pluginOverrides, setPluginEnabled, installedMeta, autoUpdate, setAutoUpdate]);
 }

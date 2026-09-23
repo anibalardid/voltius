@@ -9,10 +9,7 @@ import { OverflowTagList } from "@/components/shared/OverflowTagList";
 import { type ContextMenuItem } from "@/components/shared/ContextMenu";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { STATUS_TONE_COLOR, pingStatusMotion, pingStatusTone } from "@/utils/statusTone";
-import { MiniAvatar } from "@/components/shared/AvatarStack";
-import { useConnectionPresence } from "@/hooks/useConnectionPresence";
 import { useUIContributions } from "@/hooks/useUIContributions";
-import { useSyncPrefsStore } from "@/stores/syncPrefsStore";
 import { buildConnectionMenuItems } from "@/utils/connectionMenuItems";
 import { useConnectionStore, connectionToFormData } from "@/stores/connectionStore";
 import { useHostPingStore } from "@/stores/hostPingStore";
@@ -68,7 +65,6 @@ export default function HostCard({
   const isFtp = connection.connection_type === "ftp";
   const protocolLabel = isSerial ? "SERIAL" : isFtp ? (connection.ftp_secure ? "FTPS" : "FTP") : "SSH";
   const contributions = useUIContributions("connection.contextMenu", connection);
-  const isSynced = useSyncPrefsStore((s) => s.isObjectSynced(connection.id, "connection"));
   const pinConnection = useConnectionStore((s) => s.pinConnection);
   const pinConnectionForTeam = useConnectionStore((s) => s.pinConnectionForTeam);
   const updateConnection = useConnectionStore((s) => s.updateConnection);
@@ -117,22 +113,6 @@ export default function HostCard({
   const pingStatus = useHostPingStore((s) => s.statuses[connection.id]);
   const pingLatency = useHostPingStore((s) => s.latencies[connection.id]);
   const showPingDot = !isSerial && pingEnabled && !connection.ping_disabled;
-  const presence = useConnectionPresence(connection);
-  const presenceTitle = presence
-    ? presence.overflow > 0
-      ? t("hosts.card.inUseByOverflow", { name: presence.primary.handle, count: presence.overflow })
-      : t("hosts.card.inUseBy", { name: presence.primary.handle })
-    : "";
-  const presenceAvatar = presence && (
-    <span className="flex items-center" title={presenceTitle}>
-      <MiniAvatar name={presence.primary.handle} size={18} />
-      {presence.overflow > 0 && (
-        <span className="ml-1 text-[10px] font-semibold px-1 rounded-full bg-(--t-bg-elevated) text-(--t-text-dim)">
-          +{presence.overflow}
-        </span>
-      )}
-    </span>
-  );
 
   const contextMenuItems: ContextMenuItem[] = [
     ...(canEdit ? [{ label: t("common.action.edit"), icon: "lucide:square-pen", onClick: () => onEdit(connection), shortcut: "E" }] : []),
@@ -157,7 +137,6 @@ export default function HostCard({
       canEdit,
       contributions,
       vaults,
-      isSynced,
       pingDisabled: connection.ping_disabled ?? false,
       connectShortcut: "↩",
       duplicateShortcut: "D",
@@ -165,7 +144,6 @@ export default function HostCard({
       onDuplicate: () => onDuplicate(connection),
       onMoveToVault: onMoveToVault ? (vId) => onMoveToVault(connection, vId) : undefined,
       onCopyToVault: onCopyToVault ? (vId) => onCopyToVault(connection, vId) : undefined,
-      onToggleSync: () => useSyncPrefsStore.getState().toggleExcluded(connection.id),
       onTogglePing: () => updateConnection(connection.id, { ...connectionToFormData(connection), ping_disabled: !connection.ping_disabled }),
       onDelete: canEdit ? () => onDelete(connection.id) : undefined,
       extras: [
@@ -221,12 +199,6 @@ export default function HostCard({
   const pingTone = pingStatusTone(pingStatus);
   const pingMotion = pingStatusMotion(pingStatus, isActive);
 
-  const syncIcon = !isSynced && (
-    <span title={t("hosts.card.cloudSyncDisabled")} className="text-(--t-text-dim) flex items-center">
-      <Icon icon="lucide:cloud-off" width={18} />
-    </span>
-  );
-
   return (
     <BaseCard
       data-host-card="true"
@@ -253,21 +225,19 @@ export default function HostCard({
               <StatusDot tone={pingTone} motion={pingMotion} halo="var(--t-bg-card)" corner />
             )}
           </div>
-          <p className="text-sm font-medium-bold truncate w-52 shrink-0 text-(--t-text-bright)">
+          <p className="text-sm font-medium-bold truncate flex-[1.5] min-w-0 text-(--t-text-bright)">
             {connectionDisplayName(connection)}
           </p>
-          <p className="text-xs truncate flex-1 text-(--t-text-secondary)">
+          <p className="text-xs truncate flex-1 min-w-0 text-(--t-text-secondary)">
             {isSerial
               ? `serial · ${connection.serial_baud ?? 115200} baud`
               : `${connection.username}@${connection.host}:${connection.port}${showPingDot && pingStatus === "up" && pingLatency !== undefined ? ` · ${pingLatency}ms` : ""}`
             }
           </p>
           {connection.tags.length > 0 && (
-            <OverflowTagList tags={connection.tags} className="max-w-32 flex-1" />
+            <OverflowTagList tags={connection.tags} className="max-w-32 shrink-0" />
           )}
           <div className="flex items-center gap-1 shrink-0">
-            {presenceAvatar}
-            {syncIcon}
             {canEdit && <CardActionButton icon="lucide:square-pen" title={t("common.action.edit")} onClick={() => onEdit(connection)} />}
             {canEdit && <CardActionButton icon="lucide:trash-2" title={t("common.action.delete")} onClick={() => onDelete(connection.id)} danger />}
             {!isSerial && !isFtp && <CardActionButton icon="lucide:folder-open" title={t("hosts.card.openInSftp")} onClick={() => useUIStore.getState().openSftpWith(connection.id)} />}
@@ -289,12 +259,9 @@ export default function HostCard({
               <ConnectionAvatar connection={connection} size={30} />
               <div ref={contentColRef} className="flex flex-col gap-0.5 flex-1 min-w-0">
                 <div className="flex items-center gap-2 min-w-0">
-                  <p className="text-sm font-bold truncate text-(--t-text-bright)">
+                  <p className="text-sm font-bold truncate flex-1 min-w-0 text-(--t-text-bright)">
                     {connectionDisplayName(connection)}
                   </p>
-                  <span className="shrink-0 px-1.5 py-0.5 rounded-md text-[11px] font-semibold bg-(--t-bg-input) text-(--t-text-dim) border border-(--t-border)">
-                    {protocolLabel}
-                  </span>
                   <button
                     onClick={(e) => { e.stopPropagation(); handlePinClick(); }}
                     className={`shrink-0 flex items-center transition-colors ${pinAlwaysVisible ? "opacity-100" : "opacity-0 group-hover:opacity-100 hover:text-(--t-text-bright)"}`}
@@ -303,28 +270,23 @@ export default function HostCard({
                   >
                     <Icon icon={pinIcon} width={14} />
                   </button>
-                  {(showPingDot || syncIcon || presenceAvatar) && (
-                    <div className="flex items-center gap-1.5 ml-auto shrink-0 mr-1">
-                      {presenceAvatar}
-                      {showPingDot && (
-                        <>
-                          {pingStatus === "up" && pingLatency !== undefined && (
-                            <span className="text-xs font-medium" style={{ color: STATUS_TONE_COLOR[pingTone] }}>
-                              {pingLatency} ms
-                            </span>
-                          )}
-                          <span className="flex items-center justify-center w-6 h-6 -my-1.5 shrink-0">
-                            <StatusDot tone={pingTone} motion={pingMotion} />
-                          </span>
-                        </>
-                      )}
-                      {syncIcon}
-                    </div>
-                  )}
                 </div>
-                <div className="self-start w-full min-h-[26px]" style={{ maxWidth: tagMaxWidth }}>
+                <div className="self-start w-full min-h-[26px] flex items-center gap-1.5 min-w-0" style={{ maxWidth: tagMaxWidth }}>
+                  <span className="shrink-0 px-1.5 py-0.5 rounded-md text-[11px] font-semibold bg-(--t-bg-input) text-(--t-text-dim) border border-(--t-border)">
+                    {protocolLabel}
+                  </span>
+                  {showPingDot && pingStatus === "up" && pingLatency !== undefined && (
+                    <span className="shrink-0 text-[11px] font-medium tabular-nums" style={{ color: STATUS_TONE_COLOR[pingTone] }}>
+                      {pingLatency} ms
+                    </span>
+                  )}
+                  {showPingDot && (
+                    <span className="flex items-center justify-center w-4 h-4 shrink-0">
+                      <StatusDot tone={pingTone} motion={pingMotion} />
+                    </span>
+                  )}
                   {connection.tags.length > 0 && (
-                    <OverflowTagList tags={connection.tags} className="w-full" badgeClassName="py-0 text-[11px]" maxWidth={tagMaxWidth} />
+                    <OverflowTagList tags={connection.tags} className="flex-1 min-w-0" badgeClassName="py-0 text-[11px]" maxWidth={tagMaxWidth} />
                   )}
                 </div>
               </div>

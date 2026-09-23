@@ -4,6 +4,34 @@ use std::path::{Path, PathBuf};
 
 const TERMIUS_DB_SUBPATH: &str = "Termius/IndexedDB/file__0.indexeddb.leveldb";
 
+fn push_unique(out: &mut Vec<PathBuf>, path: PathBuf) {
+    if !out.contains(&path) {
+        out.push(path);
+    }
+}
+
+/// Discover the exact IndexedDB shape under app-support directories whose
+/// names identify Termius. This covers installer variants without probing
+/// arbitrary application data or inventing a path for a particular build.
+fn discover_termius_db_dirs(app_support: &Path) -> Vec<PathBuf> {
+    let mut out = Vec::new();
+    let Ok(entries) = std::fs::read_dir(app_support) else {
+        return out;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let name = entry.file_name().to_string_lossy().to_ascii_lowercase();
+        if !path.is_dir() || !name.contains("termius") {
+            continue;
+        }
+        let db = path.join("IndexedDB/file__0.indexeddb.leveldb");
+        if db.is_dir() {
+            push_unique(&mut out, db);
+        }
+    }
+    out
+}
+
 /// Returns all plausible Termius database locations for this platform. Termius
 /// ships through several channels — classic installer, Microsoft Store (which
 /// sandboxes the app under Packages/), and standalone — each with a different
@@ -39,10 +67,11 @@ fn termius_db_candidates() -> Vec<PathBuf> {
     #[cfg(target_os = "macos")]
     {
         if let Some(home) = dirs::home_dir() {
-            out.push(
-                home.join("Library/Application Support")
-                    .join(TERMIUS_DB_SUBPATH),
-            );
+            let app_support = home.join("Library/Application Support");
+            push_unique(&mut out, app_support.join(TERMIUS_DB_SUBPATH));
+            for path in discover_termius_db_dirs(&app_support) {
+                push_unique(&mut out, path);
+            }
         }
     }
     #[cfg(all(unix, not(target_os = "macos")))]
@@ -96,4 +125,29 @@ pub(super) fn copy_db_to_temp(src: &Path) -> Result<PathBuf, String> {
         return Err("No files copied from Termius db dir".to_string());
     }
     Ok(temp)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::discover_termius_db_dirs;
+    use std::path::PathBuf;
+
+    #[test]
+    fn discovers_termius_indexeddb_variants_without_scanning_unrelated_apps() {
+        let root =
+            std::env::temp_dir().join(format!("voltius-termius-path-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("Termius Desktop/IndexedDB/file__0.indexeddb.leveldb"))
+            .unwrap();
+        std::fs::create_dir_all(root.join("OtherApp/IndexedDB/file__0.indexeddb.leveldb")).unwrap();
+
+        let found = discover_termius_db_dirs(&root);
+        assert_eq!(
+            found,
+            vec![PathBuf::from(
+                root.join("Termius Desktop/IndexedDB/file__0.indexeddb.leveldb")
+            )]
+        );
+        let _ = std::fs::remove_dir_all(root);
+    }
 }

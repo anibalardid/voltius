@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { useUIStore } from "@/stores/uiStore";
 import { usePluginStore } from "@/stores/pluginStore";
 import { useSessionStore } from "@/stores/sessionStore";
-import { useTeamSessionStore } from "@/stores/teamSessionStore";
 import { matchShortcut } from "@/stores/shortcutStore";
 import { matchPanelShortcut } from "@/hooks/panelShortcuts";
 import { useHistoryStore } from "@/stores/historyStore";
@@ -156,15 +155,6 @@ export function useKeyboard() {
           useSessionStore.getState();
         if (activeSessionId) {
           const session = sessions.find((s) => s.id === activeSessionId);
-          // Clean up any active multiplayer connection first
-          const mpConn = useTeamSessionStore.getState().connections[activeSessionId];
-          if (mpConn) {
-            if (mpConn.role === "host") {
-              useTeamSessionStore.getState().stopSharing(activeSessionId).catch(() => {});
-            } else {
-              useTeamSessionStore.getState().leaveSession(activeSessionId);
-            }
-          }
           if (session?.status === "connected" || session?.status === "connecting") {
             disconnect(activeSessionId);
           } else {

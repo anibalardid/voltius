@@ -1,5 +1,5 @@
 use super::keys::fetch_master_key;
-use super::leveldb::{build_db_name_map, decode_idb_key, read_all_entries};
+use super::leveldb::{build_db_name_map, decode_idb_key, is_primary_data_entry, read_all_entries};
 use super::paths::{copy_db_to_temp, termius_db_dir};
 use super::v8;
 use base64::{engine::general_purpose::STANDARD, Engine};
@@ -7,6 +7,7 @@ use crypto_secretbox::{aead::Aead, KeyInit, XSalsa20Poly1305};
 use serde::Serialize;
 use serde_json::{Map, Value};
 use std::collections::BTreeMap;
+use std::path::Path;
 
 const VERSION_TAG: u8 = 0x04;
 const NONCE_LEN: usize = 24;
@@ -209,10 +210,17 @@ pub fn termius_extract() -> Result<TermiusSnapshot, String> {
 
 fn termius_extract_inner() -> Result<TermiusSnapshot, String> {
     let dir = termius_db_dir()?;
+    extract_snapshot(&dir)
+}
+
+/// Builds a snapshot from an explicit database directory. Split out from
+/// `termius_extract_inner` so a test can point at a copied database via
+/// `VOLTIUS_TERMIUS_DB` without going through path discovery.
+fn extract_snapshot(dir: &Path) -> Result<TermiusSnapshot, String> {
     let key = fetch_master_key()?;
     let cipher = XSalsa20Poly1305::new(&key.into());
 
-    let temp = copy_db_to_temp(&dir)?;
+    let temp = copy_db_to_temp(dir)?;
     let entries = read_all_entries(&temp);
     let _ = std::fs::remove_dir_all(&temp);
     let entries = entries?;
@@ -226,10 +234,8 @@ fn termius_extract_inner() -> Result<TermiusSnapshot, String> {
             continue;
         };
         // Object-store DATA entries only. Index id 1 is the primary store;
-        // anything else (2 = exists, 0x1f/0x20/0x21/0x22/0x23 = indexes) is
-        // either internal or a denormalised index, which we don't need
-        // because we read the full value.
-        if idb.index_id != 0x01 || idb.object_store_id != 0x01 {
+        // the object-store id can change between IndexedDB schema revisions.
+        if !is_primary_data_entry(&idb) {
             continue;
         }
 
@@ -421,5 +427,55 @@ mod tests {
         );
         // `group: null` is plaintext (not a FK), so it lands in the body.
         assert!(rec.body.get("group").map(|v| v.is_null()).unwrap_or(false));
+    }
+
+    /// End-to-end check against a real Termius database. Opt in with
+    /// `VOLTIUS_TERMIUS_DB=/path/to/file__0.indexeddb.leveldb`; the directory is
+    /// copied to a temp dir before reading and the original is never modified.
+    /// Needs the Termius master key in the OS keychain, so it is not run by
+    /// default (CI machines have neither).
+    #[test]
+    fn real_termius_db_extracts_when_env_set() {
+        let Ok(dir) = std::env::var("VOLTIUS_TERMIUS_DB") else {
+            eprintln!("VOLTIUS_TERMIUS_DB is not set; skipping real-database test");
+            return;
+        };
+
+        // The native credential store is registered during app startup, which a
+        // test process never runs.
+        let _ = crate::init_keychain_store();
+
+        let snapshot = extract_snapshot(Path::new(&dir)).expect("extract real Termius database");
+        assert!(!snapshot.records.is_empty(), "no records extracted");
+
+        let db_names: std::collections::BTreeSet<&str> = snapshot
+            .records
+            .iter()
+            .map(|r| r.db_name.as_str())
+            .collect();
+        for expected in ["hosts", "keys", "ssh_configs", "known_hosts"] {
+            assert!(
+                db_names.contains(expected),
+                "missing db `{expected}` in {db_names:?}"
+            );
+        }
+        // Log field *names* only — never decrypted values.
+        if let Some(host) = snapshot.records.iter().find(|r| r.db_name == "hosts") {
+            let fields: Vec<&str> = host
+                .decrypted
+                .as_object()
+                .map(|body| body.keys().map(String::as_str).collect())
+                .unwrap_or_default();
+            eprintln!(
+                "sample host id={} fields={fields:?} foreign_keys={:?}",
+                host.termius_id,
+                host.foreign_keys.keys().collect::<Vec<_>>(),
+            );
+        }
+        eprintln!(
+            "extracted {} records across {} stores: {db_names:?}",
+            snapshot.records.len(),
+            db_names.len(),
+        );
     }
 }

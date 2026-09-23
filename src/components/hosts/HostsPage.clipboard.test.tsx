@@ -214,8 +214,6 @@ vi.mock("@/stores/syncPrefsStore", () => ({
   }),
 }));
 vi.mock("@/services/vault", () => ({ storeSecret: h.storeSecret, getSecret: h.getSecret }));
-vi.mock("@/services/teamVaultSecrets", () => ({ saveTeamVaultSecretForVault: h.saveTeamVaultSecretForVault }));
-vi.mock("@/services/teamVaultPermissions", () => ({ buildTeamVaultTransferPlan: () => ({ allowed: true }) }));
 vi.mock("@/services/hostForm", () => ({ saveHostFromForm: vi.fn() }));
 
 import HostsPage from "./HostsPage";
@@ -316,20 +314,6 @@ test("a folder is never reparented under itself", async () => {
   expect(h.moveFolder).not.toHaveBeenCalled();
 });
 
-test("a copy into a team-vault folder creates the duplicate in that vault", async () => {
-  h.folders = [folder("tf", { vault_id: "team-1" })];
-  h.connections = [conn("c1", { vault_id: "personal" })];
-  h.selected = ["c1"];
-  h.activeFolderId = "tf";
-  render(<HostsPage />);
-
-  await dispatch("voltius:clipboard-copy");
-  await dispatch("voltius:clipboard-paste");
-
-  expect(h.saveConnection).toHaveBeenCalledWith(
-    expect.objectContaining({ vault_id: "team-1", folder_id: "tf" }),
-  );
-});
 
 // A copy-paste is now the primary duplication path, so a field dropped here reaches
 // the user as a host that silently cannot connect.
@@ -373,53 +357,8 @@ test("a copy-paste carries the connection fields a duplicate needs to still conn
   }));
 });
 
-test("a cut into a team-vault folder migrates the connection instead of only reparenting it", async () => {
-  h.folders = [folder("tf", { vault_id: "team-1" })];
-  h.connections = [conn("c1", { vault_id: "personal" })];
-  h.selected = ["c1"];
-  h.activeFolderId = "tf";
-  render(<HostsPage />);
 
-  await dispatch("voltius:clipboard-cut");
-  await dispatch("voltius:clipboard-paste");
 
-  expect(h.moveObjectsToFolder).not.toHaveBeenCalled();
-  expect(h.updateConnection).toHaveBeenCalledWith(
-    "c1",
-    expect.objectContaining({ vault_id: "team-1", folder_id: "tf" }),
-  );
-});
-
-test("a cut into a team vault republishes the connection's secret to that vault", async () => {
-  h.folders = [folder("tf", { vault_id: "team-1" })];
-  h.connections = [conn("c1", { vault_id: "personal" })];
-  h.selected = ["c1"];
-  h.activeFolderId = "tf";
-  h.getSecret.mockImplementation(async (k: string) => (k === "password:c1" ? "s3cret" : null));
-  render(<HostsPage />);
-
-  await dispatch("voltius:clipboard-cut");
-  await dispatch("voltius:clipboard-paste");
-
-  expect(h.saveTeamVaultSecretForVault).toHaveBeenCalledWith("team-1", "password:c1", "s3cret");
-});
-
-test("a copy into a team vault republishes the duplicate's secret under its new id", async () => {
-  h.folders = [folder("tf", { vault_id: "team-1" })];
-  h.connections = [conn("c1", { vault_id: "personal" })];
-  h.selected = ["c1"];
-  h.activeFolderId = "tf";
-  h.getSecret.mockImplementation(async (k: string) =>
-    k === "password:c1" || k === "password:new-conn" ? "s3cret" : null,
-  );
-  render(<HostsPage />);
-
-  await dispatch("voltius:clipboard-copy");
-  await dispatch("voltius:clipboard-paste");
-
-  expect(h.storeSecret).toHaveBeenCalledWith("password:new-conn", "s3cret");
-  expect(h.saveTeamVaultSecretForVault).toHaveBeenCalledWith("team-1", "password:new-conn", "s3cret");
-});
 
 test("a paste at the root leaves each object in the vault it already had", async () => {
   h.folders = [folder("tf", { vault_id: "team-1" })];

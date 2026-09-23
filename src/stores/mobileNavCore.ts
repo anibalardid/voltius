@@ -2,11 +2,10 @@
 
 export type MobileTab = "hosts" | "terminal" | "snippets" | "sftp" | "more";
 
-export type MorePage = "keychain" | "port-forwarding" | "known-hosts" | "members" | "logs";
+export type MorePage = "keychain" | "port-forwarding" | "known-hosts" | "logs";
 
 export type MobileScreen =
   | { kind: "host-edit"; hostId?: string }
-  | { kind: "account" }
   | { kind: "snippet-edit"; snippetId?: string }
   | { kind: "more-page"; page: MorePage }
   | { kind: "panel-sftp"; connectionId: string }

@@ -1,6 +1,6 @@
 import { test, expect } from "vitest";
 import { getAuditTimeRange, applyAuditLogSearch } from "./auditLogToolbarUtils.ts";
-import type { AuditLog } from "@/services/auditService";
+import type { AuditLog } from "@/services/auditContext";
 
 const NOW = new Date("2026-07-21T12:00:00Z");
 

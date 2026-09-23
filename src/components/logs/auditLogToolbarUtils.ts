@@ -1,4 +1,4 @@
-import type { AuditLog } from "@/services/auditService";
+import type { AuditLog } from "@/services/auditContext";
 
 export type AuditTimeRange = "last-day" | "last-week" | "last-month" | "all" | "custom";
 

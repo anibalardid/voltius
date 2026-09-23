@@ -8,10 +8,13 @@ const h = vi.hoisted(() => ({
   keysSet: vi.fn(),
   markIdentityUnproven: vi.fn(),
   appFetch: vi.fn(),
+  /** The local file store account.ts now reads and writes. */
   store: {} as Record<string, string | null>,
+  /** The legacy OS-keychain entries the one-time migration reads. */
+  keychain: {} as Record<string, string | null>,
+  storeThrows: false,
   keychainThrows: false,
   deriveThrows: false,
-  unwrapThrows: false,
 }));
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: h.invoke }));
@@ -49,26 +52,28 @@ const wrongKey = () => new VaultUnreadableError();
 
 const HEX64 = "a".repeat(64); // valid 32-byte hex key
 const DERIVE_KEK = [9, 9, 9];
-const UNWRAP = { dek: [1, 1, 1], x25519_private: [2, 2, 2] };
 
 function routeInvoke() {
   h.invoke.mockImplementation(async (cmd: string, args: Record<string, unknown> = {}) => {
     switch (cmd) {
-      case "keychain_get":
-        if (h.keychainThrows) throw new Error("keychain unavailable");
+      case "local_kv_get":
+        if (h.storeThrows) throw new Error("local store unavailable");
         return h.store[args.key as string] ?? null;
-      case "keychain_set":
+      case "local_kv_set":
         h.store[args.key as string] = args.value as string;
         return undefined;
-      case "keychain_delete":
+      case "local_kv_delete":
         delete h.store[args.key as string];
+        return undefined;
+      case "keychain_get":
+        if (h.keychainThrows) throw new Error("keychain unavailable");
+        return h.keychain[args.key as string] ?? null;
+      case "keychain_delete":
+        delete h.keychain[args.key as string];
         return undefined;
       case "derive_keys":
         if (h.deriveThrows) throw new Error("derive failed");
         return { auth_key: "AUTH", enc_key: DERIVE_KEK };
-      case "unwrap_user_secrets_cmd":
-        if (h.unwrapThrows) throw new Error("corrupt secrets");
-        return UNWRAP;
       default:
         return undefined;
     }
@@ -87,16 +92,19 @@ beforeEach(() => {
   h.appFetch.mockReset();
   h.appFetch.mockRejectedValue(new Error("no server in this test"));
   h.store = {};
+  h.keychain = {};
+  h.storeThrows = false;
   h.keychainThrows = false;
   h.deriveThrows = false;
-  h.unwrapThrows = false;
   routeInvoke();
 });
 
+const invoked = (cmd: string) => h.invoke.mock.calls.some(([c]) => c === cmd);
+
 // ─── fail-closed guards ──────────────────────────────────────────────────────
 
-test("autoLogin degrades to false (never throws) when the keychain is unavailable", async () => {
-  h.keychainThrows = true;
+test("autoLogin degrades to false (never throws) when the local store is unavailable", async () => {
+  h.storeThrows = true;
   await expect(autoLogin()).resolves.toBe("declined");
   expect(h.setVaultKey).not.toHaveBeenCalled();
 });
@@ -124,7 +132,21 @@ test("autoLogin returns false when derive_keys fails", async () => {
   expect(h.setVaultKey).not.toHaveBeenCalled();
 });
 
-// ─── no-password (OS keychain) path ──────────────────────────────────────────
+// ─── no OS keychain ──────────────────────────────────────────────────────────
+
+test("autoLogin reads the local store only, never the OS keychain", async () => {
+  h.store.master_password = "pw";
+  h.store.account_id = "acc";
+  h.store.mode = "local";
+  h.getVaultStatus.mockResolvedValue({ exists: true, path: "p" });
+
+  expect(await autoLogin()).toBe("ok");
+
+  expect(invoked("keychain_get")).toBe(false);
+  expect(invoked("keychain_delete")).toBe(false);
+});
+
+// ─── no-password (local store) path ──────────────────────────────────────────
 
 test("autoLogin (no-password) uses the stored hex key and heals missing account_id", async () => {
   h.store.master_password = HEX64;
@@ -134,7 +156,7 @@ test("autoLogin (no-password) uses the stored hex key and heals missing account_
   // hex decoded to 32 bytes and set as the vault key (no derive_keys call)
   expect(h.setVaultKey).toHaveBeenCalledTimes(1);
   expect(h.setVaultKey.mock.calls[0][0]).toHaveLength(32);
-  expect(h.invoke.mock.calls.some(([c]) => c === "derive_keys")).toBe(false);
+  expect(invoked("derive_keys")).toBe(false);
   // account_id healed
   expect(h.store.account_id).toBeTruthy();
 });
@@ -146,20 +168,7 @@ test("autoLogin (no-password) returns false when the stored key is not valid hex
   expect(h.setVaultKey).not.toHaveBeenCalled();
 });
 
-// ─── wrapped-secrets adoption (kek/dek convergence) ──────────────────────────
-
-test("autoLogin adopts dek when the vault exists and dek verifies", async () => {
-  h.store.master_password = "pw";
-  h.store.mode = "server";
-  h.store.account_id = "acc";
-  h.store.wrapped_user_secrets = "WRAPPED";
-  h.getVaultStatus.mockResolvedValue({ exists: true, path: "p" });
-  h.verifyVaultKey.mockResolvedValue(undefined); // dek opens the vault
-
-  expect(await autoLogin()).toBe("ok");
-  expect(h.setVaultKey).toHaveBeenCalledWith(UNWRAP.dek);
-  expect(h.keysSet).toHaveBeenCalled();
-});
+// ─── password (kek) path ─────────────────────────────────────────────────────
 
 test("autoLogin falls back to kek when the existing vault rejects dek", async () => {
   h.store.master_password = "pw";
@@ -214,7 +223,7 @@ test("autoLogin (no-password) does not call a file it could not read unreadable"
   expect(h.setVaultKey).not.toHaveBeenCalled();
 });
 
-test("autoLogin (no-password) admits the session when the keychain key opens the vault", async () => {
+test("autoLogin (no-password) admits the session when the stored key opens the vault", async () => {
   h.store.master_password = HEX64;
   h.store.mode = "local-nopassword";
   h.store.account_id = "acc";
@@ -224,101 +233,10 @@ test("autoLogin (no-password) admits the session when the keychain key opens the
   expect(h.setVaultKey).toHaveBeenCalledTimes(1);
 });
 
-test("autoLogin adopts dek without verifying when no vault exists yet", async () => {
-  h.store.master_password = "pw";
-  h.store.mode = "server";
-  h.store.account_id = "acc";
-  h.store.wrapped_user_secrets = "WRAPPED";
-  h.getVaultStatus.mockResolvedValue({ exists: false, path: "" });
-
-  expect(await autoLogin()).toBe("ok");
-  expect(h.setVaultKey).toHaveBeenCalledWith(UNWRAP.dek);
-  expect(h.verifyVaultKey).not.toHaveBeenCalled();
-});
-
-test("autoLogin stays on kek when the cached secrets are corrupt", async () => {
-  h.store.master_password = "pw";
-  h.store.mode = "server";
-  h.store.account_id = "acc";
-  h.store.wrapped_user_secrets = "WRAPPED";
-  h.unwrapThrows = true;
-
-  expect(await autoLogin()).toBe("ok");
-  expect(h.setVaultKey).toHaveBeenCalledWith(DERIVE_KEK); // kek
-});
-
-// ─── recovering the wrapped secrets after an account switch (#228) ───────────
-
-/** A cloud session whose keychain has the tokens but not the wrapped secrets. */
-function switchedBackCloudAccount() {
-  h.store.master_password = "pw";
-  h.store.mode = "server";
-  h.store.account_id = "acc";
-  h.store.jwt = "JWT";
-  h.store.server_url = "https://srv";
-  // wrapped_user_secrets deliberately absent — the switcher deleted it.
-}
-
-test("autoLogin re-fetches the wrapped secrets from the server when they are not cached", async () => {
-  switchedBackCloudAccount();
-  h.appFetch.mockResolvedValue({
-    ok: true,
-    json: async () => ({ wrapped_user_secrets: "WRAPPED" }),
-  });
-
-  expect(await autoLogin()).toBe("ok");
-  expect(h.setVaultKey).toHaveBeenCalledWith(UNWRAP.dek); // not the kek
-  expect(h.keysSet).toHaveBeenCalled();
-  expect(h.store.wrapped_user_secrets).toBe("WRAPPED");
-  expect(h.markIdentityUnproven).not.toHaveBeenCalled();
-});
-
-test("autoLogin marks the identity unproven when the secrets cannot be recovered", async () => {
-  switchedBackCloudAccount();
-  h.appFetch.mockRejectedValue(new Error("offline"));
-
-  expect(await autoLogin()).toBe("ok"); // the session still opens
-  expect(h.setVaultKey).toHaveBeenCalledWith(DERIVE_KEK); // …on the kek
-  expect(h.markIdentityUnproven).toHaveBeenCalled();
-});
-
-test("autoLogin trusts the kek when the server confirms the account is pre-split", async () => {
-  switchedBackCloudAccount();
-  h.appFetch.mockResolvedValue({ ok: true, json: async () => ({}) });
-
-  expect(await autoLogin()).toBe("ok");
-  expect(h.setVaultKey).toHaveBeenCalledWith(DERIVE_KEK);
-  expect(h.markIdentityUnproven).not.toHaveBeenCalled();
-});
-
-test("autoLogin does not ask the server for a local account's secrets", async () => {
-  h.store.master_password = "pw";
-  h.store.mode = "local";
-  h.store.account_id = "acc";
-  h.store.jwt = "JWT";
-  h.store.server_url = "https://srv";
-
-  expect(await autoLogin()).toBe("ok");
-  expect(h.appFetch).not.toHaveBeenCalled();
-  expect(h.markIdentityUnproven).not.toHaveBeenCalled();
-});
-
-test("autoLogin skips the round trip when the cached secrets already open", async () => {
-  h.store.master_password = "pw";
-  h.store.mode = "server";
-  h.store.account_id = "acc";
-  h.store.wrapped_user_secrets = "WRAPPED";
-  h.store.jwt = "JWT";
-  h.store.server_url = "https://srv";
-
-  expect(await autoLogin()).toBe("ok");
-  expect(h.appFetch).not.toHaveBeenCalled();
-});
-
 // ─── mode healing ────────────────────────────────────────────────────────────
 
 test("autoLogin heals a missing mode to local for a password account", async () => {
-  h.store.master_password = "pw"; // non-hex → not treated as OS-keychain key
+  h.store.master_password = "pw"; // non-hex → not treated as a stored hex key
   h.store.account_id = "acc";
   // no mode, no wrapped secrets
   expect(await autoLogin()).toBe("ok");

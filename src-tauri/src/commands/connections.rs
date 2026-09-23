@@ -1,10 +1,9 @@
 use crate::commands::crdt::max_clock;
 use crate::commands::vault_object::{
-    adopt_into, created_at_of, effective_vault, find_mut, impl_vault_object, requested_vault,
-    vault_delete_command, vault_list_command,
+    adopt_into, created_at_of, find_mut, impl_vault_object, requested_vault, vault_delete_command,
+    vault_list_command,
 };
 use crate::storage::config::{load_connections, save_connections, Connection, ConnectionFormData};
-use crate::vault_auth::check_vault_write;
 use chrono::Utc;
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -199,7 +198,6 @@ fn build_connection(
 pub fn connection_save(data: ConnectionFormData) -> Result<Connection, String> {
     let mut connections = load_connections()?;
     let now = Utc::now().to_rfc3339();
-    check_vault_write(&requested_vault(&data.vault_id))?;
     let conn = build_connection(Uuid::new_v4().to_string(), data, &now, None, None);
     connections.push(conn.clone());
     save_connections(&connections)?;
@@ -219,7 +217,6 @@ pub fn connection_save(data: ConnectionFormData) -> Result<Connection, String> {
 pub fn connection_adopt(id: String, data: ConnectionFormData) -> Result<Connection, String> {
     let mut connections = load_connections()?;
     let now = Utc::now().to_rfc3339();
-    check_vault_write(&requested_vault(&data.vault_id))?;
 
     let created_at = created_at_of(&connections, &id);
     let last_used_at = connections
@@ -236,7 +233,6 @@ pub fn connection_adopt(id: String, data: ConnectionFormData) -> Result<Connecti
 pub fn connection_update(id: String, data: ConnectionFormData) -> Result<Connection, String> {
     let mut connections = load_connections()?;
     let existing = find_mut(&mut connections, &id)?.clone();
-    check_vault_write(&[effective_vault(&data.vault_id, &existing.vault_id)])?;
 
     let now = Utc::now().to_rfc3339();
     let mut updated = merge_form_into_connection(&existing, data);

@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { onTeamSseEvent } from "@/services/sync";
 import { Icon } from "@iconify/react";
 import { useAuditStore } from "@/stores/auditStore";
-import { usePermissions } from "@/hooks/usePermission";
 import { useSelectedAuditContext } from "@/hooks/useAuditContext";
 import { AuditGate } from "./AuditGate";
 import { AuditFilters } from "./AuditFilters";
@@ -62,13 +60,8 @@ function Pagination({
 export default function AuditLogsPage() {
   const { t } = useTranslation();
   const auditContext = useSelectedAuditContext();
-  const can = usePermissions();
-  const canFetchAudit = auditContext?.kind === "local" || !!(auditContext && can("VIEW_AUDIT_LOG", auditContext.teamId));
-  const auditKey = auditContext
-    ? auditContext.kind === "team"
-      ? `team:${auditContext.teamId}:${auditContext.vaultId ?? ""}`
-      : `local:${auditContext.vaultId}`
-    : null;
+  const canFetchAudit = !!auditContext;
+  const auditKey = auditContext ? `local:${auditContext.vaultId}` : null;
 
   const logs = useAuditStore((s) => s.logs);
   const total = useAuditStore((s) => s.total);
@@ -91,12 +84,8 @@ export default function AuditLogsPage() {
 
   useEffect(() => {
     document.addEventListener("visibilitychange", refresh);
-    const unsub = auditContext?.kind === "team"
-      ? onTeamSseEvent((teamId) => { if (teamId === auditContext.teamId) refresh(); })
-      : undefined;
     return () => {
       document.removeEventListener("visibilitychange", refresh);
-      unsub?.();
     };
   }, [auditKey, refresh]);
 

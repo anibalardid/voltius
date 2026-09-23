@@ -1,7 +1,6 @@
 import i18n from "@/i18n";
 import { useUIStore } from "@/stores/uiStore";
 import type { LayoutMode, SortMode } from "@/stores/uiStore";
-import { pushSettingsChange, settingsStamp } from "@/stores/remoteApplyGuard";
 import { lastWriteWins, type UserDataHandler } from "../handler";
 
 // `terminalFontSize` is deliberately absent: it is device-scoped. A readable
@@ -55,8 +54,7 @@ export const uiPreferencesHandler: UserDataHandler = {
   },
 
   touch(): void {
-    useUIStore.setState({ prefsUpdatedAt: settingsStamp() });
-    pushSettingsChange();
+    useUIStore.setState({ prefsUpdatedAt: new Date().toISOString() });
   },
 
   describe(): string {

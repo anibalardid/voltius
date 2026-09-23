@@ -5,7 +5,6 @@ use crate::commands::vault_object::{
     retarget_vault, vault_object_commands,
 };
 use crate::storage::config::{load_identities, save_identities, Identity, IdentityFormData};
-use crate::vault_auth::check_vault_write;
 use chrono::Utc;
 
 impl_vault_object!(Identity, "Identity");
@@ -62,7 +61,6 @@ pub fn identity_update(id: String, data: IdentityFormData) -> Result<Identity, S
     let identity = find_mut(&mut identities, &id)?;
     let now = Utc::now().to_rfc3339();
     let effective = retarget_vault(identity, &data.vault_id, &now);
-    check_vault_write(std::slice::from_ref(&effective))?;
 
     merge_fields!(identity, data, &now, name, username, key_id, tags, folder_id);
     identity.vault_id = effective;

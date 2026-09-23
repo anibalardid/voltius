@@ -1,7 +1,5 @@
 import { Icon } from "@iconify/react";
 import { useTranslation } from "react-i18next";
-import MultiplayerTerminalView from "@/components/terminal/MultiplayerTerminalView";
-import { MultiplayerBar } from "@/components/terminal/MultiplayerBar";
 import { HostAwareTerminalView, SessionConnectionOverlay } from "@/components/terminal/SessionView";
 import { useSessionStore } from "@/stores/sessionStore";
 import { sessionClosed } from "@/stores/reconnectBackoff";
@@ -12,15 +10,6 @@ export function PaneTerminal({ session, active }: { session: TerminalSession; ac
   const removeSession = useSessionStore((s) => s.removeSession);
   const reconnectWithPassphrase = useSessionStore((s) => s.reconnectWithPassphrase);
   const retryConnect = useSessionStore((s) => s.retryConnect);
-
-  if (session.type === "multiplayer") {
-    return (
-      <div className="absolute inset-0 flex flex-col">
-        <MultiplayerTerminalView localSessionId={session.id} active={active} />
-        <MultiplayerBar localSessionId={session.id} />
-      </div>
-    );
-  }
 
   return (
     <div className="absolute inset-0 flex flex-col">

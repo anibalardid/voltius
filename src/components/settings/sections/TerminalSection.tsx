@@ -45,7 +45,6 @@ export default function TerminalSection() {
         <SettingRow
           variant="card"
           className="mt-4"
-          syncKey="appSettings.terminal.cursorStyle"
           title={t("settings.terminal.cursorStyle.title")}
           desc={t("settings.terminal.cursorStyle.desc")}
           dirty={cursorStyle !== DEFAULT_CURSOR_STYLE}
@@ -61,7 +60,6 @@ export default function TerminalSection() {
         <SettingRow
           variant="card"
           className="mt-4"
-          syncKey="appSettings.toggles.cursor-blink"
           title={t("settings.terminal.cursorBlink.title")}
           desc={t("settings.terminal.cursorBlink.desc")}
           dirty={cursorBlink !== TOGGLE_DEFS["cursor-blink"].default}
@@ -72,7 +70,6 @@ export default function TerminalSection() {
         <SettingRow
           variant="card"
           className="mt-4"
-          syncKey="appSettings.toggles.scroll-minimap"
           title={t("settings.terminal.minimap.title")}
           desc={t("settings.terminal.minimap.desc")}
           dirty={scrollMinimapEnabled !== TOGGLE_DEFS["scroll-minimap"].default}
@@ -83,7 +80,6 @@ export default function TerminalSection() {
         <SettingRow
           variant="card"
           className="mt-4"
-          syncKey="appSettings.toggles.select-to-copy"
           title={t("settings.terminal.selectToCopy.title")}
           desc={t("settings.terminal.selectToCopy.desc")}
           dirty={selectToCopy !== TOGGLE_DEFS["select-to-copy"].default}
@@ -94,7 +90,6 @@ export default function TerminalSection() {
         <SettingRow
           variant="card"
           className="mt-4"
-          syncKey="appSettings.toggles.drag-selects-text"
           title={t("settings.terminal.dragSelectsText.title")}
           desc={t("settings.terminal.dragSelectsText.desc")}
           dirty={dragSelectsText !== TOGGLE_DEFS["drag-selects-text"].default}
@@ -105,7 +100,6 @@ export default function TerminalSection() {
         <SettingRow
           variant="card"
           className="mt-4"
-          syncKey="appSettings.toggles.ignore-bracketed-paste"
           title={t("settings.terminal.ignoreBracketedPaste.title")}
           desc={t("settings.terminal.ignoreBracketedPaste.desc")}
           dirty={ignoreBracketedPaste !== TOGGLE_DEFS["ignore-bracketed-paste"].default}

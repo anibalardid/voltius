@@ -15,7 +15,6 @@ import { useThemeAutomation } from "@/hooks/useThemeAutomation";
 import { useApplyUiScale } from "@/hooks/useApplyUiScale";
 import { useCoreOmniCommands } from "@/hooks/useCoreOmniCommands";
 import { useImportExportContributions } from "@/hooks/useImportExportContributions";
-import { useConnectionPresenceBroadcast } from "@/hooks/useConnectionPresenceBroadcast";
 import { useMcpServerSync } from "@/hooks/useMcpServerSync";
 import { useChangelogAutoOpen } from "@/hooks/useChangelogAutoOpen";
 import { useSnippetStore } from "@/stores/snippetStore";
@@ -23,17 +22,11 @@ import { injectPendingSnippet } from "@/services/snippetPendingInject";
 import { initUpdaterListener } from "@/services/updater";
 import { useUpdaterPrefStore } from "@/stores/updaterPrefStore";
 import { restoreWorkspaceOnLaunch } from "@/stores/workspaceRestore";
-import { startLiveSessionPublisher } from "@/services/liveSessionPublisher";
-import { startCrossDeviceSessions } from "@/services/crossDeviceSessions";
 import { startNetworkWatch } from "@/stores/reconnectBackoff";
-import { startTeamInbox } from "@/services/teamInbox";
 import { startDeepLinks } from "@/services/deepLink";
 import { NotificationToastContainer } from "@/components/notifications/NotificationToastContainer";
 import ThemeCreator from "@/components/theme-creator/ThemeCreator";
-import { TrialExpiredModal } from "@/components/shared/TrialExpiredModal";
-import CloudAuthModal from "@/components/layout/CloudAuthModal";
 import WhatsNewModal from "@/components/changelog/WhatsNewModal";
-import { EmailVerificationRequiredModal } from "@/components/notifications/EmailVerificationRequiredModal";
 import { DeepLinkConfirmModal } from "@/components/terminal/DeepLinkConfirmModal";
 import { useDeepLinkStore } from "@/stores/deepLinkStore";
 import { GlobalTransferQueue } from "@/components/filetransfer/GlobalTransferQueue";
@@ -48,20 +41,15 @@ function App() {
   useApplyUiScale();
   useCoreOmniCommands();
   useImportExportContributions();
-  useConnectionPresenceBroadcast();
   useMcpServerSync();
   useChangelogAutoOpen();
   useEffect(() => { initUpdaterListener(); useUpdaterPrefStore.getState().load(); }, []);
-  useEffect(() => startTeamInbox(), []);
   useEffect(() => startDeepLinks(), []);
   useEffect(() => startNetworkWatch(), []);
   useEffect(() => {
     if (ready) {
       useDeepLinkStore.getState().setReady(true);
-      void restoreWorkspaceOnLaunch().then(() => {
-        startLiveSessionPublisher();
-        startCrossDeviceSessions();
-      });
+      void restoreWorkspaceOnLaunch();
     }
   }, [ready]);
   const platform = usePlatform();
@@ -83,10 +71,7 @@ function App() {
 
       <NotificationToastContainer />
       <ThemeCreator />
-      <TrialExpiredModal />
-      <CloudAuthModal />
       <WhatsNewModal />
-      <EmailVerificationRequiredModal />
       <DeepLinkConfirmModal />
       <GlobalTransferQueue />
 

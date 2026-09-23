@@ -1,7 +1,7 @@
 import { useTeamStore } from "@/stores/teamStore";
 import type { VaultTransition } from "@/services/teamVaultMigration";
 import { saveTeamVaultObject } from "@/services/teamObjectPersistence";
-import type { TeamObjectType } from "@/services/teamObjects";
+import type { TeamObjectType } from "@/services/teamObjectPersistence";
 
 /** Team-vault objects live in a `Record<teamId, items[]>` beside the local list. */
 export type TeamMap<T> = Record<string, T[]>;

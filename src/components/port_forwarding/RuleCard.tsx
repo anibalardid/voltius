@@ -9,7 +9,6 @@ import { StatusDot } from "@/components/shared/StatusDot";
 import { tunnelStatusTone } from "@/utils/statusTone";
 import { type ContextMenuItem } from "@/components/shared/ContextMenu";
 import { useUIContributions } from "@/hooks/useUIContributions";
-import { useSyncPrefsStore } from "@/stores/syncPrefsStore";
 import { vaultMenuItems } from "@/utils/vaultMenuItems";
 import { getShortcutHint } from "@/stores/shortcutStore";
 import { clipboardMenuItems } from "@/utils/clipboardMenuItems";
@@ -54,7 +53,6 @@ export function RuleCard({
   const { t } = useTranslation();
   const isList = layout === "list";
   const contributions = useUIContributions("portForwardingRule.contextMenu", rule);
-  const isSynced = useSyncPrefsStore((s) => s.isObjectSynced(rule.id, "port-forwarding-rule"));
 
   const contextMenuItems: ContextMenuItem[] = [
     ...(canEdit ? [{ label: t("common.action.edit"), icon: "lucide:pencil", onClick: () => onEdit(rule), shortcut: "E" }] : []),
@@ -71,12 +69,6 @@ export function RuleCard({
       (vId) => onCopyToVault?.(rule, vId),
       t,
     ),
-    {
-      label: isSynced ? t("portForwarding.ruleCard.disableCloudSync") : t("portForwarding.ruleCard.enableCloudSync"),
-      icon: isSynced ? "lucide:cloud-off" : "lucide:cloud",
-      onClick: () => useSyncPrefsStore.getState().toggleExcluded(rule.id),
-      divider: true,
-    },
     ...clipboardMenuItems(t),
     ...(canEdit ? [{ label: t("common.action.delete"), icon: "lucide:trash-2", onClick: () => onDelete(rule.id), danger: true, divider: true, shortcut: getShortcutHint("delete") }] : []),
   ];

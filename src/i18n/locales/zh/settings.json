@@ -40,7 +40,9 @@
     },
     "appearance": {
       "interface": "界面",
-      "language": { "title": "语言" },
+      "language": {
+        "title": "语言"
+      },
       "groupTabsByHost": {
         "title": "按主机分组标签页",
         "desc": "同一主机上的会话共用一个标签页。将鼠标悬停在上面即可切换。"
@@ -93,18 +95,114 @@
       }
     },
     "nav": {
-      "appearance":     { "label": "外观",      "keywords": ["主题", "颜色", "字体", "ui"] },
-      "account":        { "label": "账户",         "keywords": ["个人资料", "登录", "认证"] },
-      "sync":           { "label": "同步",            "keywords": ["备份", "云", "gist", "同步", "pro"] },
-      "plugins":        { "label": "插件",         "keywords": ["扩展", "附加组件", "市场"] },
-      "integrations":   { "label": "集成",         "keywords": ["mcp", "claude", "claude code", "服务器", "socket", "代理"] },
-      "terminal":       { "label": "终端",        "keywords": ["光标", "回滚", "粘贴", "括号", "复制", "小地图", "缓冲区"] },
-      "sftp":           { "label": "SFTP",            "keywords": ["文件", "传输", "ftp", "文件"] },
-      "portForwarding": { "label": "端口转发", "keywords": ["隧道", "转发", "端口", "ssh", "自动"] },
-      "hosts":          { "label": "主机",           "keywords": ["ping", "可达性", "连接性", "状态"] },
-      "shortcuts":      { "label": "快捷键",       "keywords": ["快捷键", "热键", "快捷键", "重绑定", "键盘"] },
-      "diagnostics":    { "label": "诊断",     "keywords": ["诊断", "问题", "报告", "日志", "调试", "问题"] },
-      "about":          { "label": "关于",           "keywords": ["版本", "更新", "发布", "更新日志"] }
+      "appearance": {
+        "label": "外观",
+        "keywords": [
+          "主题",
+          "颜色",
+          "字体",
+          "ui"
+        ]
+      },
+      "security": {
+        "label": "安全",
+        "keywords": [
+          "主密码",
+          "锁定",
+          "保险库",
+          "清除",
+          "密码"
+        ]
+      },
+      "plugins": {
+        "label": "插件",
+        "keywords": [
+          "扩展",
+          "附加组件",
+          "市场"
+        ]
+      },
+      "integrations": {
+        "label": "集成",
+        "keywords": [
+          "mcp",
+          "claude",
+          "claude code",
+          "服务器",
+          "socket",
+          "代理"
+        ]
+      },
+      "terminal": {
+        "label": "终端",
+        "keywords": [
+          "光标",
+          "回滚",
+          "粘贴",
+          "括号",
+          "复制",
+          "小地图",
+          "缓冲区"
+        ]
+      },
+      "sftp": {
+        "label": "SFTP",
+        "keywords": [
+          "文件",
+          "传输",
+          "ftp",
+          "文件"
+        ]
+      },
+      "portForwarding": {
+        "label": "端口转发",
+        "keywords": [
+          "隧道",
+          "转发",
+          "端口",
+          "ssh",
+          "自动"
+        ]
+      },
+      "hosts": {
+        "label": "主机",
+        "keywords": [
+          "ping",
+          "可达性",
+          "连接性",
+          "状态"
+        ]
+      },
+      "shortcuts": {
+        "label": "快捷键",
+        "keywords": [
+          "快捷键",
+          "热键",
+          "快捷键",
+          "重绑定",
+          "键盘"
+        ]
+      },
+      "diagnostics": {
+        "label": "诊断",
+        "keywords": [
+          "诊断",
+          "问题",
+          "报告",
+          "日志",
+          "调试",
+          "问题"
+        ]
+      },
+      "about": {
+        "label": "关于",
+        "keywords": [
+          "版本",
+          "更新",
+          "发布",
+          "更新日志"
+        ]
+      }
     },
     "chrome": {
       "title": "设置",
@@ -410,21 +508,54 @@
       "prefsFooter": "禁用的类型永远不会上传。单个对象也可以通过其编辑面板排除。",
       "quickToggleLabel": "同步 {{label}}",
       "objectType": {
-        "connection": { "label": "主机", "sub": "SSH 连接" },
-        "identity": { "label": "身份", "sub": "用户名和凭据" },
-        "key": { "label": "SSH 密钥", "sub": "存储在密钥链中的密钥对" },
-        "folder": { "label": "文件夹", "sub": "用于组织对象的文件夹结构" },
-        "snippet": { "label": "代码片段", "sub": "保存的命令和脚本" },
-        "port-forwarding-rule": { "label": "端口转发", "sub": "保存的隧道规则" }
+        "connection": {
+          "label": "主机",
+          "sub": "SSH 连接"
+        },
+        "identity": {
+          "label": "身份",
+          "sub": "用户名和凭据"
+        },
+        "key": {
+          "label": "SSH 密钥",
+          "sub": "存储在密钥链中的密钥对"
+        },
+        "folder": {
+          "label": "文件夹",
+          "sub": "用于组织对象的文件夹结构"
+        },
+        "snippet": {
+          "label": "代码片段",
+          "sub": "保存的命令和脚本"
+        },
+        "port-forwarding-rule": {
+          "label": "端口转发",
+          "sub": "保存的隧道规则"
+        }
       },
       "settingsTitle": "设置",
       "settingsFooter": "关闭的项目只保留在此设备上，永远不会上传，即使加密后也不会。重新开启同步会发布此设备的值。",
       "settingDomain": {
-        "themes": { "label": "主题", "sub": "当前主题和自定义主题" },
-        "uiPreferences": { "label": "界面", "sub": "缩放、布局和排序方式" },
-        "shortcuts": { "label": "快捷键", "sub": "键盘快捷键覆盖" },
-        "appSettings": { "label": "应用设置", "sub": "终端、SFTP、插件、语言" },
-        "recentPeople": { "label": "最近联系人", "sub": "您最近邀请过的人" }
+        "themes": {
+          "label": "主题",
+          "sub": "当前主题和自定义主题"
+        },
+        "uiPreferences": {
+          "label": "界面",
+          "sub": "缩放、布局和排序方式"
+        },
+        "shortcuts": {
+          "label": "快捷键",
+          "sub": "键盘快捷键覆盖"
+        },
+        "appSettings": {
+          "label": "应用设置",
+          "sub": "终端、SFTP、插件、语言"
+        },
+        "recentPeople": {
+          "label": "最近联系人",
+          "sub": "您最近邀请过的人"
+        }
       },
       "settingKey": {
         "preferredShell": "默认 Shell",
@@ -642,7 +773,10 @@
             "label": "管理 Docker",
             "description": "列出、启动、停止和删除容器、镜像、卷、网络和堆栈。这可能会永久销毁数据。"
           },
-          "portsForward": { "label": "将端口转发到本机", "description": "从已连接的主机打开 SSH 隧道到本机的本地端口，并在浏览器或剪贴板中打开得到的地址。" },
+          "portsForward": {
+            "label": "将端口转发到本机",
+            "description": "从已连接的主机打开 SSH 隧道到本机的本地端口，并在浏览器或剪贴板中打开得到的地址。"
+          },
           "proxmoxRead": {
             "label": "读取 Proxmox 信息",
             "description": "列出 LXC 容器及其快照。"
@@ -651,8 +785,14 @@
             "label": "管理 Proxmox",
             "description": "列出并控制 LXC 容器，包括创建、删除和回滚快照。这可能会永久销毁数据。"
           },
-          "sftpRead": { "label": "读取文件", "description": "浏览并读取已保存的 SSH/FTP 主机以及本机上的文件。" },
-          "sftpWrite": { "label": "写入和移动文件", "description": "在已保存的 SSH/FTP 主机和本机上创建、重命名、覆盖和删除文件，并在它们之间复制文件。这可能会永久销毁数据。" },
+          "sftpRead": {
+            "label": "读取文件",
+            "description": "浏览并读取已保存的 SSH/FTP 主机以及本机上的文件。"
+          },
+          "sftpWrite": {
+            "label": "写入和移动文件",
+            "description": "在已保存的 SSH/FTP 主机和本机上创建、重命名、覆盖和删除文件，并在它们之间复制文件。这可能会永久销毁数据。"
+          },
           "audit": {
             "label": "记录审计事件",
             "description": "在您的审计日志中添加描述其操作的条目。对于团队保险库中的主机，这些条目也会发送到该团队的服务器。"
@@ -944,10 +1084,22 @@
         "desc": "当服务器停止响应时，多快声明会话已丢失。{{detail}}。可以在每台主机上覆盖。"
       },
       "keepalivePresets": {
-        "fast": { "label": "快速", "detail": "在约 4 秒内检测到断开的连接" },
-        "balanced": { "label": "均衡", "detail": "约 9 秒；容忍短暂的网络波动" },
-        "tolerant": { "label": "宽容", "detail": "约 20 秒；适用于不稳定的网络" },
-        "off": { "label": "关闭", "detail": "不发送保持连接探测" }
+        "fast": {
+          "label": "快速",
+          "detail": "在约 4 秒内检测到断开的连接"
+        },
+        "balanced": {
+          "label": "均衡",
+          "detail": "约 9 秒；容忍短暂的网络波动"
+        },
+        "tolerant": {
+          "label": "宽容",
+          "detail": "约 20 秒；适用于不稳定的网络"
+        },
+        "off": {
+          "label": "关闭",
+          "detail": "不发送保持连接探测"
+        }
       },
       "persistentSessions": {
         "title": "持久会话",
@@ -965,23 +1117,57 @@
       }
     },
     "toggleDefs": {
-      "cursorBlink": { "label": "光标闪烁" },
-      "scrollMinimap": { "label": "滚动小地图" },
-      "selectToCopy": { "label": "选择即复制" },
-      "dragSelectsText": { "label": "拖动即选择文本" },
-      "groupTabsByHost": { "label": "按主机分组标签页" },
-      "ignoreBracketedPaste": { "label": "纯文本粘贴（无括号粘贴）" },
-      "autoForward": { "label": "自动端口转发" },
-      "forwardingNotifications": { "label": "端口转发通知" },
-      "sftpTar": { "label": "SFTP Tar 加速" },
-      "sftpAutoRefresh": { "label": "SFTP 自动刷新" },
-      "reachability": { "label": "可达性检查" },
-      "teamPresence": { "label": "团队在线状态" },
-      "shellIntegration": { "label": "Shell 集成" },
-      "persistentSessions": { "label": "持久会话" },
-      "restoreWorkspace": { "label": "启动时恢复工作区" },
-      "crossDeviceSessions": { "label": "跨设备会话" },
-      "changelogPopup": { "label": "更新后显示新内容" },
+      "cursorBlink": {
+        "label": "光标闪烁"
+      },
+      "scrollMinimap": {
+        "label": "滚动小地图"
+      },
+      "selectToCopy": {
+        "label": "选择即复制"
+      },
+      "dragSelectsText": {
+        "label": "拖动即选择文本"
+      },
+      "groupTabsByHost": {
+        "label": "按主机分组标签页"
+      },
+      "ignoreBracketedPaste": {
+        "label": "纯文本粘贴（无括号粘贴）"
+      },
+      "autoForward": {
+        "label": "自动端口转发"
+      },
+      "forwardingNotifications": {
+        "label": "端口转发通知"
+      },
+      "sftpTar": {
+        "label": "SFTP Tar 加速"
+      },
+      "sftpAutoRefresh": {
+        "label": "SFTP 自动刷新"
+      },
+      "reachability": {
+        "label": "可达性检查"
+      },
+      "teamPresence": {
+        "label": "团队在线状态"
+      },
+      "shellIntegration": {
+        "label": "Shell 集成"
+      },
+      "persistentSessions": {
+        "label": "持久会话"
+      },
+      "restoreWorkspace": {
+        "label": "启动时恢复工作区"
+      },
+      "crossDeviceSessions": {
+        "label": "跨设备会话"
+      },
+      "changelogPopup": {
+        "label": "更新后显示新内容"
+      },
       "category": {
         "appearance": "外观",
         "portForwarding": "端口转发",
@@ -991,8 +1177,12 @@
         "plugins": "插件",
         "integrations": "集成"
       },
-      "pluginInstallReview": { "label": "安装插件前先审查权限" },
-      "mcpServer": { "label": "MCP 服务器" }
+      "pluginInstallReview": {
+        "label": "安装插件前先审查权限"
+      },
+      "mcpServer": {
+        "label": "MCP 服务器"
+      }
     },
     "shortcuts": {
       "searchPlaceholder": "搜索快捷键…",
@@ -1017,28 +1207,94 @@
         "other": "其他"
       },
       "items": {
-        "omni":           { "label": "全局搜索",      "desc": "从一个地方访问所有内容" },
-        "shortcuts":      { "label": "键盘快捷键", "desc": "打开快捷键设置" },
-        "themes":         { "label": "设置",         "desc": "打开设置" },
-        "newTab":         { "label": "新建标签页",          "desc": "前往主机视图" },
-        "duplicateSession":      { "label": "复制会话",   "desc": "在同一主机上打开第二个终端" },
-        "duplicateSessionSplit": { "label": "复制到分屏", "desc": "在当前终端旁打开第二个终端" },
-        "closeTab":       { "label": "关闭标签页",        "desc": "关闭活跃会话" },
-        "nextTab":        { "label": "下一个标签页",         "desc": "切换到下一个标签页" },
-        "prevTab":        { "label": "上一个标签页",     "desc": "切换到上一个标签页" },
-        "sidebar":        { "label": "切换侧边栏",   "desc": "显示/隐藏侧边栏" },
-        "delete":         { "label": "删除所选",  "desc": "删除所选项目" },
-        "copy":           { "label": "复制",             "desc": "将选中的项目复制到剪贴板" },
-        "cut":            { "label": "剪切",             "desc": "将选中的项目剪切到剪贴板" },
-        "paste":          { "label": "粘贴",             "desc": "将剪贴板中的项目粘贴到当前文件夹" },
-        "undo":           { "label": "撤销",             "desc": "撤销上一个操作" },
-        "redo":           { "label": "重做",             "desc": "重做上一个撤销的操作" },
-        "filter":         { "label": "聚焦筛选器",     "desc": "聚焦搜索筛选器" },
-        "terminalSearch": { "label": "在终端中查找", "desc": "搜索终端回滚" },
-        "history":        { "label": "历史面板",    "desc": "在右侧面板打开命令历史" },
-        "snippets":       { "label": "代码片段面板",   "desc": "在右侧面板打开代码片段" },
-        "panelThemes":    { "label": "主题面板",     "desc": "在右侧面板打开主题" },
-        "panelNotes":     { "label": "备注面板", "desc": "在右侧面板中打开主机备注" }
+        "omni": {
+          "label": "全局搜索",
+          "desc": "从一个地方访问所有内容"
+        },
+        "shortcuts": {
+          "label": "键盘快捷键",
+          "desc": "打开快捷键设置"
+        },
+        "themes": {
+          "label": "设置",
+          "desc": "打开设置"
+        },
+        "newTab": {
+          "label": "新建标签页",
+          "desc": "前往主机视图"
+        },
+        "duplicateSession": {
+          "label": "复制会话",
+          "desc": "在同一主机上打开第二个终端"
+        },
+        "duplicateSessionSplit": {
+          "label": "复制到分屏",
+          "desc": "在当前终端旁打开第二个终端"
+        },
+        "closeTab": {
+          "label": "关闭标签页",
+          "desc": "关闭活跃会话"
+        },
+        "nextTab": {
+          "label": "下一个标签页",
+          "desc": "切换到下一个标签页"
+        },
+        "prevTab": {
+          "label": "上一个标签页",
+          "desc": "切换到上一个标签页"
+        },
+        "sidebar": {
+          "label": "切换侧边栏",
+          "desc": "显示/隐藏侧边栏"
+        },
+        "delete": {
+          "label": "删除所选",
+          "desc": "删除所选项目"
+        },
+        "copy": {
+          "label": "复制",
+          "desc": "将选中的项目复制到剪贴板"
+        },
+        "cut": {
+          "label": "剪切",
+          "desc": "将选中的项目剪切到剪贴板"
+        },
+        "paste": {
+          "label": "粘贴",
+          "desc": "将剪贴板中的项目粘贴到当前文件夹"
+        },
+        "undo": {
+          "label": "撤销",
+          "desc": "撤销上一个操作"
+        },
+        "redo": {
+          "label": "重做",
+          "desc": "重做上一个撤销的操作"
+        },
+        "filter": {
+          "label": "聚焦筛选器",
+          "desc": "聚焦搜索筛选器"
+        },
+        "terminalSearch": {
+          "label": "在终端中查找",
+          "desc": "搜索终端回滚"
+        },
+        "history": {
+          "label": "历史面板",
+          "desc": "在右侧面板打开命令历史"
+        },
+        "snippets": {
+          "label": "代码片段面板",
+          "desc": "在右侧面板打开代码片段"
+        },
+        "panelThemes": {
+          "label": "主题面板",
+          "desc": "在右侧面板打开主题"
+        },
+        "panelNotes": {
+          "label": "备注面板",
+          "desc": "在右侧面板中打开主机备注"
+        }
       }
     }
   }

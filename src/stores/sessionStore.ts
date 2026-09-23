@@ -25,7 +25,6 @@ import { resolveConnectionCredentials, resolveJumpHosts } from "@/services/crede
 import { setEphemeralCredentials, clearEphemeralCredentials } from "@/services/ephemeralCredentials";
 import { storeSecret, getSecret } from "@/services/vault";
 import { vaultErrorCode, type VaultErrorCode } from "@/services/vaultErrors";
-import { saveTeamVaultSecretForVault } from "@/services/teamVaultSecrets";
 import { useIdentityStore } from "@/stores/identityStore";
 import { auditContextForVaultId } from "@/services/auditContextResolver";
 import { reportAuditClientEvent, type ClientAuditAction } from "@/services/auditReporter";
@@ -482,17 +481,14 @@ async function persistConnectAuth(connection: Connection, override: ConnectRetry
     data.key_id = undefined;
     data.auth_type = "key";
     await storeSecret(`key:${connection.id}`, override.privateKey.trim());
-    await saveTeamVaultSecretForVault(connection.vault_id, `key:${connection.id}`, override.privateKey.trim()).catch(() => {});
     if (override.passphrase) {
       await storeSecret(`passphrase:${connection.id}`, override.passphrase);
-      await saveTeamVaultSecretForVault(connection.vault_id, `passphrase:${connection.id}`, override.passphrase).catch(() => {});
     }
   } else if (override.password) {
     data.identity_id = undefined;
     data.key_id = undefined;
     data.auth_type = "password";
     await storeSecret(`password:${connection.id}`, override.password);
-    await saveTeamVaultSecretForVault(connection.vault_id, `password:${connection.id}`, override.password).catch(() => {});
   }
 
   await useConnectionStore.getState().updateConnection(connection.id, data);
@@ -822,15 +818,10 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       })();
     } else {
       const connection = session?.connectionId ? findConnection(session.connectionId) : undefined;
-      const persist = !!session?.persist;
       const wasAttached = session?.status === "connected";
-      // The tab closes immediately; kill/tombstone resolve in the background.
-      // Shared sessions: another device listing this session means close only
-      // detaches; otherwise the backend kills unless a client is still attached
-      // there (host-side count), and confirms with the kill sentinel — only a
-      // confirmed kill publishes the tombstone.
+      // The tab closes immediately; kill resolves in the background. The backend
+      // kills unless a client is still attached host-side.
       void (async () => {
-        let killed = false;
         const postCmd = connection ? resolveHostCommand(connection, "post") : null;
         try {
           if (connection && postCmd?.kind === "snippet") {
@@ -838,28 +829,15 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
           }
         } finally {
           try {
-            let kill = true;
-            if (persist) {
-              const { otherDeviceListsSession } = await import("./crossDeviceSessionsStore");
-              kill = !otherDeviceListsSession(sessionId);
-            }
-            killed = await sshDisconnect(
+            await sshDisconnect(
               sessionId,
               postCmd?.kind === "inline" ? postCmd.text : undefined,
-              kill,
+              true,
               wasAttached,
             );
           } catch {
             // best effort; an unreachable host means nothing was killed
           }
-        }
-        if (persist && killed) {
-          const [{ useCrossDeviceSessionsStore }, { publishLiveSessionsNow }] = await Promise.all([
-            import("./crossDeviceSessionsStore"),
-            import("@/services/liveSessionPublisher"),
-          ]);
-          useCrossDeviceSessionsStore.getState().markClosed(sessionId);
-          publishLiveSessionsNow();
         }
         if (connection) reportConnectionAudit(connection, "connection.ended");
       })();
@@ -985,8 +963,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (isSessionEnded(msg)) {
-        const { sessionEnded } = await import("@/services/crossDeviceSessions");
-        sessionEnded(sessionId);
+        get().removeSession(sessionId);
         return;
       }
       markSessionError(set, sessionId, msg);

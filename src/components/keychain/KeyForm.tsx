@@ -12,7 +12,6 @@ import { PanelActionsMenu } from "@/components/shared/PanelActionsMenu";
 import { PinButton } from "@/components/shared/PinButton";
 import { useKeyStore } from "@/stores/keyStore";
 import { useUIContributions } from "@/hooks/useUIContributions";
-import { useSyncPrefsStore } from "@/stores/syncPrefsStore";
 import { resolveVaultIdForSave } from "@/hooks/useWritableVaultIds";
 import {
   SecretInput,
@@ -24,6 +23,7 @@ import type { SshKey, SshKeyFormData } from "@/types";
 import { buildKeychainMenuItems } from "@/utils/keychainMenuItems";
 import { detectKeyInfo } from "./keyDetection";
 import { KeyFileDropZone } from "./KeyFileDropZone";
+import { DetectedSshKeys } from "./DetectedSshKeys";
 import { KeyGenFields } from "./KeyGenFields";
 import { PublicKeyField, isPublicKeyInvalid } from "./PublicKeyField";
 import { useDerivedPublicKey } from "./useDerivedPublicKey";
@@ -118,8 +118,6 @@ export function KeyForm({ initial, initialMode, onSubmit, onClose, onExport, onD
   );
 
   const contributions = useUIContributions("key.panelActions", initial);
-  const { toggleExcluded, isObjectSynced } = useSyncPrefsStore();
-  const isSynced = initial ? isObjectSynced(initial.id, "key") : true;
 
   const { schedule, markDirty: _markDirty, flushAndClose, flush, saveState } = useAutosave({
     onSave: () => onSubmit(
@@ -131,7 +129,7 @@ export function KeyForm({ initial, initialMode, onSubmit, onClose, onExport, onD
     ) ?? undefined,
     // A public half that is not a key is never persisted: autosave holds until
     // the field is emptied or corrected, and the inline error says why.
-    canSave: () => !!privateKey.trim() && !isPublicKeyInvalid(publicKey),
+    canSave: () => !!privateKey.trim() && keyInfo.valid && !isPublicKeyInvalid(publicKey),
   });
   const markDirty = useCallback(() => {
     if (isDirtyRef) isDirtyRef.current = true;
@@ -184,10 +182,8 @@ export function KeyForm({ initial, initialMode, onSubmit, onClose, onExport, onD
             contributions,
             vaults,
             canEdit,
-            isSynced,
             onMoveToVault,
             onCopyToVault,
-            onToggleSync: () => toggleExcluded(initial.id),
             onDelete: onDelete ? () => { onDelete(initial.id); onClose(); } : undefined,
             leading: onExport ? [{ label: t("keychain.common.addToHost"), icon: "lucide:square-arrow-right", onClick: () => onExport(initial) }] : [],
           });
@@ -295,6 +291,11 @@ export function KeyForm({ initial, initialMode, onSubmit, onClose, onExport, onD
               onPublicKey={(v) => { markDirty(); publicKeyDirty.current = true; setPublicKey(v); }}
             />
           </FormSection>
+
+          <DetectedSshKeys
+            onPrivateKey={(v) => { markDirty(); privateKeyDirty.current = true; setPrivateKey(v); }}
+            onPublicKey={(v) => { markDirty(); publicKeyDirty.current = true; setPublicKey(v); }}
+          />
         </>)}
 
         {initial && onExport && (

@@ -41,8 +41,6 @@ interface Props {
   canEdit?: boolean;
   onMoveToVault?: (vaultId: string) => void;
   onCopyToVault?: (vaultId: string) => void;
-  syncEnabled?: boolean;
-  onToggleSync?: () => void;
   onPointerDown?: (e: React.PointerEvent<HTMLDivElement>) => void;
 }
 
@@ -67,8 +65,6 @@ export function SnippetCard({
   canEdit,
   onMoveToVault,
   onCopyToVault,
-  syncEnabled,
-  onToggleSync,
   onPointerDown,
 }: Props) {
   const { t } = useTranslation();
@@ -118,11 +114,6 @@ export function SnippetCard({
       label: snippet.favorite ? t("snippets.card.unpinForTeam") : t("snippets.card.pinForTeam"),
       icon: "lucide:users",
       onClick: () => pinSnippetForTeam(snippet.id, !snippet.favorite).catch(() => {}),
-    }] : []),
-    ...(onToggleSync ? [{
-      label: syncEnabled ? t("snippets.card.disableCloudSync") : t("snippets.card.enableCloudSync"),
-      icon: syncEnabled ? "lucide:cloud-off" : "lucide:cloud",
-      onClick: onToggleSync,
     }] : []),
     {
       label: t("snippets.card.export"),

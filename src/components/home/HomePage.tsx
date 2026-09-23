@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { DashboardHero } from "./DashboardHero";
 import { RecentHostsSection } from "./RecentHostsSection";
 import { VaultsOverview } from "./VaultsOverview";
-import { TeamSessions } from "@/components/hosts/TeamSessions";
 import { AllHostsView } from "./AllHostsView";
 import { useUIStore } from "@/stores/uiStore";
 
@@ -45,7 +44,6 @@ export default function HomePage() {
       <div className="max-w-4xl mx-auto px-8 py-8">
         <DashboardHero />
         <QuickActions />
-        <TeamSessions />
         <RecentHostsSection onSeeAll={() => setSubView("all-hosts")} />
         <VaultsOverview />
       </div>

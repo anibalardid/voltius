@@ -1,254 +1,38 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@iconify/react";
-import i18n from "@/i18n";
 import { useVaultStore } from "@/stores/vaultStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useVaultContents } from "@/hooks/useVaultContents";
 import { ContentCounts } from "@/components/shared/ContentCounts";
-import { useTeamStore } from "@/stores/teamStore";
-import type { TeamMember } from "@/services/teamService";
-import { AvatarOverflow, MiniAvatar } from "@/components/shared/AvatarStack";
-import { PickerSurface } from "@/components/shared/PickerSurface";
 import { StatusDot } from "@/components/shared/StatusDot";
-import { getSyncState, onSyncStateChange } from "@/services/sync";
-import { useSubscriptionStore } from "@/stores/subscriptionStore";
-import { VaultShareSheet } from "@/components/vault-share/VaultShareSheet";
 import { useVaultAdmin } from "@/components/vault-admin/useVaultAdmin";
 import { VaultAdminSurface } from "@/components/vault-admin/VaultAdminSurface";
 import type { VaultAdminTarget } from "@/components/vault-admin/vaultAdminTarget";
 import { chevronRotateStyle } from "@/utils/icons";
-
-// ─── Members stack ─────────────────────────────────────────────────────────
-
-const MAX_STACK = 3;
-
-export function MembersStack({
-  members,
-  vaultId,
-  vaultName,
-  open: openProp,
-  onOpenChange,
-  hasTeam = true,
-}: {
-  members: TeamMember[];
-  vaultId: string;
-  vaultName: string;
-  /** Lets a caller (the vault menu's Share… action) drive the popover too. Uncontrolled when omitted. */
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
-  /** False for a private vault: the trigger reads "Share" (not "Invite") and opens
-   *  the convert-to-team gate, not a members peek, so it must not open on a passing hover. */
-  hasTeam?: boolean;
-}) {
-  const { t } = useTranslation();
-  const openMembersInvite = useUIStore((s) => s.openMembersInvite);
-  const [invHovered, setInvHovered] = useState(false);
-  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
-  const open = openProp ?? uncontrolledOpen;
-  const setOpen = (value: boolean | ((o: boolean) => boolean)) => {
-    const next = typeof value === "function" ? value(open) : value;
-    onOpenChange?.(next);
-    setUncontrolledOpen(next);
-  };
-  const ref = useRef<HTMLDivElement>(null);
-  const closeTimer = useRef<number | null>(null);
-  const visible = members.slice(0, MAX_STACK);
-  const overflow = members.length - MAX_STACK;
-
-  // The popover is portalled out of the header, so moving the pointer into it
-  // fires the stack's mouseleave. Defer the close so the popover's own
-  // mouseenter can cancel it.
-  const openPopover = () => {
-    if (!hasTeam) return;
-    if (closeTimer.current !== null) window.clearTimeout(closeTimer.current);
-    closeTimer.current = null;
-    setOpen(true);
-  };
-  const closePopover = () => {
-    if (!hasTeam) return;
-    if (closeTimer.current !== null) window.clearTimeout(closeTimer.current);
-    closeTimer.current = window.setTimeout(() => setOpen(false), 120);
-  };
-  useEffect(() => () => {
-    if (closeTimer.current !== null) window.clearTimeout(closeTimer.current);
-  }, []);
-
-  const toggleOpen = () => setOpen((o) => !o);
-  const handleTriggerKeyDown = (e: KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      toggleOpen();
-    }
-  };
-
-  return (
-    <div
-      ref={ref}
-      className="relative flex items-center gap-2 shrink-0"
-      onMouseLeave={closePopover}
-    >
-      {/* Stack */}
-      {members.length > 0 && (
-        <button
-          type="button"
-          onClick={toggleOpen}
-          onKeyDown={handleTriggerKeyDown}
-          aria-haspopup="dialog"
-          aria-expanded={open}
-          aria-label={t("layout.vaultHeader.members")}
-          className="relative flex items-center rounded-full"
-          style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer" }}
-        >
-          {visible.map((m, i) => (
-            <div
-              key={m.user_id}
-              title={m.handle}
-              style={{
-                marginLeft: i === 0 ? 0 : -9,
-                zIndex: MAX_STACK - i,
-                borderRadius: "50%",
-                border: m.is_online
-                  ? "2px solid var(--t-status-connected)"
-                  : "2px solid transparent",
-                boxShadow: "0 0 0 1.5px var(--t-bg-chrome)",
-                opacity: m.is_online ? 1 : 0.45,
-                transition: "border-color 0.2s, opacity 0.2s",
-              }}
-            >
-              <MiniAvatar name={m.handle} size={24} />
-            </div>
-          ))}
-          <AvatarOverflow count={overflow} size={24} ringColor="var(--t-bg-chrome)" />
-        </button>
-      )}
-
-      <button
-        type="button"
-        onClick={toggleOpen}
-        onMouseEnter={() => {
-          setInvHovered(true);
-          openPopover();
-        }}
-        onMouseLeave={() => setInvHovered(false)}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        title={t("members.share.title", { vault: vaultName })}
-        className="flex items-center gap-1 rounded-full transition-all shrink-0"
-        style={{
-          height: 26,
-          padding: "0 0.625rem",
-          border: hasTeam ? "1px solid transparent" : `2px dashed ${invHovered ? "var(--t-accent)" : "var(--t-border)"}`,
-          background: hasTeam
-            ? (invHovered ? "var(--t-accent)" : "var(--t-bg-elevated)")
-            : (invHovered ? "rgba(var(--t-accent-rgb, 99,102,241), 0.1)" : "transparent"),
-          color: hasTeam ? (invHovered ? "var(--t-on-accent, #fff)" : "var(--t-text-secondary)") : (invHovered ? "var(--t-accent)" : "var(--t-text-dim)"),
-        }}
-      >
-        <Icon icon="lucide:plus" width={12} />
-        <span className="text-xs font-semibold">
-          {hasTeam ? t("members.share.tabInvite") : t("members.share.shareVerb")}
-        </span>
-      </button>
-
-      {/* Popover — portalled: the page overlay in MainPanel outranks the
-          header's stacking context, so an in-flow popover paints under it. */}
-      <PickerSurface
-        open={open}
-        onClose={() => setOpen(false)}
-        anchorRef={ref}
-        width={320}
-        // 320 leaves the Links tab's Create button below the fold.
-        maxHeight={480}
-        align="right"
-        gap={4}
-        title={t("members.share.title", { vault: vaultName })}
-        glass
-      >
-        <div onMouseEnter={openPopover} onMouseLeave={closePopover}>
-          <VaultShareSheet vaultId={vaultId} variant="popover" onRequestFull={openMembersInvite} />
-        </div>
-      </PickerSurface>
-    </div>
-  );
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function relativeTime(date: Date | null): string | null {
-  if (!date) return null;
-  const diffMs = Date.now() - date.getTime();
-  const diffMin = Math.floor(diffMs / 60_000);
-  if (diffMin < 1) return i18n.t("layout.vaultHeader.relativeTime.justNow");
-  if (diffMin < 60) return i18n.t("layout.vaultHeader.relativeTime.minutesAgo", { count: diffMin });
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return i18n.t("layout.vaultHeader.relativeTime.hoursAgo", { count: diffHr });
-  return i18n.t("layout.vaultHeader.relativeTime.daysAgo", { count: Math.floor(diffHr / 24) });
-}
 
 export default function VaultHeader() {
   const { t } = useTranslation();
   const vaults = useVaultStore((s) => s.vaults);
   const selectedVaultIds = useVaultStore((s) => s.selectedVaultIds);
   const setOmniOpen = useUIStore((s) => s.setOmniOpen);
-  const { teams, membersByTeam, loadMembers } = useTeamStore();
-
-  const [syncState, setSyncState] = useState(getSyncState);
-  useEffect(() => onSyncStateChange(() => setSyncState(getSyncState())), []);
-
-  const { accountMode } = useSubscriptionStore();
 
   // Use the first selected vault as the "active" vault.
-  // For non-owner team members there is no local vault — the sidebar sets a
-  // team ID directly, so fall back to looking up in `teams`.
   const activeVaultId = selectedVaultIds[0] ?? null;
   const vault = vaults.find((v) => v.id === activeVaultId) ?? null;
-  const standaloneTeam = !vault && activeVaultId
-    ? (teams.find((t) => t.id === activeVaultId) ?? null)
-    : null;
-  const team = vault?.teamId
-    ? (teams.find((t) => t.id === vault.teamId) ?? null)
-    : standaloneTeam;
-  const members = team ? (membersByTeam[team.id] ?? null) : null;
 
-  const contentVaultId = team?.id ?? activeVaultId ?? "personal";
-  const counts = useVaultContents(contentVaultId);
-
-  useEffect(() => {
-    if (team && !membersByTeam[team.id]) {
-      loadMembers(team.id).catch(() => {});
-    }
-  }, [team?.id]);
+  const counts = useVaultContents(activeVaultId ?? "personal");
 
   const target: VaultAdminTarget | null = vault
-    ? { kind: "local", vaultId: vault.id, teamId: vault.teamId ?? null, name: vault.name }
-    : standaloneTeam
-      ? { kind: "cloud", vaultId: null, teamId: standaloneTeam.id, name: standaloneTeam.name }
-      : null;
+    ? { vaultId: vault.id, name: vault.name }
+    : null;
   const admin = useVaultAdmin(target);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
-  const vaultSharePending = useUIStore((s) => s.vaultSharePending);
-  const clearVaultSharePending = useUIStore((s) => s.clearVaultSharePending);
-  useEffect(() => {
-    // Mirrors the rail's Share… action: it switches to this vault and sets this
-    // flag, since the rail hosts no share sheet of its own.
-    if (vaultSharePending && target) {
-      admin.setShareOpen(true);
-      clearVaultSharePending();
-    }
-    // `!!target`, not `target`: target is a fresh object literal every render, so
-    // depending on it directly would re-run this effect on every render instead
-    // of only when the vault menu's Share… action actually just fired.
-  }, [vaultSharePending, !!target, admin.setShareOpen, clearVaultSharePending]);
+  if (!vault) return null;
 
-  if (!vault && !standaloneTeam) return null;
-
-  const displayName = vault ? vault.name : (standaloneTeam!.name);
+  const displayName = vault.name;
   const initial = displayName.trim().charAt(0).toUpperCase();
-  const isE2EE = accountMode === "local";
-  const lastSync = relativeTime(syncState.lastSync);
-  const showSync = syncState.cloudActive && lastSync;
 
   return (
     <div
@@ -296,16 +80,11 @@ export default function VaultHeader() {
             </button>
           </div>
           <div className="flex items-center gap-3 text-xs mt-0.5 flex-nowrap overflow-hidden" style={{ color: "var(--t-text-dim)" }}>
-            {isE2EE && (
-              <span className="flex items-center gap-1 shrink-0">
-                <StatusDot tone="connected" size="sm" />
-                {t("layout.vaultHeader.e2ee")}
-              </span>
-            )}
+            <span className="flex items-center gap-1 shrink-0">
+              <StatusDot tone="connected" size="sm" />
+              {t("layout.vaultHeader.e2ee")}
+            </span>
             <ContentCounts counts={counts} />
-            {showSync && (
-              <span className="truncate">{t("layout.vaultHeader.lastSync", { time: lastSync })}</span>
-            )}
           </div>
         </div>
       </div>
@@ -354,21 +133,8 @@ export default function VaultHeader() {
         </kbd>
       </button>
 
-      {/* Right zone: online members */}
-      <div className="flex items-center justify-end min-w-0">
-        {/* Shown for a private vault too: the sheet's `!teamId` branch is the
-            conversion consent gate. */}
-        {activeVaultId && (accountMode === "server" || team) && (
-          <MembersStack
-            members={members ?? []}
-            vaultId={activeVaultId}
-            vaultName={vault?.name ?? team?.name ?? ""}
-            open={admin.shareOpen}
-            onOpenChange={admin.setShareOpen}
-            hasTeam={!!team}
-          />
-        )}
-      </div>
+      {/* Right zone: reserved for plugin-contributed titlebar items */}
+      <div className="flex items-center justify-end min-w-0" />
 
       <VaultAdminSurface admin={admin} target={target} />
     </div>

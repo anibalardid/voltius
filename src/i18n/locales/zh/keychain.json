@@ -100,6 +100,9 @@
       "invalidPublicKey": "这不是 SSH 公钥 —— 应为单行的「ssh-ed25519 AAAA… 注释」格式。它不会被保存，也无法添加到主机。",
       "keyPassphrasePlaceholder": "密钥口令"
     },
+    "detectedKeys": {
+      "sectionLabel": "在 ~/.ssh 中发现"
+    },
     "identityForm": {
       "titleEdit": "编辑身份",
       "sectionCredentials": "凭据",

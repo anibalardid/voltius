@@ -1,9 +1,6 @@
 import { create } from "zustand";
 import type { Connection, ConnectionFormData } from "@/types";
 import * as api from "@/services/connections";
-import { scheduleSync } from "@/services/sync";
-import { isServerMode } from "@/services/account";
-import { useSyncPrefsStore } from "@/stores/syncPrefsStore";
 import { useHistoryStore } from "@/stores/historyStore";
 import { pushCreateHistory, pushDeleteHistory } from "@/stores/recreateHistory";
 import { isTeamVaultId, findTeamEntry, setTeamMapEntry, clearTeamMapEntry, upsertInTeamMap, removeFromTeamMap, applyVaultTransition, saveStampedTeamObject } from "@/stores/teamVaultMap";
@@ -138,8 +135,6 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => ({
     const conn = await api.saveConnection(data);
     const connections = await api.listConnections();
     set({ connections });
-    const prefs = useSyncPrefsStore.getState();
-    isServerMode().then((s) => { if (s && prefs.isTypeSynced("connection")) scheduleSync(); });
     reportAuditMutation("connection", "created", { id: conn.id, name: conn.name ?? conn.host, vault_id: conn.vault_id });
     pushCreateHistory({
       label: `Created connection "${data.name ?? data.host}"`,
@@ -290,8 +285,6 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => ({
       connections,
       teamConnections: applyVaultTransition(s.teamConnections, transition, id, updated, stayTeamId),
     }));
-    const prefs = useSyncPrefsStore.getState();
-    isServerMode().then((s) => { if (s && prefs.isObjectSynced(id, "connection")) scheduleSync(); });
     if (prev) reportAuditMutation("connection", "updated", { id, name: data.name ?? prev.name ?? prev.host, vault_id: data.vault_id ?? prev.vault_id });
     if (prev) {
       const prevData: ConnectionFormData = connectionToFormData(prev);
@@ -325,8 +318,6 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => ({
     await api.deleteConnection(id);
     const connections = await api.listConnections();
     set({ connections });
-    const prefs = useSyncPrefsStore.getState();
-    isServerMode().then((s) => { if (s && prefs.isObjectSynced(id, "connection")) scheduleSync(); });
     if (prev) reportAuditMutation("connection", "deleted", { id: prev.id, name: prev.name ?? prev.host, vault_id: prev.vault_id });
     if (prev) {
       const prevData: ConnectionFormData = connectionToFormData(prev);
@@ -362,8 +353,6 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => ({
         c.id === id ? { ...c, distro } : c,
       ),
     }));
-    const prefs = useSyncPrefsStore.getState();
-    isServerMode().then((s) => { if (s && prefs.isObjectSynced(id, "connection")) scheduleSync(); });
     if (prev) {
       const prevDistro = prev.distro ?? "";
       useHistoryStore.getState().push({
@@ -391,8 +380,6 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => ({
         c.id === id ? { ...c, last_used_at: now } : c,
       ),
     }));
-    const prefs = useSyncPrefsStore.getState();
-    isServerMode().then((s) => { if (s && prefs.isObjectSynced(id, "connection")) scheduleSync(); });
   },
 
   renameTag: async (oldName, newName) => {
@@ -408,8 +395,6 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => ({
     );
     const connections = await api.listConnections();
     set({ connections });
-    const prefs = useSyncPrefsStore.getState();
-    isServerMode().then((s) => { if (s && prefs.isTypeSynced("connection")) scheduleSync(); });
 
     // Team connections
     const now = new Date().toISOString();
@@ -451,8 +436,6 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => ({
     );
     const connections = await api.listConnections();
     set({ connections });
-    const prefs = useSyncPrefsStore.getState();
-    isServerMode().then((s) => { if (s && prefs.isTypeSynced("connection")) scheduleSync(); });
 
     // Team connections
     const now = new Date().toISOString();
@@ -501,8 +484,6 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => ({
     const nextPinned = pinned ?? false;
     await api.updateConnection(id, { ...connectionToFormData(conn), pinned: nextPinned });
     set((s) => ({ connections: s.connections.map((c) => c.id === id ? { ...c, pinned: nextPinned } : c) }));
-    const prefs = useSyncPrefsStore.getState();
-    isServerMode().then((s) => { if (s && prefs.isObjectSynced(id, "connection")) scheduleSync(); });
   },
 
   pinConnectionForTeam: async (id, pinned) => {

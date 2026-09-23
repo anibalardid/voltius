@@ -34,11 +34,8 @@ describe("api.audit.query", () => {
     await expect(api.audit.query({})).rejects.toThrow(/audit:read/);
   });
 
-  // A team's log is every member's activity, which is what team:read gates
-  // everywhere else — audit:read alone must not buy it.
-  it("refuses a team read without team:read, and lets the local read through", async () => {
-    const api = createHostPluginAPI("test:no-team-perm", ["audit:read"]);
-    await expect(api.audit.query({ teamId: "team-1" })).rejects.toThrow(/team:read/);
+  it("lets a local read through", async () => {
+    const api = createHostPluginAPI("test:local-read", ["audit:read"]);
     await expect(api.audit.query({})).resolves.toBeDefined();
   });
 
@@ -117,7 +114,7 @@ describe("api.audit.query", () => {
     });
   });
 
-  it("forwards actorId to the local sink too, not only the team one", async () => {
+  it("forwards actorId to the local sink", async () => {
     const api = createHostPluginAPI("test:local-actor", ["audit:read"]);
     await api.audit.query({ actorId: "user-3" });
     expect(fetchLocalAuditLogs).toHaveBeenCalledWith("personal", {

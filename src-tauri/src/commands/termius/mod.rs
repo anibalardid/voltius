@@ -23,6 +23,7 @@ mod extract;
 mod keys;
 mod leveldb;
 mod paths;
+mod raw_leveldb;
 mod v8;
 
 pub use extract::*;

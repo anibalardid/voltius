@@ -1,6 +1,30 @@
-export type AuditContext =
-  | { kind: "team"; teamId: string; vaultId?: string }
-  | { kind: "local"; vaultId: string };
+export type AuditContext = { kind: "local"; vaultId: string };
+
+/** A local audit row, projected for the Logs UI. */
+export interface AuditLog {
+  id: number;
+  team_id: string;
+  vault_id: string | null;
+  actor_id: string;
+  actor_name: string;
+  action: string;
+  source: "server" | "client";
+  target_type: string | null;
+  target_id: string | null;
+  target_name: string | null;
+  metadata: Record<string, unknown> | null;
+  ip_address: string | null;
+  created_at: string;
+}
+
+export interface AuditFilters {
+  actions?: string[];
+  actor_id?: string;
+  from?: string;
+  to?: string;
+  page: number;
+  per_page: number;
+}
 
 export interface AuditTarget {
   vault_id?: string;
@@ -11,7 +35,7 @@ export interface AuditTarget {
 }
 
 export function auditContextKey(context: AuditContext): string {
-  return context.kind === "team" ? `team:${context.teamId}:${context.vaultId ?? ""}` : `local:${context.vaultId}`;
+  return `local:${context.vaultId}`;
 }
 
 export type ClientAuditAction =

@@ -104,22 +104,14 @@
           "ui"
         ]
       },
-      "account": {
-        "label": "Account",
+      "security": {
+        "label": "Security",
         "keywords": [
-          "profile",
-          "login",
-          "auth"
-        ]
-      },
-      "sync": {
-        "label": "Sync",
-        "keywords": [
-          "backup",
-          "cloud",
-          "gist",
-          "sync",
-          "pro"
+          "master password",
+          "lock",
+          "vault",
+          "wipe",
+          "password"
         ]
       },
       "plugins": {
@@ -544,11 +536,26 @@
       "settingsTitle": "Settings",
       "settingsFooter": "Anything switched off stays on this device. It is never uploaded, even encrypted. Turning sync back on publishes this device's values.",
       "settingDomain": {
-        "themes": { "label": "Themes", "sub": "Active theme and custom themes" },
-        "uiPreferences": { "label": "Interface", "sub": "Scale, layouts and sort order" },
-        "shortcuts": { "label": "Shortcuts", "sub": "Keyboard overrides" },
-        "appSettings": { "label": "App settings", "sub": "Terminal, SFTP, plugins, language" },
-        "recentPeople": { "label": "Recent people", "sub": "Who you have invited lately" }
+        "themes": {
+          "label": "Themes",
+          "sub": "Active theme and custom themes"
+        },
+        "uiPreferences": {
+          "label": "Interface",
+          "sub": "Scale, layouts and sort order"
+        },
+        "shortcuts": {
+          "label": "Shortcuts",
+          "sub": "Keyboard overrides"
+        },
+        "appSettings": {
+          "label": "App settings",
+          "sub": "Terminal, SFTP, plugins, language"
+        },
+        "recentPeople": {
+          "label": "Recent people",
+          "sub": "Who you have invited lately"
+        }
       },
       "settingKey": {
         "preferredShell": "Default shell",
@@ -726,75 +733,282 @@
           "readOnlyWarning": "The plugin can see this, but cannot change or delete anything with it.",
           "dangerHeading": "Powerful permissions",
           "dangerWarning": "These give the plugin far-reaching access. Grant them only to a plugin you trust.",
-          "terminalRead": { "label": "Read terminal output", "description": "Read the visible output and scrollback of your terminal sessions." },
-          "terminalStream": { "label": "Watch terminal output live", "description": "Continuously watch everything printed in your terminal sessions, as it happens." },
-          "terminalWrite": { "label": "Type into your terminals", "description": "Send input and run commands in your terminal sessions — as if typing them yourself." },
-          "keychainRead": { "label": "Read its own stored secrets", "description": "Read secrets this plugin previously stored in your device keychain." },
-          "keychainWrite": { "label": "Store secrets on your device", "description": "Save secrets to your device's OS keychain." },
-          "metricsRead": { "label": "Read system metrics", "description": "Read CPU, memory, disk and network statistics from your connected hosts." },
-          "dockerRead": { "label": "Read Docker information", "description": "List containers, images, volumes, networks and stacks, and read container logs. Logs can contain passwords or tokens." },
-          "processesRead": { "label": "Read process information", "description": "List running processes on your connected hosts." },
-          "processesManage": { "label": "Manage processes", "description": "List and kill running processes on your connected hosts." },
-          "dockerManage": { "label": "Manage Docker", "description": "List, start, stop and delete containers, images, volumes, networks and stacks. This can permanently destroy data." },
-          "portsForward": { "label": "Forward ports to this computer", "description": "Open SSH tunnels from your connected hosts to local ports on this computer, and open the resulting address in your browser or clipboard." },
-          "proxmoxRead": { "label": "Read Proxmox information", "description": "List LXC containers and their snapshots." },
-          "proxmoxManage": { "label": "Manage Proxmox", "description": "List and control LXC containers, including creating, deleting and rolling back snapshots. This can permanently destroy data." },
-          "sftpRead": { "label": "Read files", "description": "Browse and read files on your saved SSH/FTP hosts and on this computer." },
-          "sftpWrite": { "label": "Write and move files", "description": "Create, rename, overwrite and delete files on your saved SSH/FTP hosts and on this computer, and copy files between them. This can permanently destroy data." },
-          "audit": { "label": "Record audit events", "description": "Add entries to your audit log describing what it did. For a host in a team vault, these entries are also sent to that team's server." },
-          "auditRead": { "label": "Read the activity log", "description": "Read this device's activity log, including which hosts were reached, which files were touched and what other plugins did. When a team is named, it also reads that team's server-side log — every member's activity." },
-          "mcpContribute": { "label": "Expose tools to external AI agents", "description": "Lets this plugin add its own commands to the Voltius MCP server, so any external AI agent you have connected can run them — using this plugin's own permissions." },
-          "vaultsRead": { "label": "See your vaults", "description": "See the names of your vaults, including team vaults, and how they are organized." },
-          "vaultsWrite": { "label": "Create and delete vaults", "description": "Create, rename and delete your vaults. Deleting a vault can delete everything filed in it." },
-          "foldersRead": { "label": "See your folders", "description": "See the folders you organize hosts, keys, port forwards and snippets into." },
-          "foldersWrite": { "label": "Create and delete folders", "description": "Create, rename and delete folders. Deleting a folder can delete everything filed in it." },
-          "sessionsRead": { "label": "See your sessions", "description": "See which terminal sessions are open and when they change." },
-          "sessionsWrite": { "label": "Open and close sessions", "description": "Open new terminal sessions and close existing ones." },
-          "connectionsRead": { "label": "Read your connections", "description": "Read your saved connections and their details." },
-          "connectionsWrite": { "label": "Manage your connections", "description": "Create, edit, and delete your saved connections." },
-          "keysRead": { "label": "Read your SSH keys", "description": "List your saved SSH keys, and append one to a saved host's authorized_keys over SSH." },
-          "keysWrite": { "label": "Manage your SSH keys", "description": "Create and delete SSH keys on your behalf." },
-          "identitiesRead": { "label": "Read your identities", "description": "List your saved identities." },
-          "identitiesWrite": { "label": "Manage your identities", "description": "Create and delete identities on your behalf." },
-          "snippetsRead": { "label": "Read your snippets", "description": "List your saved snippets and the commands they run." },
-          "snippetsWrite": { "label": "Manage your snippets", "description": "Create, edit, move and delete your saved snippets." },
-          "snippetsRun": { "label": "Run your snippets on your hosts", "description": "Execute a saved snippet against a host, connecting to it if needed. Its commands run with your own access, exactly as if you ran them yourself." },
-          "portForwardingRead": { "label": "Read your port forwards", "description": "List your saved port forwarding rules and the tunnels open right now." },
-          "portForwardingWrite": { "label": "Manage your port forwards", "description": "Create, edit, move and delete your saved port forwarding rules." },
-          "knownHostsRead": { "label": "Read your known hosts", "description": "List the SSH host keys you have trusted, with their fingerprints." },
-          "knownHostsWrite": { "label": "Trust and remove host keys", "description": "Authorise an SSH host key, or delete one you trusted. A trusted key means connections to that host are accepted without asking you." },
-          "historyRead": { "label": "Read your command history", "description": "Search the commands you typed in terminals. These can contain passwords or tokens you typed in plain text." },
-          "transfersRead": { "label": "See file transfers", "description": "See the file transfers running now, including their file names, progress and errors." },
-          "transfersWrite": { "label": "Cancel and retry transfers", "description": "Cancel a file transfer that is running, or start a failed one again — including transfers you started yourself." },
-          "healthRead": { "label": "See host reachability", "description": "See which of your saved hosts last answered a reachability check, and how quickly." },
-          "vaultRead": { "label": "Read your vault", "description": "Read data stored in your vault." },
-          "vaultWrite": { "label": "Write to your vault", "description": "Store and change data in your vault." },
-          "syncRead": { "label": "Read sync data", "description": "Read this plugin's own data synced across your devices, and see the status of your own configuration sync." },
-          "syncWrite": { "label": "Write sync data", "description": "Store and change data synced across your devices." },
-          "panesRead": { "label": "Read the terminal layout", "description": "See your open tabs and split panes, and which session is in each." },
-          "panesWrite": { "label": "Arrange terminal panes", "description": "Split, move, detach and focus terminal panes. Sessions stay open; nothing is closed." },
-          "teamRead": { "label": "Read your teams", "description": "See your teams, who belongs to them, their roles, and which members hold the team vault key." },
-          "teamWrite": { "label": "Manage team members", "description": "Invite people to your teams, remove members, and change what role they hold." },
-          "sharingRead": { "label": "Read shared terminals", "description": "See which of your terminal sessions are shared, who is watching them, and who holds control." },
-          "sharingWrite": { "label": "Share live terminals", "description": "Stream a live terminal session to members of your teams, stop sharing, and hand control of it to a participant who asked for it." },
-          "settingsRead": { "label": "Read app settings", "description": "See every setting in this app and its current value." },
-          "settingsWrite": { "label": "Change app settings", "description": "Change any setting in this app, including ones that turn off a safeguard." },
-          "accountRead": { "label": "Read your subscription", "description": "See your plan, trial status, seats and billing state." },
-          "pluginsManage": { "label": "Manage plugins", "description": "Install, update, remove, enable and disable plugins, and add marketplace sources. An installed plugin runs code inside Voltius with the permissions it declares." },
-          "importExportRead": { "label": "Export your data", "description": "Export connections, identities, SSH keys, snippets and port-forwarding rules. Bundles containing passwords or private keys can only be exported encrypted." },
-          "importExportWrite": { "label": "Import data", "description": "Import connections, identities, SSH keys, snippets and port-forwarding rules into a vault. Existing items are never overwritten." },
-          "storage": { "label": "Store plugin data", "description": "Save this plugin's own settings and data on your device." },
-          "http": { "label": "Access the network", "description": "Make network requests to external services." },
-          "cryptoDerive": { "label": "Derive encryption keys", "description": "Derive an encryption key from a passphrase you provide. Does not grant access to your stored secrets." },
-          "fs": { "label": "Access files", "description": "Read and write files on your device." },
-          "ui": { "label": "Show interface elements", "description": "Add its own panels and controls to the app." },
-          "notifications": { "label": "Show notifications", "description": "Show you notifications and toasts." },
-          "settingsPage": { "label": "Add a settings page", "description": "Add its own page to Settings." },
-          "rightPanel": { "label": "Add a side panel", "description": "Add a panel to the session side area." },
-          "globalPanel": { "label": "Add an app-wide panel", "description": "Add a panel available across the whole app." },
-          "themes": { "label": "Add color themes", "description": "Add its own color themes you can select in the app." },
-          "omniCommands": { "label": "Add command-palette actions", "description": "Add its own actions to the command palette." },
-          "uiContributions": { "label": "Add interface elements", "description": "Add its own elements to the app's interface." }
+          "terminalRead": {
+            "label": "Read terminal output",
+            "description": "Read the visible output and scrollback of your terminal sessions."
+          },
+          "terminalStream": {
+            "label": "Watch terminal output live",
+            "description": "Continuously watch everything printed in your terminal sessions, as it happens."
+          },
+          "terminalWrite": {
+            "label": "Type into your terminals",
+            "description": "Send input and run commands in your terminal sessions — as if typing them yourself."
+          },
+          "keychainRead": {
+            "label": "Read its own stored secrets",
+            "description": "Read secrets this plugin previously stored in your device keychain."
+          },
+          "keychainWrite": {
+            "label": "Store secrets on your device",
+            "description": "Save secrets to your device's OS keychain."
+          },
+          "metricsRead": {
+            "label": "Read system metrics",
+            "description": "Read CPU, memory, disk and network statistics from your connected hosts."
+          },
+          "dockerRead": {
+            "label": "Read Docker information",
+            "description": "List containers, images, volumes, networks and stacks, and read container logs. Logs can contain passwords or tokens."
+          },
+          "processesRead": {
+            "label": "Read process information",
+            "description": "List running processes on your connected hosts."
+          },
+          "processesManage": {
+            "label": "Manage processes",
+            "description": "List and kill running processes on your connected hosts."
+          },
+          "dockerManage": {
+            "label": "Manage Docker",
+            "description": "List, start, stop and delete containers, images, volumes, networks and stacks. This can permanently destroy data."
+          },
+          "portsForward": {
+            "label": "Forward ports to this computer",
+            "description": "Open SSH tunnels from your connected hosts to local ports on this computer, and open the resulting address in your browser or clipboard."
+          },
+          "proxmoxRead": {
+            "label": "Read Proxmox information",
+            "description": "List LXC containers and their snapshots."
+          },
+          "proxmoxManage": {
+            "label": "Manage Proxmox",
+            "description": "List and control LXC containers, including creating, deleting and rolling back snapshots. This can permanently destroy data."
+          },
+          "sftpRead": {
+            "label": "Read files",
+            "description": "Browse and read files on your saved SSH/FTP hosts and on this computer."
+          },
+          "sftpWrite": {
+            "label": "Write and move files",
+            "description": "Create, rename, overwrite and delete files on your saved SSH/FTP hosts and on this computer, and copy files between them. This can permanently destroy data."
+          },
+          "audit": {
+            "label": "Record audit events",
+            "description": "Add entries to your audit log describing what it did. For a host in a team vault, these entries are also sent to that team's server."
+          },
+          "auditRead": {
+            "label": "Read the activity log",
+            "description": "Read this device's activity log, including which hosts were reached, which files were touched and what other plugins did. When a team is named, it also reads that team's server-side log — every member's activity."
+          },
+          "mcpContribute": {
+            "label": "Expose tools to external AI agents",
+            "description": "Lets this plugin add its own commands to the Voltius MCP server, so any external AI agent you have connected can run them — using this plugin's own permissions."
+          },
+          "vaultsRead": {
+            "label": "See your vaults",
+            "description": "See the names of your vaults, including team vaults, and how they are organized."
+          },
+          "vaultsWrite": {
+            "label": "Create and delete vaults",
+            "description": "Create, rename and delete your vaults. Deleting a vault can delete everything filed in it."
+          },
+          "foldersRead": {
+            "label": "See your folders",
+            "description": "See the folders you organize hosts, keys, port forwards and snippets into."
+          },
+          "foldersWrite": {
+            "label": "Create and delete folders",
+            "description": "Create, rename and delete folders. Deleting a folder can delete everything filed in it."
+          },
+          "sessionsRead": {
+            "label": "See your sessions",
+            "description": "See which terminal sessions are open and when they change."
+          },
+          "sessionsWrite": {
+            "label": "Open and close sessions",
+            "description": "Open new terminal sessions and close existing ones."
+          },
+          "connectionsRead": {
+            "label": "Read your connections",
+            "description": "Read your saved connections and their details."
+          },
+          "connectionsWrite": {
+            "label": "Manage your connections",
+            "description": "Create, edit, and delete your saved connections."
+          },
+          "keysRead": {
+            "label": "Read your SSH keys",
+            "description": "List your saved SSH keys, and append one to a saved host's authorized_keys over SSH."
+          },
+          "keysWrite": {
+            "label": "Manage your SSH keys",
+            "description": "Create and delete SSH keys on your behalf."
+          },
+          "identitiesRead": {
+            "label": "Read your identities",
+            "description": "List your saved identities."
+          },
+          "identitiesWrite": {
+            "label": "Manage your identities",
+            "description": "Create and delete identities on your behalf."
+          },
+          "snippetsRead": {
+            "label": "Read your snippets",
+            "description": "List your saved snippets and the commands they run."
+          },
+          "snippetsWrite": {
+            "label": "Manage your snippets",
+            "description": "Create, edit, move and delete your saved snippets."
+          },
+          "snippetsRun": {
+            "label": "Run your snippets on your hosts",
+            "description": "Execute a saved snippet against a host, connecting to it if needed. Its commands run with your own access, exactly as if you ran them yourself."
+          },
+          "portForwardingRead": {
+            "label": "Read your port forwards",
+            "description": "List your saved port forwarding rules and the tunnels open right now."
+          },
+          "portForwardingWrite": {
+            "label": "Manage your port forwards",
+            "description": "Create, edit, move and delete your saved port forwarding rules."
+          },
+          "knownHostsRead": {
+            "label": "Read your known hosts",
+            "description": "List the SSH host keys you have trusted, with their fingerprints."
+          },
+          "knownHostsWrite": {
+            "label": "Trust and remove host keys",
+            "description": "Authorise an SSH host key, or delete one you trusted. A trusted key means connections to that host are accepted without asking you."
+          },
+          "historyRead": {
+            "label": "Read your command history",
+            "description": "Search the commands you typed in terminals. These can contain passwords or tokens you typed in plain text."
+          },
+          "transfersRead": {
+            "label": "See file transfers",
+            "description": "See the file transfers running now, including their file names, progress and errors."
+          },
+          "transfersWrite": {
+            "label": "Cancel and retry transfers",
+            "description": "Cancel a file transfer that is running, or start a failed one again — including transfers you started yourself."
+          },
+          "healthRead": {
+            "label": "See host reachability",
+            "description": "See which of your saved hosts last answered a reachability check, and how quickly."
+          },
+          "vaultRead": {
+            "label": "Read your vault",
+            "description": "Read data stored in your vault."
+          },
+          "vaultWrite": {
+            "label": "Write to your vault",
+            "description": "Store and change data in your vault."
+          },
+          "syncRead": {
+            "label": "Read sync data",
+            "description": "Read this plugin's own data synced across your devices, and see the status of your own configuration sync."
+          },
+          "syncWrite": {
+            "label": "Write sync data",
+            "description": "Store and change data synced across your devices."
+          },
+          "panesRead": {
+            "label": "Read the terminal layout",
+            "description": "See your open tabs and split panes, and which session is in each."
+          },
+          "panesWrite": {
+            "label": "Arrange terminal panes",
+            "description": "Split, move, detach and focus terminal panes. Sessions stay open; nothing is closed."
+          },
+          "teamRead": {
+            "label": "Read your teams",
+            "description": "See your teams, who belongs to them, their roles, and which members hold the team vault key."
+          },
+          "teamWrite": {
+            "label": "Manage team members",
+            "description": "Invite people to your teams, remove members, and change what role they hold."
+          },
+          "sharingRead": {
+            "label": "Read shared terminals",
+            "description": "See which of your terminal sessions are shared, who is watching them, and who holds control."
+          },
+          "sharingWrite": {
+            "label": "Share live terminals",
+            "description": "Stream a live terminal session to members of your teams, stop sharing, and hand control of it to a participant who asked for it."
+          },
+          "settingsRead": {
+            "label": "Read app settings",
+            "description": "See every setting in this app and its current value."
+          },
+          "settingsWrite": {
+            "label": "Change app settings",
+            "description": "Change any setting in this app, including ones that turn off a safeguard."
+          },
+          "accountRead": {
+            "label": "Read your subscription",
+            "description": "See your plan, trial status, seats and billing state."
+          },
+          "pluginsManage": {
+            "label": "Manage plugins",
+            "description": "Install, update, remove, enable and disable plugins, and add marketplace sources. An installed plugin runs code inside Voltius with the permissions it declares."
+          },
+          "importExportRead": {
+            "label": "Export your data",
+            "description": "Export connections, identities, SSH keys, snippets and port-forwarding rules. Bundles containing passwords or private keys can only be exported encrypted."
+          },
+          "importExportWrite": {
+            "label": "Import data",
+            "description": "Import connections, identities, SSH keys, snippets and port-forwarding rules into a vault. Existing items are never overwritten."
+          },
+          "storage": {
+            "label": "Store plugin data",
+            "description": "Save this plugin's own settings and data on your device."
+          },
+          "http": {
+            "label": "Access the network",
+            "description": "Make network requests to external services."
+          },
+          "cryptoDerive": {
+            "label": "Derive encryption keys",
+            "description": "Derive an encryption key from a passphrase you provide. Does not grant access to your stored secrets."
+          },
+          "fs": {
+            "label": "Access files",
+            "description": "Read and write files on your device."
+          },
+          "ui": {
+            "label": "Show interface elements",
+            "description": "Add its own panels and controls to the app."
+          },
+          "notifications": {
+            "label": "Show notifications",
+            "description": "Show you notifications and toasts."
+          },
+          "settingsPage": {
+            "label": "Add a settings page",
+            "description": "Add its own page to Settings."
+          },
+          "rightPanel": {
+            "label": "Add a side panel",
+            "description": "Add a panel to the session side area."
+          },
+          "globalPanel": {
+            "label": "Add an app-wide panel",
+            "description": "Add a panel available across the whole app."
+          },
+          "themes": {
+            "label": "Add color themes",
+            "description": "Add its own color themes you can select in the app."
+          },
+          "omniCommands": {
+            "label": "Add command-palette actions",
+            "description": "Add its own actions to the command palette."
+          },
+          "uiContributions": {
+            "label": "Add interface elements",
+            "description": "Add its own elements to the app's interface."
+          }
         }
       }
     },
@@ -1037,9 +1251,18 @@
           "label": "Delete Selected",
           "desc": "Delete selected items"
         },
-        "copy": { "label": "Copy", "desc": "Copy the selected items to the clipboard" },
-        "cut": { "label": "Cut", "desc": "Cut the selected items to the clipboard" },
-        "paste": { "label": "Paste", "desc": "Paste clipboard items into the current folder" },
+        "copy": {
+          "label": "Copy",
+          "desc": "Copy the selected items to the clipboard"
+        },
+        "cut": {
+          "label": "Cut",
+          "desc": "Cut the selected items to the clipboard"
+        },
+        "paste": {
+          "label": "Paste",
+          "desc": "Paste clipboard items into the current folder"
+        },
         "undo": {
           "label": "Undo",
           "desc": "Undo last action"

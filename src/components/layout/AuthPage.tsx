@@ -1,22 +1,11 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@iconify/react";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import LogoBadge from "./LogoBadge";
-import {
-  createLocalAccountNoPassword,
-  createServerAccount,
-  login,
-} from "@/services/account";
+import { createLocalAccountNoPassword, login } from "@/services/account";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { VaultUnreadableError } from "@/services/vaultErrors";
 import { VaultBackups } from "@/components/shared/VaultBackups";
-import { ServerUrlField } from "@/components/shared/ServerUrlField";
-import { lastServerUrl } from "@/utils/serverInstance";
-
-
-type View = "home" | "cloud";
-type CloudMode = "signup" | "signin";
 
 interface Props {
   isLocked: boolean;
@@ -31,8 +20,6 @@ type Unreadable = "no-password" | "wrong-key";
 
 export default function AuthPage({ isLocked, vaultUnreadable, onReady }: Props) {
   const { t } = useTranslation();
-  const [view, setView] = useState<View>("home");
-  const [cloudMode, setCloudMode] = useState<CloudMode>("signup");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [unreadable, setUnreadable] = useState<Unreadable | null>(
@@ -40,18 +27,7 @@ export default function AuthPage({ isLocked, vaultUnreadable, onReady }: Props) 
   );
 
   const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [email, setEmail] = useState("");
-  const [serverUrl, setServerUrl] = useState(lastServerUrl);
   const addToast = useNotificationStore((s) => s.addToast);
-
-  const reset = (v: View, mode?: CloudMode) => {
-    setView(v);
-    if (mode) setCloudMode(mode);
-    setError("");
-    setPassword("");
-    setConfirm("");
-  };
 
   const wrap = async (fn: () => Promise<void>) => {
     setLoading(true);
@@ -85,8 +61,8 @@ export default function AuthPage({ isLocked, vaultUnreadable, onReady }: Props) 
         window.location.reload();
       });
 
-    // No password was ever asked for, so there is no other one to try and no
-    // cloud copy to re-download: the backups below are the only way back.
+    // No password was ever asked for, so there is no other one to try: the
+    // backups below are the only way back.
     const noPassword = unreadable === "no-password";
 
     return (
@@ -155,134 +131,22 @@ export default function AuthPage({ isLocked, vaultUnreadable, onReady }: Props) 
 
   // ── Home (first launch) ──────────────────────────────────────────────────
 
-  if (view === "home") {
-    return (
-      <Layout>
-        <p className="text-xs mb-6 text-center text-(--t-text-muted)">
-          {t("layout.auth.chooseHowToUse")}
-        </p>
+  return (
+    <Layout>
+      <p className="text-xs mb-6 text-center text-(--t-text-muted)">
+        {t("layout.auth.chooseHowToUse")}
+      </p>
 
-        <ActionButton
-          icon="lucide:zap"
-          label={t("layout.auth.getStarted")}
-          sub={t("layout.auth.getStartedSub")}
-          primary
-          loading={loading}
-          onClick={() => wrap(createLocalAccountNoPassword)}
-        />
-
-        <div className="flex items-center gap-2 my-4">
-          <div className="flex-1 h-px bg-(--t-border)" />
-          <span className="text-xs text-(--t-text-dim)">{t("layout.auth.or")}</span>
-          <div className="flex-1 h-px bg-(--t-border)" />
-        </div>
-
-        <ActionButton
-          icon="lucide:cloud"
-          label={t("layout.auth.cloudAccount")}
-          sub={t("layout.auth.cloudAccountSub")}
-          onClick={() => reset("cloud", "signup")}
-        />
-      </Layout>
-    );
-  }
-
-  // ── Cloud (merged sign-up / sign-in) ─────────────────────────────────────
-
-  if (view === "cloud") {
-    const isSignup = cloudMode === "signup";
-
-    const submit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!email.includes("@")) { setError(t("layout.auth.errorInvalidEmail")); return; }
-      const normalizedUrl = serverUrl.replace(/\/+$/, "");
-      if (isSignup) {
-        if (password.length < 8) { setError(t("layout.auth.errorMinLength8")); return; }
-        if (password !== confirm) { setError(t("layout.auth.errorPasswordMismatch")); return; }
-        await wrap(async () => {
-          await createServerAccount(email, password, normalizedUrl);
-          addToast({
-            source: { kind: "plugin", id: "system", name: "Voltius" },
-            type: "toast",
-            message: t("layout.auth.accountCreatedToast"),
-            severity: "info",
-            duration: 5000,
-          });
-        });
-      } else {
-        await wrap(() => login(password, email, normalizedUrl));
-      }
-    };
-
-    return (
-      <Layout onBack={() => reset("home")}>
-        <p className="text-xs mb-4 text-center text-(--t-text-muted)">
-          {isSignup ? t("layout.auth.signupPrompt") : t("layout.auth.signinPrompt")}
-        </p>
-        <form onSubmit={submit} className="w-full space-y-2">
-          <Input type="email" placeholder={t("layout.auth.emailPlaceholder")} value={email} onChange={setEmail} autoFocus />
-          <Input type="password" placeholder={isSignup ? t("layout.auth.masterPasswordMinPlaceholder") : t("layout.auth.masterPasswordPlaceholder")}
-            value={password} onChange={setPassword} />
-          {isSignup && (
-            <Input type="password" placeholder={t("layout.auth.confirmPasswordPlaceholder")} value={confirm} onChange={setConfirm} />
-          )}
-          <ServerUrlField value={serverUrl} onChange={setServerUrl} inputClassName={INPUT_CLASS} />
-          <ErrorMsg msg={error} />
-          <SubmitBtn loading={loading} label={isSignup ? t("layout.auth.createAccount") : t("layout.auth.signIn")} />
-        </form>
-
-        <div className="mt-3 text-center">
-          {isSignup ? (
-            <>
-              <span className="text-xs text-(--t-text-dim)">{t("layout.auth.alreadyHaveAccount")}</span>
-              <button
-                type="button"
-                onClick={() => { setCloudMode("signin"); setError(""); setConfirm(""); }}
-                className="text-xs text-(--t-accent) hover:underline"
-              >
-                {t("layout.auth.signIn")}
-              </button>
-            </>
-          ) : (
-            <>
-              <span className="text-xs text-(--t-text-dim)">{t("layout.auth.newHere")}</span>
-              <button
-                type="button"
-                onClick={() => { setCloudMode("signup"); setError(""); }}
-                className="text-xs text-(--t-accent) hover:underline"
-              >
-                {t("layout.auth.createAccount")}
-              </button>
-            </>
-          )}
-        </div>
-
-        {isSignup && (
-          <p className="mt-2 text-xs text-center text-(--t-text-dim) leading-relaxed">
-            {t("layout.auth.e2eeNotice")}{" "}
-            <button type="button" onClick={() => void openUrl("https://github.com/VoltiusApp/voltius")}
-              className="text-(--t-accent) hover:underline">
-              {t("layout.auth.openSource")}
-            </button>
-            <br />
-            {t("layout.auth.agreeToTerms")}{" "}
-            <button type="button" onClick={() => void openUrl("https://voltius.app/terms")}
-              className="text-(--t-accent) hover:underline">
-              {t("layout.auth.termsOfService")}
-            </button>{" "}
-            {t("layout.auth.and")}{" "}
-            <button type="button" onClick={() => void openUrl("https://voltius.app/privacy")}
-              className="text-(--t-accent) hover:underline">
-              {t("layout.auth.privacyPolicy")}
-            </button>
-            .
-          </p>
-        )}
-      </Layout>
-    );
-  }
-
-  return null;
+      <ActionButton
+        icon="lucide:zap"
+        label={t("layout.auth.getStarted")}
+        sub={t("layout.auth.getStartedSub")}
+        primary
+        loading={loading}
+        onClick={() => wrap(createLocalAccountNoPassword)}
+      />
+    </Layout>
+  );
 }
 
 // ── Shared sub-components ────────────────────────────────────────────────────

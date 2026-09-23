@@ -5,17 +5,9 @@ import { Icon } from "@iconify/react";
 import { useUIStore } from "@/stores/uiStore";
 import { useSessionStore } from "@/stores/sessionStore";
 import { useThemeStore } from "@/stores/themeStore";
-import type { SyncStatus } from "@/services/sync";
-import { syncStatusColor } from "@/services/syncStatus";
-import { useSyncProviders } from "@/hooks/useSyncProviders";
 import { useRipple } from "@/hooks/useRipple";
-import { useTeamSessionStore } from "@/stores/teamSessionStore";
-import { ShareMenu } from "@/components/terminal/ShareMenu";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { usePfToastBridge } from "@/hooks/usePfToastBridge";
-import { useSubscriptionStore } from "@/stores/subscriptionStore";
-import { SyncDropdown } from "@/components/layout/SyncDropdown";
-import { usePluginInstaller } from "@/components/settings/usePluginInstaller";
 import { NewSessionPopover } from "@/components/layout/NewSessionPopover";
 import { clearTitlebarDropTarget, useDragStore } from "@/stores/dragStore";
 import { useMcpOwnershipStore } from "@/stores/mcpOwnershipStore";
@@ -31,8 +23,6 @@ import { activateSessionTab, activateSplitTabPane } from "@/services/tabActivati
 import { pinHostList } from "@/services/hostStack";
 import { sessionMenuItems, pinListExtra } from "@/utils/sessionMenuItems";
 import { InlineNameEditor } from "@/components/shared/InlineNameEditor";
-import { StatusDot } from "@/components/shared/StatusDot";
-import { SyncStatusIcon, useSyncMotion } from "@/components/shared/SyncStatusIcon";
 import { sessionStatusTone } from "@/utils/statusTone";
 import { sessionLabel, splitTabLabel } from "@/utils/sessionLabel";
 import { focusSession } from "@/hooks/useTerminal";
@@ -78,11 +68,6 @@ export default function TitleBar() {
 
   usePfToastBridge();
 
-  const { providers: syncProviders, effective: sync } = useSyncProviders();
-  const syncInstaller = usePluginInstaller();
-
-  const accountMode = useSubscriptionStore((s) => s.accountMode);
-
   const { pos: tabMenuPos, open: openTabMenu, close: closeTabMenu } = useContextMenu();
   const [menuTarget, setMenuTarget] = useState<{ kind: "session" | "split"; id: string } | null>(null);
   const [menuExtras, setMenuExtras] = useState<ContextMenuItem[]>([]);
@@ -115,24 +100,11 @@ export default function TitleBar() {
   const menuSession = menuTarget?.kind === "session" ? sessions.find((s) => s.id === menuTarget.id) ?? null : null;
   const menuSplitTab = menuTarget?.kind === "split" ? splitTabs.find((tab) => tab.id === menuTarget.id) ?? null : null;
 
-  const [syncDropdownOpen, setSyncDropdownOpen] = useState(false);
-  const syncButtonRef = useRef<HTMLButtonElement>(null);
-
   const showTerminal = activeSessionId !== null && sessions.length > 0 && activeNav === "terminal" && !sftpPanelOpen;
   const isVaultsActive = !sftpPanelOpen && activeNav !== "terminal";
   const isVaultCompact = !isVaultsActive && sessions.length > 0;
 
-  const mpConnections = useTeamSessionStore((s) => s.connections);
-  const [shareDropdownOpen, setShareDropdownOpen] = useState(false);
-  const shareButtonRef = useRef<HTMLButtonElement>(null);
-  const tier = useSubscriptionStore((s) => s.tier);
-  const openSettings = useUIStore((s) => s.openSettings);
-  const openCloudAuth = useUIStore((s) => s.openCloudAuth);
-
   const activeSession = sessions.find((s) => s.id === activeSessionId);
-  const isActiveSessionMultiplayer = activeSession?.type === "multiplayer";
-  const isActiveSessionSharing = activeSessionId ? !!mpConnections[activeSessionId] && !mpConnections[activeSessionId]?.ended : false;
-  const isActiveSessionEnded = activeSessionId ? !!mpConnections[activeSessionId]?.ended : false;
 
   const lastActiveByHost = useLastActiveByHost(activeSession, sessions);
   const pinnedHost = hostPanelPinned && activeNav === "terminal" && !sftpPanelOpen && activeSession ? stackGroupKey(activeSession) : null;
@@ -488,114 +460,6 @@ export default function TitleBar() {
         />
       )}
 
-      {accountMode === "server" && <SubscriptionBadge />}
-
-      {/* Sync indicator */}
-      <SyncIndicator
-        anchorRef={syncButtonRef}
-        status={sync.status}
-        lastSync={sync.lastSync}
-        error={sync.error}
-        errorSource={sync.errorSource}
-        active={syncDropdownOpen}
-        configured={sync.configured}
-        onClick={() => setSyncDropdownOpen((o) => !o)}
-      />
-      <SyncDropdown
-        anchorRef={syncButtonRef}
-        open={syncDropdownOpen}
-        onClose={() => setSyncDropdownOpen(false)}
-        providers={syncProviders}
-        installer={syncInstaller}
-      />
-      {syncInstaller.modal}
-
-      {/* Watching / Ended badge — guest in a multiplayer session */}
-      {showTerminal && isActiveSessionMultiplayer && (
-        <div className="flex items-center px-1 shrink-0">
-          {isActiveSessionEnded ? (
-            <span
-              className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium"
-              style={{
-                background: "color-mix(in srgb, var(--t-status-error) 12%, transparent)",
-                color: "var(--t-status-error)",
-                border: "1px solid color-mix(in srgb, var(--t-status-error) 25%, transparent)",
-              }}
-            >
-              <StatusDot tone="error" size="sm" />
-              {t("layout.titleBar.ended")}
-            </span>
-          ) : (
-            <span
-              className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium"
-              style={{
-                background: "color-mix(in srgb, var(--t-accent) 12%, transparent)",
-                color: "var(--t-accent)",
-                border: "1px solid color-mix(in srgb, var(--t-accent) 25%, transparent)",
-              }}
-            >
-              <StatusDot tone="accent" size="sm" motion="pulse" />
-              {t("layout.titleBar.watching")}
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Share button — only in terminal view for non-multiplayer sessions */}
-      {showTerminal && !isActiveSessionMultiplayer && (
-        <div className="flex items-center px-1 shrink-0">
-          <button
-            ref={shareButtonRef}
-            onClick={() => setShareDropdownOpen((o) => !o)}
-            className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs transition-all"
-            style={{
-              background: isActiveSessionSharing
-                ? "color-mix(in srgb, var(--t-accent) 15%, transparent)"
-                : shareDropdownOpen ? "var(--t-bg-elevated)" : "transparent",
-              color: isActiveSessionSharing ? "var(--t-accent)" : "var(--t-text-secondary)",
-              border: isActiveSessionSharing
-                ? "1px solid color-mix(in srgb, var(--t-accent) 30%, transparent)"
-                : "1px solid transparent",
-            }}
-            title={
-              isActiveSessionSharing        ? t("layout.titleBar.sharingCurrently") :
-              accountMode !== "server"      ? t("layout.titleBar.signInToShare") :
-              tier === "free"               ? t("layout.titleBar.sharingRequiresPro") :
-                                              t("layout.titleBar.shareTerminal")
-            }
-            onMouseEnter={(e) => {
-              if (!isActiveSessionSharing && !shareDropdownOpen) {
-                (e.currentTarget as HTMLButtonElement).style.color = "var(--t-text-primary)";
-                (e.currentTarget as HTMLButtonElement).style.background = "var(--t-bg-elevated)";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isActiveSessionSharing && !shareDropdownOpen) {
-                (e.currentTarget as HTMLButtonElement).style.color = "var(--t-text-secondary)";
-                (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-              }
-            }}
-          >
-            <Icon icon="lucide:radio" width={13} />
-            {isActiveSessionSharing ? t("layout.titleBar.sharing") : t("layout.titleBar.share")}
-          </button>
-          {activeSessionId && (
-            <ShareMenu
-              anchorRef={shareButtonRef}
-              open={shareDropdownOpen}
-              onClose={() => setShareDropdownOpen(false)}
-              activeSessionId={activeSessionId}
-              connectionName={activeSession ? sessionLabel(activeSession) : t("layout.titleBar.terminalFallback")}
-              connectionVaultId={connections.find((c) => c.id === activeSession?.connectionId)?.vault_id}
-              isLoggedIn={accountMode === "server"}
-              tier={tier}
-              onSignIn={() => { setShareDropdownOpen(false); openCloudAuth("signin"); }}
-              onUpgrade={() => { setShareDropdownOpen(false); openSettings("account"); }}
-            />
-          )}
-        </div>
-      )}
-
       {/* Right panel toggle — only in terminal view */}
       {showTerminal && (
         <div className="flex items-center px-2 shrink-0">
@@ -712,126 +576,5 @@ function TitleBarBtn({ onClick, title, children }: {
       {rippleEls}
       {children}
     </button>
-  );
-}
-
-
-function SubscriptionBadge() {
-  const { t } = useTranslation();
-  const openSettings = useUIStore((s) => s.openSettings);
-  const { tier, trialEndsAt, trialUsed, trialKnown, isTrialActive } = useSubscriptionStore();
-  const [hovered, setHovered] = useState(false);
-
-  const isPremium = tier !== "free";
-
-  const daysLeft = trialEndsAt
-    ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / 86_400_000))
-    : 0;
-
-  const hoverLabel = isTrialActive
-    ? t("layout.titleBar.plan.proTrial", { daysLeft })
-    : tier === "teams" ? t("layout.titleBar.plan.teams")
-    : tier === "business" ? t("layout.titleBar.plan.business")
-    : tier === "pro" ? t("layout.titleBar.plan.pro")
-    : trialKnown && !trialUsed ? t("layout.titleBar.plan.upgradeTrial")
-    : t("layout.titleBar.plan.upgrade");
-
-  return (
-    <div className="flex items-center px-1 shrink-0">
-      <button
-        onClick={() => openSettings("account")}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        className="flex items-center gap-1.5 h-7 rounded-lg overflow-hidden transition-all"
-        style={{
-          maxWidth: hovered ? "10rem" : "2rem",
-          padding: hovered ? "0 0.5rem" : "0 0.375rem",
-          whiteSpace: "nowrap",
-          transition: "max-width 250ms ease, padding 250ms ease, color 150ms ease",
-          color: hovered
-            ? isPremium ? "#f59e0b" : "var(--t-accent)"
-            : isPremium ? "#f59e0b" : "var(--t-text-secondary)",
-          background: hovered ? "var(--t-bg-elevated)" : "transparent",
-        }}
-        title={hoverLabel}
-      >
-        <Icon
-          icon={isPremium ? "lucide:crown" : "lucide:circle-fading-arrow-up"}
-          width={14}
-          className="shrink-0"
-        />
-        <span className="text-xs font-medium overflow-hidden" style={{ opacity: hovered ? 1 : 0, transition: "opacity 150ms ease" }}>
-          {hoverLabel}
-        </span>
-      </button>
-    </div>
-  );
-}
-
-function SyncIndicator({
-  anchorRef,
-  status: engineStatus,
-  lastSync,
-  error,
-  errorSource,
-  active,
-  configured,
-  onClick,
-}: {
-  anchorRef: React.RefObject<HTMLButtonElement | null>;
-  status: SyncStatus;
-  lastSync: Date | null;
-  error: string | null;
-  errorSource: string | null;
-  active: boolean;
-  configured: boolean;
-  onClick: () => void;
-}) {
-  const { t } = useTranslation();
-  const { createRipple, rippleEls } = useRipple();
-  const sync = useSyncMotion(engineStatus);
-  const status = sync.status;
-  const color = !configured ? "var(--t-text-dim)" : syncStatusColor(status);
-
-  const title = !configured ? t("layout.sync.status.notConfigured") :
-    status === "syncing" ? t("layout.sync.status.syncing") :
-    status === "success" ? (lastSync ? t("layout.sync.status.syncedAt", { time: lastSync.toLocaleTimeString() }) : t("layout.sync.status.synced")) :
-    status === "error"   ? (errorSource
-      ? t("layout.sync.status.errorDetailFrom", { source: errorSource, error: error ?? t("layout.sync.status.unknown") })
-      : t("layout.sync.status.errorDetail", { error: error ?? t("layout.sync.status.unknown") })) :
-    status === "offline" ? t("layout.sync.status.offline") :
-                           t("layout.sync.status.default");
-
-  return (
-    <div className="flex items-center px-1 shrink-0">
-      <button
-        ref={anchorRef}
-        onClick={onClick}
-        onPointerDown={createRipple}
-        className="flex items-center justify-center w-8 h-8 rounded-xl transition-colors relative overflow-hidden cursor-pointer"
-        style={{
-          color: active ? "var(--t-tab-active-text)" : color,
-          background: active ? "var(--t-tab-active-bg)" : "transparent",
-          border: active ? "1px solid var(--t-tab-active-border)" : "1px solid transparent",
-        }}
-        title={title}
-        onMouseEnter={(e) => {
-          if (!active) {
-            (e.currentTarget as HTMLButtonElement).style.background = "var(--t-bg-toolbar)";
-            (e.currentTarget as HTMLButtonElement).style.color = status === "error"
-              ? "var(--t-status-error)" : "var(--t-tab-active-text)";
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!active) {
-            (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-            (e.currentTarget as HTMLButtonElement).style.color = color;
-          }
-        }}
-      >
-        {rippleEls}
-        {configured ? <SyncStatusIcon sync={sync} width={18} /> : <Icon icon="lucide:cloud-off" width={18} />}
-      </button>
-    </div>
   );
 }

@@ -1,6 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getSecret, storeSecret } from "@/services/vault";
-import { saveTeamVaultSecretForVault } from "@/services/teamVaultSecrets";
 import { isValidSshPublicKey } from "@/services/sshPublicKey";
 import type { SshKey } from "@/types";
 
@@ -51,6 +50,5 @@ export async function ensurePublicKey(sshKey: SshKey): Promise<string | null> {
   if (!isValidSshPublicKey(result.publicKey)) return null;
 
   await storeSecret(localKey, result.publicKey);
-  await saveTeamVaultSecretForVault(sshKey.vault_id, localKey, result.publicKey).catch(() => {});
   return result.publicKey;
 }

@@ -1,5 +1,4 @@
 import type { AuditContext, AuditTarget, ClientAuditAction, PluginAuditAction } from "@/services/auditContext";
-import { reportClientEvent } from "@/services/auditService";
 import { reportLocalClientEvent } from "@/services/localAuditService";
 
 export type { ClientAuditAction } from "@/services/auditContext";
@@ -17,25 +16,12 @@ export function reportAuditClientEvent(
     occurred_at: new Date().toISOString(),
   };
 
-  if (context.kind === "team") {
-    reportClientEvent(context.teamId, {
-      ...event,
-      vault_id: opts.vault_id ?? context.vaultId,
-    }).catch(() => {});
-    return;
-  }
-
   reportLocalClientEvent(context.vaultId, event).catch(() => {});
 }
 
-/**
- * Where the LOCAL copy goes. A team context falls back to "personal" rather
- * than its own vault id: auditStore.fetchLogs dispatches local-vs-team on
- * context.kind, so a local row written under a team vault id would be written
- * and never read back.
- */
+/** Where the local copy goes: the context's own vault id. */
 export function localSinkVaultId(context: AuditContext): string {
-  return context.kind === "local" ? context.vaultId : "personal";
+  return context.vaultId;
 }
 
 const MAX_LOCAL_STRING_CHARS = 2000;
@@ -82,13 +68,11 @@ export function boundLocalMetadata(
 }
 
 /**
- * Unlike reportAuditClientEvent, which routes to exactly one sink, this ALWAYS
- * writes the local record and ADDITIONALLY posts for team contexts. The
- * on-device trail is the real security property and must not depend on a
- * server deploy.
+ * Writes the local record. The on-device trail is the security property; there
+ * is no server sink in a local-only install.
  *
  * localMetadata is a separate parameter, not a convention: command text and
- * denial reasons are structurally unable to reach the wire.
+ * denial reasons are structurally unable to reach a wire.
  */
 export function reportPluginAuditEvent(
   context: AuditContext,
@@ -113,13 +97,4 @@ export function reportPluginAuditEvent(
     occurred_at,
     metadata: Object.keys(localMerged).length > 0 ? localMerged : undefined,
   }).catch(() => {});
-
-  if (context.kind === "team") {
-    reportClientEvent(context.teamId, {
-      ...target,
-      action,
-      occurred_at,
-      vault_id: target.vault_id ?? context.vaultId,
-    }).catch(() => {});
-  }
 }

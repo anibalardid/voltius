@@ -17,10 +17,7 @@ import { buildSnippetRunTools, SNIPPET_RUN_PERMISSIONS } from "./tools/snippetRu
 import { buildTransferTools, TRANSFER_PERMISSIONS } from "./tools/transfers";
 import { buildTelemetryTools, TELEMETRY_PERMISSIONS } from "./tools/telemetry";
 import { buildPaneTools, PANE_PERMISSIONS } from "./tools/panes";
-import { buildTeamTools, TEAM_PERMISSIONS } from "./tools/team";
-import { buildSharingTools, SHARING_PERMISSIONS } from "./tools/sharing";
 import { buildSettingTools, SETTINGS_PERMISSIONS } from "./tools/settings";
-import { buildAccountTools, ACCOUNT_PERMISSIONS } from "./tools/account";
 import { buildPluginTools, PLUGIN_PERMISSIONS } from "./tools/plugins";
 import { buildMarketplaceTools, MARKETPLACE_PERMISSIONS } from "./tools/marketplace";
 import { buildImportExportTools, IMPORT_EXPORT_PERMISSIONS } from "./tools/importExport";
@@ -44,10 +41,7 @@ const GROUPS = [
   { build: buildSnippetRunTools, permissions: SNIPPET_RUN_PERMISSIONS },
   { build: buildTransferTools, permissions: TRANSFER_PERMISSIONS },
   { build: buildTelemetryTools, permissions: TELEMETRY_PERMISSIONS },
-  { build: buildTeamTools, permissions: TEAM_PERMISSIONS },
-  { build: buildSharingTools, permissions: SHARING_PERMISSIONS },
   { build: buildSettingTools, permissions: SETTINGS_PERMISSIONS },
-  { build: buildAccountTools, permissions: ACCOUNT_PERMISSIONS },
   { build: buildPluginTools, permissions: PLUGIN_PERMISSIONS },
   { build: buildMarketplaceTools, permissions: MARKETPLACE_PERMISSIONS },
   { build: buildImportExportTools, permissions: IMPORT_EXPORT_PERMISSIONS },

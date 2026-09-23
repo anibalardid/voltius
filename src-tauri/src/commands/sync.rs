@@ -10,54 +10,6 @@ use std::path::Path;
 use crate::storage::config::config_dir;
 use crate::storage::secrets::SecretsStore;
 
-// ─── encrypt_payload ──────────────────────────────────────────────────────────
-
-/// Encrypt an arbitrary files+secrets payload with the provided 32-byte XChaCha20-Poly1305 key.
-/// Uses the same binary format as backup_export (4-byte LE header len + header JSON + 24-byte nonce + ciphertext)
-/// but with a minimal header (no account/device id needed for team blobs).
-///
-/// This command is used by the TypeScript team-vault-sync layer to encrypt the merged
-/// CRDT payload before uploading it to the server's team_sync_blobs table.
-#[tauri::command]
-pub fn encrypt_payload(
-    enc_key: Vec<u8>,
-    files: HashMap<String, String>,
-    secrets: HashMap<String, String>,
-) -> Result<Vec<u8>, String> {
-    if enc_key.len() != 32 {
-        return Err("enc_key must be 32 bytes".to_string());
-    }
-
-    // Minimal header so decrypt_blob can strip it out
-    let header = serde_json::json!({ "version": BLOB_VERSION });
-    let header_json = serde_json::to_vec(&header).map_err(|e| e.to_string())?;
-
-    // Team-vault blobs are server-authoritative per record and don't participate
-    // in the per-secret clock merge, so no clocks are attached here.
-    let payload = BlobPayload {
-        files,
-        secrets,
-        secret_clocks: HashMap::new(),
-    };
-    let payload_json = serde_json::to_vec(&payload).map_err(|e| e.to_string())?;
-
-    let key = Key::from_slice(&enc_key);
-    let cipher = XChaCha20Poly1305::new(key);
-    let nonce = XChaCha20Poly1305::generate_nonce(&mut OsRng);
-    let ciphertext = cipher
-        .encrypt(&nonce, payload_json.as_slice())
-        .map_err(|e| format!("Encryption failed: {e}"))?;
-
-    let header_len = header_json.len() as u32;
-    let mut blob = Vec::with_capacity(4 + header_json.len() + NONCE_LEN + ciphertext.len());
-    blob.extend_from_slice(&header_len.to_le_bytes());
-    blob.extend_from_slice(&header_json);
-    blob.extend_from_slice(&nonce);
-    blob.extend_from_slice(&ciphertext);
-
-    Ok(blob)
-}
-
 const BLOB_VERSION: u32 = 2;
 const NONCE_LEN: usize = 24;
 
@@ -420,63 +372,6 @@ pub fn settings_load() -> Option<String> {
 pub fn settings_save(state: String) -> Result<(), String> {
     std::fs::write(config_dir().join("settings.json"), state)
         .map_err(|e| format!("settings_save failed: {e}"))
-}
-
-// ─── Cross-device live-session manifest ──────────────────────────────────────
-// Stored as a root JSON file in config_dir() so backup_export bundles it into
-// the encrypted per-device sync blob automatically.
-
-#[tauri::command]
-pub fn live_sessions_load() -> Option<String> {
-    std::fs::read_to_string(config_dir().join("live_sessions.json")).ok()
-}
-
-#[tauri::command]
-pub fn live_sessions_save(state: String) -> Result<(), String> {
-    std::fs::write(config_dir().join("live_sessions.json"), state)
-        .map_err(|e| format!("live_sessions_save failed: {e}"))
-}
-
-#[tauri::command]
-pub fn device_hostname() -> String {
-    // Android's kernel hostname is always "localhost", so fall back to the
-    // user-facing device model (e.g. "Pixel 8") via system properties.
-    #[cfg(target_os = "android")]
-    if let Some(name) = android_device_name() {
-        return name;
-    }
-    hostname::get()
-        .ok()
-        .and_then(|h| h.into_string().ok())
-        .unwrap_or_else(|| "Unknown device".to_string())
-}
-
-#[cfg(target_os = "android")]
-fn android_device_name() -> Option<String> {
-    fn getprop(key: &str) -> String {
-        std::process::Command::new("getprop")
-            .arg(key)
-            .output()
-            .ok()
-            .and_then(|o| String::from_utf8(o.stdout).ok())
-            .map(|s| s.trim().to_string())
-            .unwrap_or_default()
-    }
-    let model = getprop("ro.product.model");
-    if model.is_empty() {
-        return None;
-    }
-    let manufacturer = getprop("ro.product.manufacturer");
-    // Avoid "Samsung Galaxy"/"samsung SM-..." dupes when model already names the brand.
-    if manufacturer.is_empty()
-        || model
-            .to_lowercase()
-            .starts_with(&manufacturer.to_lowercase())
-    {
-        Some(model)
-    } else {
-        Some(format!("{manufacturer} {model}"))
-    }
 }
 
 // ─── Auto-update preference ─────────────────────────────────────────────────────

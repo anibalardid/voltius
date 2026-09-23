@@ -1,26 +1,10 @@
 import { describe, test, expect, vi, beforeEach } from "vitest";
 import type { PluginAPI, PluginManifest } from "@/plugins/api";
 
-// Spy on the Tauri `backup_export` bridge so we can inspect the args the plugin
-// runtime forwards to it.
+// Spy on the Tauri bridge so we can inspect the args the plugin runtime forwards.
 const invokeMock = vi.fn();
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: (...args: unknown[]) => invokeMock(...args),
-}));
-
-// Stub the sync service: `getExcludedObjectIds()` and `getPluginSkippedSyncFiles()`
-// return known/controllable values so the test can assert they're threaded through
-// to `backup_export` (issues #47, #42). The rest are the remaining surface
-// runtime.ts pulls from this module.
-const pluginSkippedFilesMock = vi.fn<() => string[]>(() => ["theme.json"]);
-const writeFilteredSettingsMock = vi.fn(async () => {});
-vi.mock("@/services/sync", () => ({
-  getExcludedObjectIds: () => ["excluded-host", "excluded-key"],
-  getPluginSkippedSyncFiles: () => pluginSkippedFilesMock(),
-  writeFilteredSettings: () => writeFilteredSettingsMock(),
-  getSyncState: () => ({ status: "idle" }),
-  onSyncStateChange: () => () => {},
-  ENTITY_FILES: [],
 }));
 
 import { loadPlugin, unloadPlugin } from "@/plugins/runtime";
@@ -49,52 +33,23 @@ async function exportOnce(): Promise<void> {
   }
 }
 
-describe("plugin sync.exportState honours sync exclusions", () => {
+describe("plugin sync.exportState on a local-only install", () => {
   beforeEach(() => {
     invokeMock.mockReset();
     invokeMock.mockResolvedValue([1, 2, 3]);
-    pluginSkippedFilesMock.mockReset();
-    writeFilteredSettingsMock.mockReset();
   });
 
-  test("forwards getExcludedObjectIds() into backup_export", async () => {
-    pluginSkippedFilesMock.mockReturnValue(["theme.json"]);
+  test("exports with no exclusions and no withheld files", async () => {
     await exportOnce();
 
     expect(invokeMock).toHaveBeenCalledWith(
       "backup_export",
-      expect.objectContaining({
-        excludedIds: ["excluded-host", "excluded-key"],
-        skipFiles: ["theme.json"],
-      }),
+      expect.objectContaining({ excludedIds: [], skipFiles: [] }),
     );
   });
 
-  test("writes the filtered settings bundle before calling backup_export", async () => {
+  test("writes the settings bundle before calling backup_export", async () => {
     await exportOnce();
-    expect(writeFilteredSettingsMock).toHaveBeenCalled();
-  });
-
-  // The plugin wire can only decide per FILE. That is the whole contract now:
-  // theme.json no longer carries `themes.location`, so an ON domain here means
-  // nothing per-key is riding along un-filtered (#163).
-  test("themes ON: theme.json is not withheld on the plugin path", async () => {
-    pluginSkippedFilesMock.mockReturnValue([]);
-    await exportOnce();
-
-    expect(invokeMock).toHaveBeenCalledWith(
-      "backup_export",
-      expect.objectContaining({ skipFiles: [] }),
-    );
-  });
-
-  test("themes OFF: theme.json is withheld on the plugin path", async () => {
-    pluginSkippedFilesMock.mockReturnValue(["theme.json"]);
-    await exportOnce();
-
-    expect(invokeMock).toHaveBeenCalledWith(
-      "backup_export",
-      expect.objectContaining({ skipFiles: ["theme.json"] }),
-    );
+    expect(invokeMock).toHaveBeenCalledWith("settings_save", expect.anything());
   });
 });

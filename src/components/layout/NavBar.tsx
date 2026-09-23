@@ -15,7 +15,6 @@ const NAV_ITEM_DEFS: { id: NavItem; icon: string }[] = [
   { id: "port-forwarding", icon: "lucide:arrow-left-right" },
   { id: "snippets",        icon: "lucide:braces" },
   { id: "known-hosts",     icon: "lucide:fingerprint-pattern" },
-  { id: "members",         icon: "lucide:users-round" },
   { id: "logs",            icon: "lucide:scroll-text" },
 ];
 

@@ -1,6 +1,5 @@
 import type { SettingsSection } from "@/stores/uiStore";
 import { TOGGLE_DEFS, getToggle, useToggleSettingsStore, type ToggleId } from "@/stores/toggleSettingsStore";
-import { SYNC_OBJECT_TYPES, useSyncPrefsStore } from "@/stores/syncPrefsStore";
 import {
   CURSOR_STYLES,
   DEFAULT_CURSOR_STYLE,
@@ -111,19 +110,6 @@ function toggleDefs(): SettingDef[] {
       set: (v: unknown) => useToggleSettingsStore.getState().set(id, v as boolean),
     };
   });
-}
-
-function syncDefs(): SettingDef[] {
-  return SYNC_OBJECT_TYPES.map((t) => ({
-    key: `sync.type.${t.id}`,
-    type: "boolean" as const,
-    default: true,
-    section: "sync" as const,
-    labelKey: `settings.sync.objectType.${t.id}.label`,
-    writable: true,
-    get: () => useSyncPrefsStore.getState().isTypeSynced(t.id),
-    set: (v: unknown) => useSyncPrefsStore.getState().setSyncType(t.id, v as boolean),
-  }));
 }
 
 function shortcutDefs(): SettingDef[] {
@@ -257,7 +243,7 @@ function explicitDefs(): SettingDef[] {
     {
       key: "security.sessionTimeoutMinutes",
       type: "number", min: 1, max: 1440, default: null,
-      section: "account", labelKey: "settings.account.sessionSecurity.autoLockLabel", writable: true,
+      section: "security", labelKey: "settings.account.sessionSecurity.autoLockLabel", writable: true,
       consequence: GUARDED["security.sessionTimeoutMinutes"],
       get: () => useSecurityStore.getState().sessionTimeoutMinutes,
       set: (v) => useSecurityStore.getState().setSessionTimeoutMinutes(v === null ? null : (v as number)),
@@ -274,7 +260,7 @@ function explicitDefs(): SettingDef[] {
 }
 
 export function settingDefs(): SettingDef[] {
-  return [...toggleDefs(), ...syncDefs(), ...explicitDefs(), ...shortcutDefs()];
+  return [...toggleDefs(), ...explicitDefs(), ...shortcutDefs()];
 }
 
 export function settingDef(key: string): SettingDef | undefined {

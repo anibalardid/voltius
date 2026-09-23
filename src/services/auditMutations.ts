@@ -17,7 +17,7 @@ export function reportAuditMutation(
   metadata?: Record<string, unknown>,
 ): void {
   const context = auditContextForVaultId(target.vault_id);
-  const vaultId = context.kind === "team" ? context.vaultId : context.vaultId;
+  const vaultId = context.vaultId;
   reportAuditClientEvent(context, `${objectType}.${mutation}`, {
     vault_id: vaultId,
     target_type: objectType,

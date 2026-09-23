@@ -1,15 +1,12 @@
 import { describe, test, expect, vi, beforeEach } from "vitest";
 
-const reportClientEvent = vi.fn().mockResolvedValue(undefined);
 const reportLocalClientEvent = vi.fn().mockResolvedValue(undefined);
 
-vi.mock("@/services/auditService", () => ({ reportClientEvent }));
 vi.mock("@/services/localAuditService", () => ({ reportLocalClientEvent }));
 
 const { reportPluginAuditEvent, localSinkVaultId, boundLocalMetadata } = await import("@/services/auditReporter");
 
 beforeEach(() => {
-  reportClientEvent.mockClear();
   reportLocalClientEvent.mockClear();
 });
 
@@ -17,42 +14,23 @@ describe("localSinkVaultId", () => {
   test("uses the vault id for a local context", () => {
     expect(localSinkVaultId({ kind: "local", vaultId: "personal" })).toBe("personal");
   });
-
-  test("falls back to personal for a team context", () => {
-    expect(localSinkVaultId({ kind: "team", teamId: "t1", vaultId: "v1" })).toBe("personal");
-  });
 });
 
 describe("reportPluginAuditEvent", () => {
-  test("a local context writes only the local sink", () => {
+  test("writes the local sink", () => {
     reportPluginAuditEvent({ kind: "local", vaultId: "personal" }, "agent.command_run");
     expect(reportLocalClientEvent).toHaveBeenCalledTimes(1);
-    expect(reportClientEvent).not.toHaveBeenCalled();
   });
 
-  test("a team context writes local AND posts the team", () => {
-    reportPluginAuditEvent({ kind: "team", teamId: "t1", vaultId: "v1" }, "agent.command_run");
-    expect(reportLocalClientEvent).toHaveBeenCalledTimes(1);
-    expect(reportClientEvent).toHaveBeenCalledTimes(1);
-    expect(reportClientEvent.mock.calls[0][0]).toBe("t1");
-  });
-
-  test("localMetadata reaches the local sink and never the wire", () => {
+  test("localMetadata reaches the local sink", () => {
     reportPluginAuditEvent(
-      { kind: "team", teamId: "t1" },
-      "agent.command_run",
-      { metadata: { shared: 1 } },
-    );
-    reportPluginAuditEvent(
-      { kind: "team", teamId: "t1" },
+      { kind: "local", vaultId: "personal" },
       "agent.command_run",
       { metadata: { shared: 1 }, localMetadata: { command: "rm -rf /" } },
     );
 
-    const local = reportLocalClientEvent.mock.calls[1][1] as { metadata: Record<string, unknown> };
-    const team = reportClientEvent.mock.calls[1][1] as { metadata?: Record<string, unknown> };
+    const local = reportLocalClientEvent.mock.calls[0][1] as { metadata: Record<string, unknown> };
     expect(local.metadata).toEqual({ shared: 1, command: "rm -rf /" });
-    expect(team.metadata).toEqual({ shared: 1 });
   });
 
   test("a caller-supplied localMetadata.plugin_id does not override the stamped one", () => {
@@ -65,33 +43,22 @@ describe("reportPluginAuditEvent", () => {
     expect(local.metadata.plugin_id).toBe("agent");
   });
 
-  test("a team POST failure does not reject, and the local write still happens", () => {
-    reportClientEvent.mockReturnValueOnce(Promise.reject(new Error("400")));
-    expect(() =>
-      reportPluginAuditEvent({ kind: "team", teamId: "t1" }, "agent.command_run"),
-    ).not.toThrow();
-    expect(reportLocalClientEvent).toHaveBeenCalledTimes(1);
-  });
-
   test("an empty payload leaves the local metadata undefined", () => {
     reportPluginAuditEvent({ kind: "local", vaultId: "personal" }, "agent.command_run");
     const local = reportLocalClientEvent.mock.calls[0][1] as { metadata?: Record<string, unknown> };
     expect(local.metadata).toBeUndefined();
   });
 
-  test("bounds an oversize wire metadata locally while the wire copy stays verbatim", () => {
+  test("bounds an oversize metadata payload locally", () => {
     const huge = "x".repeat(600_000);
     reportPluginAuditEvent(
-      { kind: "team", teamId: "t1" },
+      { kind: "local", vaultId: "personal" },
       "agent.command_run",
       { metadata: { blob: huge, plugin_id: "agent" } },
     );
 
     const local = reportLocalClientEvent.mock.calls[0][1] as { metadata: Record<string, unknown> };
     expect(local.metadata).toEqual({ blob: "x".repeat(2000), blob_truncated: true, plugin_id: "agent" });
-
-    const team = reportClientEvent.mock.calls[0][1] as { metadata: Record<string, unknown> };
-    expect(team.metadata).toEqual({ blob: huge, plugin_id: "agent" });
   });
 
   test("plugin_id survives a dropped local payload", () => {

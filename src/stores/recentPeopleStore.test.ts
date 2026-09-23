@@ -1,6 +1,5 @@
 import { test, expect, beforeEach } from "vitest";
 import { useRecentPeopleStore, MAX_RECENT, type RecentPerson } from "./recentPeopleStore";
-import { withRemoteApply } from "./remoteApplyGuard";
 
 const person = (id: string, at = "2026-08-15T00:00:00.000Z") => ({
   user_id: id, handle: `h-${id}`, last_invited_at: at,
@@ -90,14 +89,6 @@ test("an imported list is stamped, not left at the epoch", () => {
   const epoch = new Date(0).toISOString();
   useRecentPeopleStore.getState().replaceAll([person("a")]);
   expect(useRecentPeopleStore.getState().recentUpdatedAt > epoch).toBe(true);
-});
-
-test("a remotely applied list adopts the remote timestamp", async () => {
-  const remoteAt = "2026-08-15T07:51:57.626Z";
-  await withRemoteApply(remoteAt, async () => {
-    useRecentPeopleStore.getState().replaceAll([person("a")]);
-  });
-  expect(useRecentPeopleStore.getState().recentUpdatedAt).toBe(remoteAt);
 });
 
 // The rehydration-drops-a-legacy-row case now lives in

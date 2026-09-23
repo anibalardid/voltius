@@ -54,7 +54,9 @@ export function ExportTab({ selection, preselectedTypes }: {
   const [buildError, setBuildError] = useState<string | null>(null);
   const { copied, flash: flashCopied } = useCopiedFlash(2000);
   const [bundleCounts, setBundleCounts] = useState<Record<string, number>>({});
-  const [showPreview, setShowPreview] = useState(false);
+  // Open by default: the export's JSON is the copy/paste path when the user
+  // cannot or does not want to save a file.
+  const [showPreview, setShowPreview] = useState(true);
   const [encrypt, setEncrypt] = useState(false);
   const [encryptPassword, setEncryptPassword] = useState("");
   const [encryptConfirm, setEncryptConfirm] = useState("");

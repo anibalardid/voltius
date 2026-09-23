@@ -2,22 +2,14 @@ import { Icon } from "@iconify/react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useVaultStore } from "@/stores/vaultStore";
-import { useTeamStore } from "@/stores/teamStore";
 import { useOrphanVaultIds } from "@/hooks/useAccessibleVaultIds";
 import { unknownVaultLabel } from "@/hooks/accessibleVaults";
-import { useTeamVaultStateStore } from "@/stores/teamVaultStateStore";
-import { onVaultSelect } from "@/services/teamDataManager";
 import LogoBadge from "./LogoBadge";
 import { useUIStore } from "@/stores/uiStore";
 import { useRipple } from "@/hooks/useRipple";
 import { SidebarAccountButton } from "./SidebarAccountButton";
-import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import { CreateVaultModal } from "@/components/shared/CreateVaultModal";
-import { Modal } from "@/components/shared/Modal";
-import { openBillingCheckout } from "@/services/billingCheckout";
 import { getUpdaterState, onUpdaterStateChange, type UpdaterStatus } from "@/services/updater";
-import { acceptInvitation, declineInvitation } from "@/services/invitationActions";
-import type { MyPendingInvitation } from "@/stores/teamStore";
 import { useVaultAdmin } from "@/components/vault-admin/useVaultAdmin";
 import { VaultAdminSurface } from "@/components/vault-admin/VaultAdminSurface";
 import type { VaultAdminTarget } from "@/components/vault-admin/vaultAdminTarget";
@@ -27,7 +19,6 @@ function getInitials(name: string) {
 }
 
 export default function VaultSidebar() {
-  const { t } = useTranslation();
   const vaults = useVaultStore((s) => s.vaults);
   const selectedVaultIds = useVaultStore((s) => s.selectedVaultIds);
   const selectVaultOnly = useVaultStore((s) => s.selectVaultOnly);
@@ -35,74 +26,26 @@ export default function VaultSidebar() {
   const homeView = useUIStore((s) => s.homeView);
   const setHomeView = useUIStore((s) => s.setHomeView);
   const openSettings = useUIStore((s) => s.openSettings);
-  const openCloudAuth = useUIStore((s) => s.openCloudAuth);
   const openWhatsNew = useUIStore((s) => s.openWhatsNew);
-  const openVaultSharePending = useUIStore((s) => s.openVaultSharePending);
 
   const orphanVaultIds = useOrphanVaultIds();
 
-  const teams = useTeamStore((s) => s.teams);
-  const pendingInvites = useTeamStore((s) => s.myPendingInvitations);
-  const loadMyPendingInvitations = useTeamStore((s) => s.loadMyPendingInvitations);
-  const linkedTeamIds = new Set(vaults.map((v) => v.teamId).filter(Boolean));
-  const standaloneTeams = teams.filter((t) => !linkedTeamIds.has(t.id));
-
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showVaultLimitModal, setShowVaultLimitModal] = useState(false);
-  const [selectedInvite, setSelectedInvite] = useState<MyPendingInvitation | null>(null);
-  const isPro = useSubscriptionStore((s) => s.isPro);
-  const accountMode = useSubscriptionStore((s) => s.accountMode);
-  const isCloudAccount = accountMode === "server";
 
-  useEffect(() => {
-    if (!isCloudAccount) return;
-    loadMyPendingInvitations().catch(() => {});
-  }, [isCloudAccount, loadMyPendingInvitations]);
-
-  const switchToVault = (vault: { id: string; teamId?: string | null }) => {
+  const switchToVault = (vault: { id: string }) => {
     selectVaultOnly(vault.id);
     setHomeView(false);
-    if (vault.teamId) onVaultSelect(vault.teamId).catch(() => {});
   };
 
   // One menu for the whole rail: only one row can be right-clicked at a time, so
-  // a menu per row would just multiply state for no benefit. The target is held
-  // whole rather than as an id, because the rail's rows are not all local vaults
-  // — a standalone team row has no vault row to look the rest up from.
+  // a menu per row would just multiply state for no benefit.
   const [menuTarget, setMenuTarget] = useState<VaultAdminTarget | null>(null);
-  const activateMenuTarget = () => {
-    if (!menuTarget) return;
-    switchToVault({ id: menuTarget.vaultId ?? menuTarget.teamId!, teamId: menuTarget.teamId });
-    setMenuTarget(null);
-  };
-  const admin = useVaultAdmin(menuTarget, {
-    // The rail has no share sheet of its own — switch to the vault so the
-    // header's sheet (the app's one and only) can open for it instead.
-    onShare: () => {
-      activateMenuTarget();
-      openVaultSharePending();
-    },
-    // Members/Roles nav is scoped to the ACTIVE vault, not the right-clicked
-    // one — switch first so it opens for the vault the user actually chose.
-    onActivate: activateMenuTarget,
-  });
+  const admin = useVaultAdmin(menuTarget);
 
   /** Opens the vault menu for `target`. Rows with nothing to administer pass no handler. */
   const menuFor = (target: VaultAdminTarget) => (e: React.MouseEvent) => {
     setMenuTarget(target);
     admin.openAtPointer(e);
-  };
-
-  const handleAddVaultClick = () => {
-    if (!isPro && vaults.length >= 1) {
-      setShowVaultLimitModal(true);
-      return;
-    }
-    setShowCreateModal(true);
-  };
-
-  const handleUpgradePro = async () => {
-    if (await openBillingCheckout("pro")) setShowVaultLimitModal(false);
   };
 
   const handleCreateVault = (name: string) => {
@@ -134,55 +77,22 @@ export default function VaultSidebar() {
             <VaultRailRow
               key={vault.id}
               testId={`vault-row-${vault.id}`}
-              onContextMenu={menuFor({
-                kind: "local", vaultId: vault.id, teamId: vault.teamId ?? null, name: vault.name,
-              })}
+              onContextMenu={menuFor({ vaultId: vault.id, name: vault.name })}
             >
               <VaultButton
                 testId={`vault-button-${vault.id}`}
                 initial={getInitials(vault.name)}
-                label={vault.teamId ? t("layout.vaultSidebar.cloudVaultLabel", { name: vault.name }) : vault.name}
+                label={vault.name}
                 isActive={isActive}
                 onClick={() => switchToVault(vault)}
               />
-              {vault.teamId && <TeamVaultBadge teamId={vault.teamId} />}
-            </VaultRailRow>
-          );
-        })}
-
-        {/* Pending vault invitations */}
-        {pendingInvites.map((inv) => (
-          <VaultRailRow key={inv.id}>
-            <PendingInviteButton invite={inv} onClick={() => setSelectedInvite(inv)} />
-          </VaultRailRow>
-        ))}
-
-        {/* Standalone team vault buttons (invited members who have no linked local vault) */}
-        {standaloneTeams.map((team) => {
-          const isActive = selectedVaultIds.includes(team.id) && !homeView;
-          return (
-            // The members who most need Members and Roles are exactly the ones
-            // with no local vault row, so this menu is not optional: the header
-            // already builds the same cloud target for them.
-            <VaultRailRow
-              key={team.id}
-              testId={`vault-row-${team.id}`}
-              onContextMenu={menuFor({ kind: "cloud", vaultId: null, teamId: team.id, name: team.name })}
-            >
-              <VaultButton
-                initial={getInitials(team.name)}
-                label={t("layout.vaultSidebar.cloudVaultLabel", { name: team.name })}
-                isActive={isActive}
-                onClick={() => switchToVault({ id: team.id, teamId: team.id })}
-              />
-              <TeamVaultBadge teamId={team.id} />
             </VaultRailRow>
           );
         })}
 
         {/* Unnamed vaults, kept visible so their hosts stay reachable. No menu:
             an orphan id has no vault record behind it, so every item the menu
-            offers — rename, share, delete, make private — would act on nothing. */}
+            offers — rename, delete — would act on nothing. */}
         {orphanVaultIds.map((id) => {
           const isActive = selectedVaultIds.includes(id) && !homeView;
           return (
@@ -191,14 +101,14 @@ export default function VaultSidebar() {
                 initial="?"
                 label={unknownVaultLabel(id)}
                 isActive={isActive}
-                onClick={() => switchToVault({ id, teamId: null })}
+                onClick={() => switchToVault({ id })}
               />
             </VaultRailRow>
           );
         })}
 
         {/* Add vault */}
-        <AddVaultButton onClick={handleAddVaultClick} />
+        <AddVaultButton onClick={() => setShowCreateModal(true)} />
       </div>
 
       <VaultAdminSurface admin={admin} target={menuTarget} onClose={() => setMenuTarget(null)} />
@@ -207,33 +117,6 @@ export default function VaultSidebar() {
         <CreateVaultModal
           onConfirm={handleCreateVault}
           onCancel={() => setShowCreateModal(false)}
-        />
-      )}
-
-      {selectedInvite && (
-        <PendingInviteModal
-          invite={selectedInvite}
-          onAccept={async () => {
-            await acceptInvitation(selectedInvite.id, selectedInvite.team_id);
-            setSelectedInvite(null);
-          }}
-          onDecline={async () => {
-            await declineInvitation(selectedInvite.id);
-            setSelectedInvite(null);
-          }}
-          onClose={() => setSelectedInvite(null)}
-        />
-      )}
-
-      {showVaultLimitModal && (
-        <VaultLimitModal
-          isCloudAccount={isCloudAccount}
-          onClose={() => setShowVaultLimitModal(false)}
-          onSignIn={() => {
-            setShowVaultLimitModal(false);
-            openCloudAuth("signin");
-          }}
-          onUpgrade={() => void handleUpgradePro()}
         />
       )}
 
@@ -248,226 +131,6 @@ export default function VaultSidebar() {
       {/* Settings */}
       <SettingsButton onClick={() => openSettings()} />
     </aside>
-  );
-}
-
-function PendingInviteButton({ invite, onClick }: { invite: MyPendingInvitation; onClick: () => void }) {
-  const { t } = useTranslation();
-  const { createRipple, rippleEls } = useRipple();
-  const [hovered, setHovered] = useState(false);
-  const initial = invite.team_name.trim().charAt(0).toUpperCase();
-  return (
-    <div
-      className="relative flex items-center justify-center w-full"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      {hovered && <ActivePip active={false} />}
-      <button
-        onClick={onClick}
-        onPointerDown={createRipple}
-        title={t("layout.vaultSidebar.vaultInviteTitle", { name: invite.team_name })}
-        className="flex items-center justify-center text-base font-bold relative overflow-hidden transition-all"
-        style={{
-          width: 44,
-          height: 44,
-          background: hovered ? "rgba(245,158,11,0.2)" : "var(--t-bg-elevated)",
-          color: "var(--t-text-dim)",
-          borderRadius: hovered ? "0.75rem" : "1.375rem",
-          border: "2px dashed rgba(245,158,11,0.5)",
-          opacity: 0.8,
-          transition: "border-radius 200ms, background 200ms",
-        }}
-      >
-        {rippleEls}
-        {initial}
-      </button>
-      <span
-        className="absolute bottom-0.5 right-0.5 flex items-center justify-center rounded-full pointer-events-none"
-        style={{ width: 14, height: 14, background: "var(--t-bg-terminal)" }}
-      >
-        <Icon icon="lucide:clock" width={9} style={{ color: "#f59e0b" }} />
-      </span>
-    </div>
-  );
-}
-
-function PendingInviteModal({
-  invite,
-  onAccept,
-  onDecline,
-  onClose,
-}: {
-  invite: MyPendingInvitation;
-  onAccept: () => Promise<void>;
-  onDecline: () => Promise<void>;
-  onClose: () => void;
-}) {
-  const { t } = useTranslation();
-  const [loading, setLoading] = useState<"accept" | "decline" | null>(null);
-  const [error, setError] = useState("");
-
-  const handle = async (action: "accept" | "decline") => {
-    setLoading(action);
-    setError("");
-    try {
-      if (action === "accept") await onAccept();
-      else await onDecline();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.state.error"));
-      setLoading(null);
-    }
-  };
-
-  return (
-    <Modal onClose={onClose} blur>
-      <div
-        className="flex flex-col gap-5 p-6"
-        style={{ width: "min(22rem, 92vw)", background: "var(--t-bg-base)", border: "1px solid var(--t-border)", borderRadius: "0.933rem", boxShadow: "var(--t-elev-3)" }}
-      >
-        <div className="flex items-start gap-3">
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)" }}
-          >
-            <Icon icon="lucide:vault" width={20} style={{ color: "#f59e0b" }} />
-          </div>
-          <div className="min-w-0">
-            <p className="text-base font-semibold text-(--t-text-primary) mb-0.5">{t("layout.vaultSidebar.vaultInvitation")}</p>
-            <p className="text-sm text-(--t-text-muted) leading-relaxed">
-              <span className="text-(--t-text-primary) font-medium">{invite.inviter_display_name ?? t("layout.vaultSidebar.inviterFallback")}</span>
-              {" "}{t("layout.vaultSidebar.invitedYouTo")}{" "}
-              <span className="text-(--t-text-primary) font-medium">{invite.team_name}</span>
-              {" "}{t("layout.vaultSidebar.asRole")} <span className="capitalize font-medium" style={{ color: "var(--t-accent)" }}>{invite.role}</span>.
-            </p>
-          </div>
-        </div>
-
-        {error && (
-          <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(239,68,68,0.08)", color: "var(--t-status-error)" }}>
-            {error}
-          </p>
-        )}
-
-        <div className="flex gap-2">
-          <button
-            onClick={() => void handle("accept")}
-            disabled={!!loading}
-            className="flex-1 py-2.5 rounded-lg text-sm font-semibold transition-opacity"
-            style={{ background: "var(--t-accent)", color: "#fff", opacity: loading ? 0.6 : 1 }}
-          >
-            {loading === "accept" ? t("layout.vaultSidebar.accepting") : t("layout.vaultSidebar.accept")}
-          </button>
-          <button
-            onClick={() => void handle("decline")}
-            disabled={!!loading}
-            className="flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors"
-            style={{ background: "var(--t-bg-elevated)", color: "var(--t-text-muted)", opacity: loading ? 0.6 : 1 }}
-          >
-            {loading === "decline" ? t("layout.vaultSidebar.declining") : t("layout.vaultSidebar.decline")}
-          </button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-function VaultLimitModal({
-  isCloudAccount,
-  onClose,
-  onSignIn,
-  onUpgrade,
-}: {
-  isCloudAccount: boolean;
-  onClose: () => void;
-  onSignIn: () => void;
-  onUpgrade: () => void;
-}) {
-  const { t } = useTranslation();
-  return (
-    <Modal onClose={onClose} blur>
-      <div
-        className="flex flex-col gap-4 bg-(--t-bg-base) border border-(--t-border) p-6"
-        style={{ width: "min(25rem, 92vw)", borderRadius: "0.933rem", boxShadow: "var(--t-elev-3)" }}
-      >
-        <div className="flex items-start gap-3">
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)" }}
-          >
-            <Icon icon="lucide:vault" width={20} style={{ color: "var(--t-accent)" }} />
-          </div>
-          <div>
-            <p className="text-base font-semibold text-(--t-text-primary) mb-1">
-              {t("layout.vaultSidebar.multipleVaultsTitle")}
-            </p>
-            <p className="text-sm text-(--t-text-muted) leading-relaxed">
-              {t("layout.vaultSidebar.multipleVaultsBody")}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <button
-            onClick={isCloudAccount ? onUpgrade : onSignIn}
-            className="w-full py-2.5 rounded-lg text-sm font-semibold bg-(--t-accent) text-white hover:opacity-90 transition-opacity"
-          >
-            {isCloudAccount ? t("layout.vaultSidebar.upgradeToPro") : t("layout.vaultSidebar.signInOrCreate")}
-          </button>
-          <button
-            onClick={onClose}
-            className="w-full py-2.5 rounded-lg text-sm text-(--t-text-muted) hover:text-(--t-text-primary) transition-colors"
-          >
-            {t("layout.vaultSidebar.maybeLater")}
-          </button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-function TeamVaultBadge({ teamId }: { teamId: string }) {
-  const status = useTeamVaultStateStore((s) => s.statusByTeamId[teamId] ?? "idle");
-
-  let icon: string;
-  let spin = false;
-  let opacity = 1;
-
-  const isError = status === "error" || status === "forbidden" || status === "payment_required";
-
-  if (status === "loading") {
-    icon = "lucide:loader";
-    spin = true;
-  } else if (status === "offline") {
-    icon = "lucide:cloud-off";
-    opacity = 0.5;
-  } else if (status === "awaiting_key") {
-    // Benign, self-healing wait (issue #41) — not an error, so no alert triangle.
-    icon = "lucide:clock";
-    opacity = 0.5;
-  } else if (isError) {
-    icon = "lucide:triangle-alert";
-  } else {
-    icon = "lucide:cloud";
-  }
-
-  return (
-    <span
-      className="absolute bottom-0.5 right-0.5 flex items-center justify-center rounded-full pointer-events-none"
-      style={{
-        width: 14,
-        height: 14,
-        background: "var(--t-bg-terminal)",
-        opacity,
-      }}
-    >
-      <Icon
-        icon={icon}
-        width={10}
-        className={spin ? "animate-spin" : undefined}
-        style={{ color: spin ? "var(--t-accent)" : isError ? "#f59e0b" : "var(--t-text-dim)" }}
-      />
-    </span>
   );
 }
 

@@ -5,7 +5,6 @@ use crate::commands::vault_object::{
     retarget_vault, vault_object_commands,
 };
 use crate::storage::config::{load_keys, save_keys, SshKey, SshKeyFormData};
-use crate::vault_auth::check_vault_write;
 use chrono::Utc;
 
 impl_vault_object!(SshKey, "Key");
@@ -49,7 +48,6 @@ pub fn key_update(id: String, data: SshKeyFormData) -> Result<SshKey, String> {
     let key = find_mut(&mut keys, &id)?;
     let now = Utc::now().to_rfc3339();
     let effective = retarget_vault(key, &data.vault_id, &now);
-    check_vault_write(std::slice::from_ref(&effective))?;
 
     merge_fields!(key, data, &now, name, key_type, tags, folder_id);
     key.vault_id = effective;

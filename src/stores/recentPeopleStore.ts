@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { pushSettingsChange, settingsStamp } from "./remoteApplyGuard";
 
 export const MAX_RECENT = 20;
 
@@ -46,27 +45,24 @@ export const useRecentPeopleStore = create<RecentPeopleStore>()(
         set((s) => {
           const clean = project(person);
           const recent = [clean, ...s.recent.filter((p) => p.user_id !== clean.user_id)].slice(0, MAX_RECENT);
-          const recentUpdatedAt = settingsStamp();
-          pushSettingsChange();
+          const recentUpdatedAt = new Date().toISOString();
           return { recent, recentUpdatedAt };
         }),
 
       forget: (userId) =>
         set((s) => {
-          const recentUpdatedAt = settingsStamp();
-          pushSettingsChange();
+          const recentUpdatedAt = new Date().toISOString();
           return { recent: s.recent.filter((p) => p.user_id !== userId), recentUpdatedAt };
         }),
 
       // Stamps like every other write path: a list arriving through the sync
       // blob or the import UI must carry a timestamp, or `lastWriteWins` dates
       // it at the epoch and the next pull discards what was just applied. Under
-      // a remote apply `settingsStamp()` adopts the remote section's timestamp
+      // a remote apply `new Date().toISOString()` adopts the remote section's timestamp
       // and `pushSettingsChange()` is a no-op, so this cannot bounce back.
       replaceAll: (list) =>
         set(() => {
-          const recentUpdatedAt = settingsStamp();
-          pushSettingsChange();
+          const recentUpdatedAt = new Date().toISOString();
           return { recent: Array.isArray(list) ? list.filter((p) => p.handle).slice(0, MAX_RECENT).map(project) : [], recentUpdatedAt };
         }),
     }),

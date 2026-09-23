@@ -4,7 +4,6 @@ import type { DataTypeHandler } from "../handler";
 import type { ConnectionExport, JumpHostExport, ExportBundle } from "../formats";
 import type { ExportCtx, ImportCtx, ReloadFns } from "../context";
 import { existingConnectionsForVault, selectionMethods } from "../context";
-import { saveTeamVaultSecretForVault } from "@/services/teamVaultSecrets";
 import { fetchConnectionSecrets, storeConnectionSecrets, resolveConnectionKeyEid, resolveConnectionKeyId } from "../secretsLogic";
 
 export const connectionsHandler: DataTypeHandler = {
@@ -124,7 +123,6 @@ export const connectionsHandler: DataTypeHandler = {
         if (conn._eid) ctx.connectionEidMap.set(conn._eid, saved.id);
         await storeConnectionSecrets(conn, saved.id, async (key, value) => {
           await storeSecret(key, value);
-          await saveTeamVaultSecretForVault(ctx.vault_id, key, value).catch(() => {});
         });
         imported++;
       } catch { errors++; }

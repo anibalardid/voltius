@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { pushSettingsChange, settingsStamp } from "./remoteApplyGuard";
 import {
   isAliveVaultRow,
   pruneVaultTombstones,
@@ -49,22 +48,20 @@ export const useVaultStore = create<VaultStore>()(
       selectVaultOnly: (id) => set({ selectedVaultIds: [id] }),
       isSelected: (id) => get().selectedVaultIds.includes(id),
       addVault: (name) => {
-        const vault: Vault = { id: crypto.randomUUID(), name, updatedAt: settingsStamp() };
+        const vault: Vault = { id: crypto.randomUUID(), name, updatedAt: new Date().toISOString() };
         set((s) => ({ vaults: [...s.vaults, vault] }));
-        pushSettingsChange();
         return vault;
       },
       renameVault: (id, name) => {
         set((s) => ({
-          vaults: s.vaults.map((v) => v.id === id ? { ...v, name, updatedAt: settingsStamp() } : v),
+          vaults: s.vaults.map((v) => v.id === id ? { ...v, name, updatedAt: new Date().toISOString() } : v),
         }));
-        pushSettingsChange();
       },
       removeVault: (id) => {
         if (id === "personal") return;
         set((s) => {
           const gone = s.vaults.find((v) => v.id === id);
-          const deletedAt = settingsStamp();
+          const deletedAt = new Date().toISOString();
           return {
             vaults: s.vaults.filter((v) => v.id !== id),
             selectedVaultIds: s.selectedVaultIds.filter((v) => v !== id),
@@ -73,18 +70,16 @@ export const useVaultStore = create<VaultStore>()(
               : s.deletedVaults,
           };
         });
-        pushSettingsChange();
       },
       setVaultTeamId: (vaultId, teamId) => {
         set((s) => ({
           vaults: s.vaults.map((v) => {
             if (v.id !== vaultId) return v;
-            const updatedAt = settingsStamp();
+            const updatedAt = new Date().toISOString();
             if (teamId === null) { const { teamId: _, ...rest } = v; return { ...rest, updatedAt }; }
             return { ...v, teamId, updatedAt };
           }),
         }));
-        pushSettingsChange();
       },
       // Rows carry their own clocks, so nothing is stamped here. A vault arriving
       // for the first time is also selected: `selectedVaultIds` is device-local and
@@ -109,7 +104,6 @@ export const useVaultStore = create<VaultStore>()(
             selectedVaultIds,
           };
         });
-        pushSettingsChange();
       },
     }),
     {

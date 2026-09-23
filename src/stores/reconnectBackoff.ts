@@ -21,9 +21,9 @@ const liveStore = (restore: boolean): BackoffStore => ({
   online: (id) =>
     navigator.onLine !== false || useSessionStore.getState().sessions.find((s) => s.id === id)?.type !== "ssh",
   attempt: (id) => useSessionStore.getState().reconnectAttempt(id, { restore }),
-  sessionEnded: (id) => {
-    void import("@/services/crossDeviceSessions").then(({ sessionEnded }) => sessionEnded(id));
-  },
+  // The multiplexer session is gone on the host (attach probe failed): the
+  // retry can never succeed, so drop the tab.
+  sessionEnded: (id) => useSessionStore.getState().removeSession(id),
 });
 
 /** `restore` replays the multiplexer history into a tab whose buffer is still empty. */
@@ -31,12 +31,6 @@ export function reconnectWithBackoff(
   sessionId: string,
   { restore = false, catchUp }: { restore?: boolean; catchUp?: readonly number[] } = {},
 ): Promise<boolean> {
-  // The drop may be another device closing a shared session — pull manifests
-  // now so the tombstone can tear this tab down instead of the loop retrying.
-  const s = useSessionStore.getState().sessions.find((x) => x.id === sessionId);
-  if (s?.type === "ssh" && s.persist) {
-    void import("@/services/sync").then(({ syncNow }) => syncNow().catch(() => {}));
-  }
   return runBackoff(sessionId, liveStore(restore), catchUp);
 }
 

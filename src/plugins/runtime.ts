@@ -1,12 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { closePfTunnel, getPfState, openPfTunnel } from "@/services/portForwardingTunnels";
-import { whenLoginSyncSettled } from "@/services/loginSyncGate";
 import { resolvePort } from "@/plugins/domains/ports";
 import { runSnippetSequence, previewSnippetSequence } from "@/services/snippetSequence";
 import type { RunTarget } from "@/services/sftpTarget";
-import { readSyncProviderInputs, type LoadedPluginSource } from "@/services/syncProviderInputs";
-import { buildSyncProviders, toSyncProviderSummary } from "@/services/syncProviders";
 import { writeClipboard } from "@/utils/clipboard";
 import { log as appLog } from "@/lib/logger";
 import i18n from "@/i18n";
@@ -33,9 +30,8 @@ import { useVaultStore } from "@/stores/vaultStore";
 import { usePortForwardingStore } from "@/stores/portForwardingStore";
 import { useTransferQueueStore } from "@/stores/transferQueueStore";
 import { useHostPingStore } from "@/stores/hostPingStore";
-import { getSyncState, onSyncStateChange, ENTITY_FILES, getExcludedObjectIds, getPluginSkippedSyncFiles, writeFilteredSettings, type BlobPayload } from "@/services/sync";
+import { getSyncState, onSyncStateChange, ENTITY_FILES, getExcludedObjectIds, getPluginSkippedSyncFiles, writeFilteredSettings, type BlobPayload } from "@/services/pluginBlobSync";
 import { useThemeStore } from "@/stores/themeStore";
-import { useSyncPrefsStore } from "@/stores/syncPrefsStore";
 import { mergeEntities, mergeSecrets } from "@/services/crdt";
 import type {
   UISlot,
@@ -57,10 +53,8 @@ import { PLUGIN_AUDIT_ACTIONS } from "@/services/auditContext";
 import { auditContextForVaultId } from "@/services/auditContextResolver";
 import { reportPluginAuditEvent } from "@/services/auditReporter";
 import { fetchLocalAuditLogs } from "@/services/localAuditService";
-import { fetchAuditLogs } from "@/services/auditService";
 import { registerContributions, clearContributions } from "@/mcp/contributions";
 import { getSetting, listSettings, setSetting, settingConsequence } from "./domains/settings";
-import { subscription as subscriptionRead } from "./domains/account";
 import {
   listPlugins, installPlugin, uninstallPlugin, setPluginEnabled, updatePlugin,
   readPluginConfig, writePluginConfig, listSources, searchCatalog, addSource, removeSource,
@@ -69,7 +63,7 @@ import {
 import { exportObjects, importObjects } from "./domains/importexport";
 import type { MarketplacePlugin } from "@/stores/marketplaceStore";
 import type { DomainResult } from "./domains/result";
-import type { AuditLog } from "@/services/auditService";
+import type { AuditLog } from "@/services/auditContext";
 import type {
   PluginAPI,
   PluginManifest,
@@ -111,33 +105,11 @@ import {
   splitWith,
   type PanePorts,
 } from "./domains/panes";
-import {
-  keyStatus,
-  inviteMember,
-  listMembers,
-  listTeams,
-  removeMember,
-  setMemberRole,
-  type TeamPorts,
-} from "./domains/team";
-import {
-  handoffControl,
-  listSharedSessions,
-  shareRefusalReason,
-  shareSession,
-  unshareSession,
-  type SharingPorts,
-} from "./domains/sharing";
-import { broadcastActiveForSession, useLayoutStore } from "@/stores/layoutStore";
-import { hasInputControl } from "@/services/broadcast";
-import { useTeamSessionStore } from "@/stores/teamSessionStore";
-import { useTeamVaultStateStore } from "@/stores/teamVaultStateStore";
-import { highestOwnerTier, membersOfTeams } from "@/services/teamSharing";
+import { useLayoutStore } from "@/stores/layoutStore";
 import { isMobileShell } from "@/utils/platform";
 import { type Permission } from "@/services/permissions";
 import { canFromStores } from "@/services/permissionsFromStores";
-import { getMyUserId, getVaultKeyHolders } from "@/services/teamService";
-import { fetchTeamData } from "@/services/teamVaultSync";
+import { getMyUserId } from "@/services/teamService";
 import { injectPluginStyle, removePluginStyle } from "./importPluginModule";
 import { assertValidPluginId, isValidPluginId } from "./pluginId";
 
@@ -520,22 +492,6 @@ const objectPorts: ObjectPorts = {
   hydrate: async () => {
     await hydrateVaultObjectStores();
     _myUserId = (await getMyUserId().catch(() => null)) ?? "";
-    // Team roles and members decide `can` for a team-vault source; unloaded, the
-    // pessimistic branch refuses a move the user is actually allowed to make.
-    const team = useTeamStore.getState();
-    await team.loadTeams().catch(() => {});
-    await Promise.all(
-      useTeamStore.getState().teams.flatMap((t) => [
-        team.loadMembers(t.id).catch(() => {}),
-        team.loadRoles(t.id).catch(() => {}),
-        // The team maps every object read spans are filled by fetchTeamData
-        // alone, which the UI drives. Without this a session that never opened
-        // a team vault reports its objects as "not found" — and, worse, cannot
-        // see a team-vault key a personal host points at, so a cross-vault move
-        // completes with no cascade and no dangling refusal.
-        fetchTeamData(t.id, { background: true }).catch(() => {}),
-      ]),
-    );
   },
   can: (permission, vaultId) => canFromStores(_myUserId)(permission as Permission, vaultId),
   isTeamVault: isTeamVaultId,
@@ -724,41 +680,6 @@ const panePorts: PanePorts = {
   isMobile: () => isMobileShell(),
 };
 
-const teamPorts: TeamPorts = {
-  teams: () => useTeamStore.getState().teams,
-  loadTeams: () => useTeamStore.getState().loadTeams(),
-  members: (teamId) => useTeamStore.getState().membersByTeam[teamId] ?? [],
-  loadMembers: (teamId) => useTeamStore.getState().loadMembers(teamId),
-  pendingInvitations: (teamId) => useTeamStore.getState().pendingInvitationsByTeam[teamId] ?? [],
-  loadPendingInvitations: (teamId) => useTeamStore.getState().loadPendingInvitations(teamId),
-  roles: (teamId) => useTeamStore.getState().rolesByTeam[teamId] ?? [],
-  loadRoles: (teamId) => useTeamStore.getState().loadRoles(teamId),
-  vaultStatus: (teamId) => useTeamVaultStateStore.getState().statusByTeamId[teamId] ?? "idle",
-  keyHolders: (teamId) => getVaultKeyHolders(teamId),
-  myUserId: () => getMyUserId(),
-  addMember: (teamId, email, role) => useTeamStore.getState().addMember(teamId, email, role),
-  addMemberById: (teamId, userId, role) => useTeamStore.getState().addMemberById(teamId, userId, role),
-  removeMember: (teamId, userId) => useTeamStore.getState().removeMember(teamId, userId),
-  assignMemberRole: (t, u, r) => useTeamStore.getState().assignMemberRole(t, u, r),
-  removeMemberRole: (t, u, r) => useTeamStore.getState().removeMemberRole(t, u, r),
-};
-
-const sharingPorts: SharingPorts = {
-  activeSessions: () => useTeamSessionStore.getState().activeSessions,
-  fetchActiveSessions: () => useTeamSessionStore.getState().fetchActiveSessions(),
-  localSessions: () => Object.keys(useTeamSessionStore.getState().connections),
-  state: (id) => useTeamSessionStore.getState().getState(id),
-  startSharing: (id, vaultIds, roles, name, members, tier) =>
-    useTeamSessionStore.getState().startSharing(id, vaultIds, roles, name, members, tier),
-  stopSharing: (id) => useTeamSessionStore.getState().stopSharing(id),
-  grantControl: (id, userId) => useTeamSessionStore.getState().grantControl(id, userId),
-  broadcastActiveForSession,
-  connectionName: (id) => useSessionStore.getState().sessions.find((s) => s.id === id)?.connectionName,
-  teamMembers: (teamIds) => membersOfTeams(teamIds),
-  ownerTier: (teamIds) => highestOwnerTier(teamIds),
-  myUserId: () => getMyUserId(),
-};
-
 // ─── Store reload map ─────────────────────────────────────────────────────
 
 const RELOADABLE_STORES: Record<string, () => Promise<void>> = {
@@ -925,7 +846,6 @@ const inactiveError = (id: string): string => `Plugin "${id}" is disabled or unl
 async function writeSessionBytes(sessionId: string, text: string): Promise<void> {
   const session = useSessionStore.getState().sessions.find((s) => s.id === sessionId);
   if (!session) throw new Error(`Session "${sessionId}" not found`);
-  if (!hasInputControl(sessionId)) throw new Error(`Session "${sessionId}" is controlled by another participant`);
   await sendSessionInput(sessionId, session.type as "ssh" | "local" | "serial", new TextEncoder().encode(text));
 }
 
@@ -1291,56 +1211,6 @@ function createPluginAPI(manifest: PluginManifest): PluginAPI {
       },
     },
 
-    team: {
-      async list() {
-        requirePerm(manifest, "team:read");
-        return listTeams(teamPorts);
-      },
-      async members(teamId) {
-        requirePerm(manifest, "team:read");
-        return listMembers(teamPorts, teamId);
-      },
-      async keyStatus(teamId) {
-        requirePerm(manifest, "team:read");
-        return keyStatus(teamPorts, teamId);
-      },
-      async invite(input) {
-        requirePerm(manifest, "team:write");
-        return inviteMember(teamPorts, input);
-      },
-      async removeMember(teamId, userId) {
-        requirePerm(manifest, "team:write");
-        return removeMember(teamPorts, teamId, userId);
-      },
-      async setMemberRole(teamId, userId, role) {
-        requirePerm(manifest, "team:write");
-        return setMemberRole(teamPorts, teamId, userId, role);
-      },
-    },
-
-    sharing: {
-      async list() {
-        requirePerm(manifest, "sharing:read");
-        return listSharedSessions(sharingPorts);
-      },
-      shareRefusal(sessionId) {
-        requirePerm(manifest, "sharing:read");
-        return shareRefusalReason(sharingPorts, sessionId);
-      },
-      async share(input) {
-        requirePerm(manifest, "sharing:write");
-        return shareSession(sharingPorts, input);
-      },
-      async unshare(sessionId) {
-        requirePerm(manifest, "sharing:write");
-        return unshareSession(sharingPorts, sessionId);
-      },
-      async handoffControl(sessionId, userId) {
-        requirePerm(manifest, "sharing:write");
-        return handoffControl(sharingPorts, sessionId, userId);
-      },
-    },
-
     appSync: {
       status() {
         requirePerm(manifest, "sync:read");
@@ -1351,7 +1221,7 @@ function createPluginAPI(manifest: PluginManifest): PluginAPI {
           error: s.error,
           cloudActive: s.cloudActive,
           blobSizeBytes: s.blobSizeBytes,
-          providers: buildSyncProviders(readSyncProviderInputs(loadedPluginSource)).map(toSyncProviderSummary),
+          providers: [],
         };
       },
     },
@@ -1551,23 +1421,12 @@ function createPluginAPI(manifest: PluginManifest): PluginAPI {
         if (!whileActive("audit.record")) return;
 
         const conn = connectionId ? findConnection(connectionId) : undefined;
-        // A scope matching no connection may still be a team id: the membership
-        // verbs scope on the team, and only a team context is forwarded to the
-        // team server. Promote ONLY on kind === "team" — for an unknown id
-        // auditContextForVaultId returns { kind: "local", vaultId: <id> }, which
-        // would file the row outside the "personal" sink audit.query reads.
-        const resolved = !conn && connectionId ? auditContextForVaultId(connectionId) : undefined;
         const context = conn
           ? auditContextForVaultId(conn.vault_id)
-          : resolved?.kind === "team"
-            ? resolved
-            : { kind: "local" as const, vaultId: "personal" };
-        const teamName = context.kind === "team" && !conn
-          ? useTeamStore.getState().teams.find((t) => t.id === context.teamId)?.name?.trim()
-          : undefined;
+          : { kind: "local" as const, vaultId: "personal" };
         const targetName = conn
           ? conn.name?.trim() || `${conn.username}@${conn.host}:${conn.port}`
-          : (teamName || connectionId || "local");
+          : (connectionId || "local");
 
         reportPluginAuditEvent(context, action, {
           target_type: "plugin",
@@ -1582,27 +1441,7 @@ function createPluginAPI(manifest: PluginManifest): PluginAPI {
         requireGated("audit:read");
         if (!whileActive("audit.query")) return { logs: [], total: 0 };
 
-        // Two sinks. Local is per-vault and capped; server is the Logs tab's
-        // source and the only one team rows ever reach.
-        if (filters.teamId) {
-          // A team's log is every member's activity, which is what "team:read"
-          // already means everywhere else. "audit:read" alone buys the device.
-          requireGated("team:read");
-          const { logs, total } = await fetchAuditLogs(filters.teamId, filters.vaultId, {
-            actions: filters.actions,
-            actor_id: filters.actorId,
-            from: filters.from,
-            to: filters.to,
-            page: Math.max(1, filters.page ?? 1),
-            per_page: Math.min(100, Math.max(1, filters.perPage ?? 50)),
-          });
-          return { logs: logs.map(toPluginAuditRow), total };
-        }
-
-        // "personal" is the local sink's vault key for every non-team row:
-        // auditContextForVaultId returns { kind: "local", vaultId: "personal" }
-        // when there is no team vault, and that is the key reportLocalClientEvent
-        // writes under.
+        // Local-only: the per-vault on-device sink. There is no server sink.
         const { logs, total } = await fetchLocalAuditLogs(filters.vaultId || "personal", {
           actions: filters.actions,
           actor_id: filters.actorId,
@@ -1638,16 +1477,6 @@ function createPluginAPI(manifest: PluginManifest): PluginAPI {
         requireGated("settings:write");
         if (!whileActive("settings.set")) return { ok: false, error: inactiveError(id) };
         return setSetting(key, value);
-      },
-    },
-
-    account: {
-      async subscription() {
-        requireGated("account:read");
-        // No empty projection to return, unlike settings.list: a fabricated
-        // plan would read as a real one.
-        if (!whileActive("account.subscription")) throw new Error(inactiveError(id));
-        return subscriptionRead();
       },
     },
 
@@ -2245,7 +2074,8 @@ function createPluginAPI(manifest: PluginManifest): PluginAPI {
         _onBeforeQuit.add(cb);
         return () => _onBeforeQuit.delete(cb);
       },
-      waitForLoginSync: whenLoginSyncSettled,
+      // Local-only: there is no login-time cloud pull to wait for.
+      waitForLoginSync: async () => {},
     },
 
     sync: {
@@ -2377,12 +2207,9 @@ function createPluginAPI(manifest: PluginManifest): PluginAPI {
           }
         }
 
-        // Inbound half of what getPluginSkippedSyncFiles enforces outbound: a
-        // device that opted themes out of sync must not have them overwritten
-        // by an incoming blob either. The domain toggle is the whole decision
-        // here — theme.json carries no per-key leaf (see themeStore's
-        // ThemeDiskState), so `location` cannot arrive through this wire.
-        if (bestThemeRaw && useSyncPrefsStore.getState().isDomainSynced("themes")) {
+        // A plugin blob's theme.json is applied on import when present; there is
+        // no per-domain sync toggle locally.
+        if (bestThemeRaw) {
           try {
             const localRaw = await invoke<string | null>("theme_load");
             let apply = true;
@@ -2628,12 +2455,6 @@ export function getLoadedPlugins(): PluginManifest[] {
 export function isPluginActive(pluginId: string): boolean {
   return _registry.get(pluginId)?.active ?? false;
 }
-
-export const loadedPluginSource: LoadedPluginSource = {
-  loaded: getLoadedPlugins,
-  isActive: isPluginActive,
-  exposed: getExposedApi,
-};
 
 /** Read a plugin's storage value — for use by trusted UI code (e.g. auto-generated settings). */
 export function pluginStorageGet<T>(pluginId: string, key: string): Promise<T | null> {

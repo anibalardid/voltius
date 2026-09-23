@@ -8,15 +8,11 @@ import { useFolderStore } from "@/stores/folderStore";
 import { useSnippetStore } from "@/stores/snippetStore";
 import { useSnippetFolderStore } from "@/stores/snippetFolderStore";
 import { usePortForwardingStore } from "@/stores/portForwardingStore";
-import { autoLogin, consumeForceLockFlag, isServerMode } from "@/services/account";
-import { saveCurrentAccount } from "@/services/savedAccounts";
-import { syncOnLogin, syncOnLoginReplace, startRealtimeSync } from "@/services/sync";
-import { setLoginSyncPending, resolveLoginSync } from "@/services/loginSyncGate";
+import { autoLogin, consumeForceLockFlag } from "@/services/account";
 import { loadSeededPlugins } from "@/plugins/seeded";
 import { loadInstalledPlugins, loadPluginMeta, supersedeStaleFirstPartyShadows } from "@/stores/marketplaceStore";
 import { usePluginRegistryStore } from "@/stores/pluginRegistryStore";
 import { useThemeStore } from "@/stores/themeStore";
-import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import AuthPage from "./AuthPage";
 import LogoBadge from "./LogoBadge";
 
@@ -27,15 +23,6 @@ interface Step { id: string; label: string; status: StepStatus; }
 interface Props { onReady: () => void; }
 
 const STEP_IDS = ["init", "vault", "connections"] as const;
-
-/**
- * Keep the quick switcher's copy of this account current. Nothing on the splash
- * can show a toast yet, so the failure is logged rather than dropped: a write
- * refused in silence is how an account went missing from the switcher.
- */
-function keepSwitcherFresh(): void {
-  saveCurrentAccount().catch((e) => console.warn("[splash] could not save this account to the switcher:", e));
-}
 
 export default function SplashScreen({ onReady }: Props) {
   const { t } = useTranslation();
@@ -73,7 +60,6 @@ export default function SplashScreen({ onReady }: Props) {
       if (outcome === "ok") {
         setStep("vault", "done", t("layout.splash.sessionRestored"));
         setPhase("finishing");
-        keepSwitcherFresh();
         await finishLoading();
         return;
       }
@@ -122,20 +108,6 @@ export default function SplashScreen({ onReady }: Props) {
     } catch {
       setStep("connections", "error", t("layout.splash.connectionsUnavailable"));
     }
-    useSubscriptionStore.getState().load().catch(() => {});
-    isServerMode().then((server) => {
-      if (!server) return;
-      const useReplace = sessionStorage.getItem("voltius.replace-sync-on-login") === "1";
-      if (useReplace) sessionStorage.removeItem("voltius.replace-sync-on-login");
-      // Gate plugins behind this promise so they see post-merge data.
-      // vault_reset (logout) wipes the config dir including plugin storage,
-      // so plugins must not run their initial sync before server data lands.
-      setLoginSyncPending({ replace: useReplace });
-      (useReplace ? syncOnLoginReplace() : syncOnLogin())
-        .catch(() => {})
-        .finally(() => resolveLoginSync());
-      startRealtimeSync();
-    });
     useThemeStore.getState().loadFromDisk().catch(() => {});
     // Plugin loading must never freeze startup: a single rejected invoke here
     // (e.g. a storage command failing on a locked-down platform) would leave the
@@ -157,7 +129,6 @@ export default function SplashScreen({ onReady }: Props) {
 
   const handleAuthReady = async () => {
     setPhase("finishing");
-    keepSwitcherFresh();
     await finishLoading();
   };
 

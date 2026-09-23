@@ -104,22 +104,14 @@
           "interface"
         ]
       },
-      "account": {
-        "label": "Compte",
+      "security": {
+        "label": "Sécurité",
         "keywords": [
-          "profil",
-          "connexion",
-          "authentification"
-        ]
-      },
-      "sync": {
-        "label": "Synchronisation",
-        "keywords": [
-          "sauvegarde",
-          "nuage",
-          "gist",
-          "synchronisation",
-          "pro"
+          "mot de passe maître",
+          "verrouillage",
+          "coffre",
+          "effacer",
+          "mot de passe"
         ]
       },
       "plugins": {
@@ -544,11 +536,26 @@
       "settingsTitle": "Paramètres",
       "settingsFooter": "Tout ce qui est désactivé reste sur cet appareil. Rien n'est envoyé, même chiffré. Réactiver la synchronisation publie les valeurs de cet appareil.",
       "settingDomain": {
-        "themes": { "label": "Thèmes", "sub": "Thème actif et thèmes personnalisés" },
-        "uiPreferences": { "label": "Interface", "sub": "Échelle, dispositions et tri" },
-        "shortcuts": { "label": "Raccourcis", "sub": "Raccourcis clavier personnalisés" },
-        "appSettings": { "label": "Paramètres de l'application", "sub": "Terminal, SFTP, extensions, langue" },
-        "recentPeople": { "label": "Personnes récentes", "sub": "Vos invitations récentes" }
+        "themes": {
+          "label": "Thèmes",
+          "sub": "Thème actif et thèmes personnalisés"
+        },
+        "uiPreferences": {
+          "label": "Interface",
+          "sub": "Échelle, dispositions et tri"
+        },
+        "shortcuts": {
+          "label": "Raccourcis",
+          "sub": "Raccourcis clavier personnalisés"
+        },
+        "appSettings": {
+          "label": "Paramètres de l'application",
+          "sub": "Terminal, SFTP, extensions, langue"
+        },
+        "recentPeople": {
+          "label": "Personnes récentes",
+          "sub": "Vos invitations récentes"
+        }
       },
       "settingKey": {
         "preferredShell": "Shell par défaut",
@@ -726,75 +733,282 @@
           "readOnlyWarning": "Le plugin peut consulter ces informations, mais ne peut rien modifier ni supprimer avec.",
           "dangerHeading": "Autorisations sensibles",
           "dangerWarning": "Elles donnent au plugin un accès étendu. Ne les accordez qu'à un plugin de confiance.",
-          "terminalRead": { "label": "Lire la sortie du terminal", "description": "Lire la sortie visible et l'historique de vos sessions de terminal." },
-          "terminalStream": { "label": "Observer la sortie du terminal en direct", "description": "Observer en continu tout ce qui s'affiche dans vos sessions de terminal, en temps réel." },
-          "terminalWrite": { "label": "Écrire dans vos terminaux", "description": "Envoyer des saisies et exécuter des commandes dans vos sessions de terminal — comme si vous les tapiez vous-même." },
-          "keychainRead": { "label": "Lire ses propres secrets stockés", "description": "Lire les secrets que ce plugin a précédemment enregistrés dans le trousseau de votre appareil." },
-          "keychainWrite": { "label": "Enregistrer des secrets sur votre appareil", "description": "Enregistrer des secrets dans le trousseau de votre système." },
-          "metricsRead": { "label": "Lire les métriques système", "description": "Lire les statistiques processeur, mémoire, disque et réseau de vos hôtes connectés." },
-          "dockerRead": { "label": "Lire les informations Docker", "description": "Lister les conteneurs, images, volumes, réseaux et stacks, et lire les journaux des conteneurs. Les journaux peuvent contenir des mots de passe ou des jetons." },
-          "processesRead": { "label": "Lire les informations sur les processus", "description": "Lister les processus en cours sur vos hôtes connectés." },
-          "processesManage": { "label": "Gérer les processus", "description": "Lister et arrêter les processus en cours sur vos hôtes connectés." },
-          "dockerManage": { "label": "Gérer Docker", "description": "Lister, démarrer, arrêter et supprimer conteneurs, images, volumes, réseaux et stacks. Cela peut détruire définitivement des données." },
-          "portsForward": { "label": "Rediriger des ports vers cet ordinateur", "description": "Ouvrir des tunnels SSH depuis vos hôtes connectés vers des ports locaux de cet ordinateur, et ouvrir l'adresse obtenue dans votre navigateur ou votre presse-papiers." },
-          "proxmoxRead": { "label": "Lire les informations Proxmox", "description": "Lister les conteneurs LXC et leurs snapshots." },
-          "proxmoxManage": { "label": "Gérer Proxmox", "description": "Lister et contrôler les conteneurs LXC, y compris créer, supprimer et restaurer des snapshots. Cela peut détruire définitivement des données." },
-          "sftpRead": { "label": "Lire les fichiers", "description": "Parcourir et lire les fichiers de vos hôtes SSH/FTP enregistrés et de cet ordinateur." },
-          "sftpWrite": { "label": "Écrire et déplacer des fichiers", "description": "Créer, renommer, écraser et supprimer des fichiers sur vos hôtes SSH/FTP enregistrés et sur cet ordinateur, et les copier entre eux. Cela peut détruire définitivement des données." },
-          "audit": { "label": "Enregistrer des événements d'audit", "description": "Ajouter à votre journal d'audit des entrées décrivant ses actions. Pour un hôte d'un coffre d'équipe, ces entrées sont également envoyées au serveur de cette équipe." },
-          "auditRead": { "label": "Lire le journal d'activité", "description": "Lire le journal d'activité de cet appareil, y compris les hôtes contactés, les fichiers touchés et les actions des autres plugins. Lorsqu'une équipe est nommée, cela lit aussi le journal côté serveur de cette équipe — l'activité de chacun de ses membres." },
-          "mcpContribute": { "label": "Exposer des outils aux agents IA externes", "description": "Permet à ce plugin d'ajouter ses propres commandes au serveur MCP de Voltius, afin que tout agent IA externe connecté puisse les exécuter — avec les autorisations de ce plugin." },
-          "vaultsRead": { "label": "Voir vos coffres", "description": "Voir les noms de vos coffres, y compris les coffres d'équipe, et leur organisation." },
-          "vaultsWrite": { "label": "Créer et supprimer des coffres", "description": "Créer, renommer et supprimer vos coffres. Supprimer un coffre peut supprimer tout ce qu'il contient." },
-          "foldersRead": { "label": "Voir vos dossiers", "description": "Voir les dossiers dans lesquels vous classez hôtes, clés, redirections de ports et snippets." },
-          "foldersWrite": { "label": "Créer et supprimer des dossiers", "description": "Créer, renommer et supprimer des dossiers. Supprimer un dossier peut supprimer tout ce qu'il contient." },
-          "sessionsRead": { "label": "Voir vos sessions", "description": "Voir quelles sessions de terminal sont ouvertes et quand elles changent." },
-          "sessionsWrite": { "label": "Ouvrir et fermer des sessions", "description": "Ouvrir de nouvelles sessions de terminal et fermer celles existantes." },
-          "connectionsRead": { "label": "Lire vos connexions", "description": "Lire vos connexions enregistrées et leurs détails." },
-          "connectionsWrite": { "label": "Gérer vos connexions", "description": "Créer, modifier et supprimer vos connexions enregistrées." },
-          "keysRead": { "label": "Lire vos clés SSH", "description": "Lister vos clés SSH enregistrées, et en ajouter une au fichier authorized_keys d'un hôte enregistré via SSH." },
-          "keysWrite": { "label": "Gérer vos clés SSH", "description": "Créer et supprimer des clés SSH en votre nom." },
-          "identitiesRead": { "label": "Lire vos identités", "description": "Lister vos identités enregistrées." },
-          "identitiesWrite": { "label": "Gérer vos identités", "description": "Créer et supprimer des identités en votre nom." },
-          "snippetsRead": { "label": "Lire vos snippets", "description": "Lister vos snippets enregistrés et les commandes qu'ils exécutent." },
-          "snippetsWrite": { "label": "Gérer vos snippets", "description": "Créer, modifier, déplacer et supprimer vos snippets enregistrés." },
-          "snippetsRun": { "label": "Exécuter vos snippets sur vos hôtes", "description": "Exécuter un snippet enregistré sur un hôte, en s'y connectant si nécessaire. Ses commandes s'exécutent avec vos propres accès, exactement comme si vous les lanciez vous-même." },
-          "portForwardingRead": { "label": "Lire vos redirections de ports", "description": "Lister vos règles de redirection de ports enregistrées et les tunnels actuellement ouverts." },
-          "portForwardingWrite": { "label": "Gérer vos redirections de ports", "description": "Créer, modifier, déplacer et supprimer vos règles de redirection de ports enregistrées." },
-          "knownHostsRead": { "label": "Lire vos hôtes connus", "description": "Lister les clés d'hôte SSH que vous avez approuvées, avec leurs empreintes." },
-          "knownHostsWrite": { "label": "Approuver et supprimer des clés d'hôte", "description": "Autoriser une clé d'hôte SSH, ou supprimer une clé approuvée. Une clé approuvée signifie que les connexions à cet hôte sont acceptées sans vous le demander." },
-          "historyRead": { "label": "Lire votre historique de commandes", "description": "Rechercher dans les commandes que vous avez saisies dans les terminaux. Elles peuvent contenir des mots de passe ou des jetons saisis en clair." },
-          "transfersRead": { "label": "Voir les transferts de fichiers", "description": "Voir les transferts de fichiers en cours, y compris les noms de fichiers, la progression et les erreurs." },
-          "transfersWrite": { "label": "Annuler et relancer des transferts", "description": "Annuler un transfert de fichiers en cours, ou relancer un transfert échoué — y compris les transferts que vous avez lancés vous-même." },
-          "healthRead": { "label": "Voir l'accessibilité des hôtes", "description": "Voir quels hôtes enregistrés ont répondu au dernier test d'accessibilité, et à quelle vitesse." },
-          "vaultRead": { "label": "Lire votre coffre", "description": "Lire les données stockées dans votre coffre." },
-          "vaultWrite": { "label": "Écrire dans votre coffre", "description": "Stocker et modifier des données dans votre coffre." },
-          "syncRead": { "label": "Lire les données de synchronisation", "description": "Lire les données propres à ce plugin synchronisées entre vos appareils, et consulter l'état de la synchronisation de votre configuration." },
-          "syncWrite": { "label": "Écrire les données de synchronisation", "description": "Stocker et modifier les données synchronisées entre vos appareils." },
-          "panesRead": { "label": "Lire la disposition du terminal", "description": "Voir vos onglets ouverts et vos panneaux divisés, et quelle session se trouve dans chacun." },
-          "panesWrite": { "label": "Organiser les panneaux du terminal", "description": "Diviser, déplacer, détacher et activer des panneaux. Les sessions restent ouvertes ; rien n'est fermé." },
-          "teamRead": { "label": "Lire vos équipes", "description": "Voir vos équipes, leurs membres, leurs rôles, et quels membres détiennent la clé du coffre d'équipe." },
-          "teamWrite": { "label": "Gérer les membres d'équipe", "description": "Inviter des personnes dans vos équipes, retirer des membres et modifier leur rôle." },
-          "sharingRead": { "label": "Lire les terminaux partagés", "description": "Voir lesquelles de vos sessions de terminal sont partagées, qui les regarde et qui en détient le contrôle." },
-          "sharingWrite": { "label": "Partager des terminaux en direct", "description": "Diffuser une session de terminal en direct aux membres de vos équipes, arrêter le partage et céder le contrôle à un participant qui l'a demandé." },
-          "settingsRead": { "label": "Lire les réglages", "description": "Voir chaque réglage de l'application et sa valeur actuelle." },
-          "settingsWrite": { "label": "Modifier les réglages", "description": "Modifier n'importe quel réglage, y compris ceux qui désactivent une protection." },
-          "accountRead": { "label": "Lire votre abonnement", "description": "Voir votre formule, votre essai, vos sièges et votre facturation." },
-          "pluginsManage": { "label": "Gérer les plugins", "description": "Installer, mettre à jour, supprimer, activer et désactiver des plugins, et ajouter des sources de marketplace. Un plugin installé exécute du code dans Voltius avec les permissions qu'il déclare." },
-          "importExportRead": { "label": "Exporter vos données", "description": "Exporter connexions, identités, clés SSH, snippets et règles de redirection de ports. Un export contenant des mots de passe ou des clés privées ne sort que chiffré." },
-          "importExportWrite": { "label": "Importer des données", "description": "Importer connexions, identités, clés SSH, snippets et règles de redirection de ports dans un coffre. Rien d'existant n'est écrasé." },
-          "storage": { "label": "Stocker les données du plugin", "description": "Enregistrer les réglages et données propres à ce plugin sur votre appareil." },
-          "http": { "label": "Accéder au réseau", "description": "Effectuer des requêtes réseau vers des services externes." },
-          "cryptoDerive": { "label": "Dériver des clés de chiffrement", "description": "Dériver une clé de chiffrement à partir d'une phrase secrète que vous fournissez. Ne donne pas accès à vos secrets stockés." },
-          "fs": { "label": "Accéder aux fichiers", "description": "Lire et écrire des fichiers sur votre appareil." },
-          "ui": { "label": "Afficher des éléments d'interface", "description": "Ajouter ses propres panneaux et contrôles à l'application." },
-          "notifications": { "label": "Afficher des notifications", "description": "Vous afficher des notifications et des messages." },
-          "settingsPage": { "label": "Ajouter une page de réglages", "description": "Ajouter sa propre page dans les Réglages." },
-          "rightPanel": { "label": "Ajouter un panneau latéral", "description": "Ajouter un panneau à la zone latérale de session." },
-          "globalPanel": { "label": "Ajouter un panneau global", "description": "Ajouter un panneau disponible dans toute l'application." },
-          "themes": { "label": "Ajouter des thèmes de couleurs", "description": "Ajouter ses propres thèmes de couleurs sélectionnables dans l'application." },
-          "omniCommands": { "label": "Ajouter des actions à la palette de commandes", "description": "Ajouter ses propres actions à la palette de commandes." },
-          "uiContributions": { "label": "Ajouter des éléments d'interface", "description": "Ajouter ses propres éléments à l'interface de l'application." }
+          "terminalRead": {
+            "label": "Lire la sortie du terminal",
+            "description": "Lire la sortie visible et l'historique de vos sessions de terminal."
+          },
+          "terminalStream": {
+            "label": "Observer la sortie du terminal en direct",
+            "description": "Observer en continu tout ce qui s'affiche dans vos sessions de terminal, en temps réel."
+          },
+          "terminalWrite": {
+            "label": "Écrire dans vos terminaux",
+            "description": "Envoyer des saisies et exécuter des commandes dans vos sessions de terminal — comme si vous les tapiez vous-même."
+          },
+          "keychainRead": {
+            "label": "Lire ses propres secrets stockés",
+            "description": "Lire les secrets que ce plugin a précédemment enregistrés dans le trousseau de votre appareil."
+          },
+          "keychainWrite": {
+            "label": "Enregistrer des secrets sur votre appareil",
+            "description": "Enregistrer des secrets dans le trousseau de votre système."
+          },
+          "metricsRead": {
+            "label": "Lire les métriques système",
+            "description": "Lire les statistiques processeur, mémoire, disque et réseau de vos hôtes connectés."
+          },
+          "dockerRead": {
+            "label": "Lire les informations Docker",
+            "description": "Lister les conteneurs, images, volumes, réseaux et stacks, et lire les journaux des conteneurs. Les journaux peuvent contenir des mots de passe ou des jetons."
+          },
+          "processesRead": {
+            "label": "Lire les informations sur les processus",
+            "description": "Lister les processus en cours sur vos hôtes connectés."
+          },
+          "processesManage": {
+            "label": "Gérer les processus",
+            "description": "Lister et arrêter les processus en cours sur vos hôtes connectés."
+          },
+          "dockerManage": {
+            "label": "Gérer Docker",
+            "description": "Lister, démarrer, arrêter et supprimer conteneurs, images, volumes, réseaux et stacks. Cela peut détruire définitivement des données."
+          },
+          "portsForward": {
+            "label": "Rediriger des ports vers cet ordinateur",
+            "description": "Ouvrir des tunnels SSH depuis vos hôtes connectés vers des ports locaux de cet ordinateur, et ouvrir l'adresse obtenue dans votre navigateur ou votre presse-papiers."
+          },
+          "proxmoxRead": {
+            "label": "Lire les informations Proxmox",
+            "description": "Lister les conteneurs LXC et leurs snapshots."
+          },
+          "proxmoxManage": {
+            "label": "Gérer Proxmox",
+            "description": "Lister et contrôler les conteneurs LXC, y compris créer, supprimer et restaurer des snapshots. Cela peut détruire définitivement des données."
+          },
+          "sftpRead": {
+            "label": "Lire les fichiers",
+            "description": "Parcourir et lire les fichiers de vos hôtes SSH/FTP enregistrés et de cet ordinateur."
+          },
+          "sftpWrite": {
+            "label": "Écrire et déplacer des fichiers",
+            "description": "Créer, renommer, écraser et supprimer des fichiers sur vos hôtes SSH/FTP enregistrés et sur cet ordinateur, et les copier entre eux. Cela peut détruire définitivement des données."
+          },
+          "audit": {
+            "label": "Enregistrer des événements d'audit",
+            "description": "Ajouter à votre journal d'audit des entrées décrivant ses actions. Pour un hôte d'un coffre d'équipe, ces entrées sont également envoyées au serveur de cette équipe."
+          },
+          "auditRead": {
+            "label": "Lire le journal d'activité",
+            "description": "Lire le journal d'activité de cet appareil, y compris les hôtes contactés, les fichiers touchés et les actions des autres plugins. Lorsqu'une équipe est nommée, cela lit aussi le journal côté serveur de cette équipe — l'activité de chacun de ses membres."
+          },
+          "mcpContribute": {
+            "label": "Exposer des outils aux agents IA externes",
+            "description": "Permet à ce plugin d'ajouter ses propres commandes au serveur MCP de Voltius, afin que tout agent IA externe connecté puisse les exécuter — avec les autorisations de ce plugin."
+          },
+          "vaultsRead": {
+            "label": "Voir vos coffres",
+            "description": "Voir les noms de vos coffres, y compris les coffres d'équipe, et leur organisation."
+          },
+          "vaultsWrite": {
+            "label": "Créer et supprimer des coffres",
+            "description": "Créer, renommer et supprimer vos coffres. Supprimer un coffre peut supprimer tout ce qu'il contient."
+          },
+          "foldersRead": {
+            "label": "Voir vos dossiers",
+            "description": "Voir les dossiers dans lesquels vous classez hôtes, clés, redirections de ports et snippets."
+          },
+          "foldersWrite": {
+            "label": "Créer et supprimer des dossiers",
+            "description": "Créer, renommer et supprimer des dossiers. Supprimer un dossier peut supprimer tout ce qu'il contient."
+          },
+          "sessionsRead": {
+            "label": "Voir vos sessions",
+            "description": "Voir quelles sessions de terminal sont ouvertes et quand elles changent."
+          },
+          "sessionsWrite": {
+            "label": "Ouvrir et fermer des sessions",
+            "description": "Ouvrir de nouvelles sessions de terminal et fermer celles existantes."
+          },
+          "connectionsRead": {
+            "label": "Lire vos connexions",
+            "description": "Lire vos connexions enregistrées et leurs détails."
+          },
+          "connectionsWrite": {
+            "label": "Gérer vos connexions",
+            "description": "Créer, modifier et supprimer vos connexions enregistrées."
+          },
+          "keysRead": {
+            "label": "Lire vos clés SSH",
+            "description": "Lister vos clés SSH enregistrées, et en ajouter une au fichier authorized_keys d'un hôte enregistré via SSH."
+          },
+          "keysWrite": {
+            "label": "Gérer vos clés SSH",
+            "description": "Créer et supprimer des clés SSH en votre nom."
+          },
+          "identitiesRead": {
+            "label": "Lire vos identités",
+            "description": "Lister vos identités enregistrées."
+          },
+          "identitiesWrite": {
+            "label": "Gérer vos identités",
+            "description": "Créer et supprimer des identités en votre nom."
+          },
+          "snippetsRead": {
+            "label": "Lire vos snippets",
+            "description": "Lister vos snippets enregistrés et les commandes qu'ils exécutent."
+          },
+          "snippetsWrite": {
+            "label": "Gérer vos snippets",
+            "description": "Créer, modifier, déplacer et supprimer vos snippets enregistrés."
+          },
+          "snippetsRun": {
+            "label": "Exécuter vos snippets sur vos hôtes",
+            "description": "Exécuter un snippet enregistré sur un hôte, en s'y connectant si nécessaire. Ses commandes s'exécutent avec vos propres accès, exactement comme si vous les lanciez vous-même."
+          },
+          "portForwardingRead": {
+            "label": "Lire vos redirections de ports",
+            "description": "Lister vos règles de redirection de ports enregistrées et les tunnels actuellement ouverts."
+          },
+          "portForwardingWrite": {
+            "label": "Gérer vos redirections de ports",
+            "description": "Créer, modifier, déplacer et supprimer vos règles de redirection de ports enregistrées."
+          },
+          "knownHostsRead": {
+            "label": "Lire vos hôtes connus",
+            "description": "Lister les clés d'hôte SSH que vous avez approuvées, avec leurs empreintes."
+          },
+          "knownHostsWrite": {
+            "label": "Approuver et supprimer des clés d'hôte",
+            "description": "Autoriser une clé d'hôte SSH, ou supprimer une clé approuvée. Une clé approuvée signifie que les connexions à cet hôte sont acceptées sans vous le demander."
+          },
+          "historyRead": {
+            "label": "Lire votre historique de commandes",
+            "description": "Rechercher dans les commandes que vous avez saisies dans les terminaux. Elles peuvent contenir des mots de passe ou des jetons saisis en clair."
+          },
+          "transfersRead": {
+            "label": "Voir les transferts de fichiers",
+            "description": "Voir les transferts de fichiers en cours, y compris les noms de fichiers, la progression et les erreurs."
+          },
+          "transfersWrite": {
+            "label": "Annuler et relancer des transferts",
+            "description": "Annuler un transfert de fichiers en cours, ou relancer un transfert échoué — y compris les transferts que vous avez lancés vous-même."
+          },
+          "healthRead": {
+            "label": "Voir l'accessibilité des hôtes",
+            "description": "Voir quels hôtes enregistrés ont répondu au dernier test d'accessibilité, et à quelle vitesse."
+          },
+          "vaultRead": {
+            "label": "Lire votre coffre",
+            "description": "Lire les données stockées dans votre coffre."
+          },
+          "vaultWrite": {
+            "label": "Écrire dans votre coffre",
+            "description": "Stocker et modifier des données dans votre coffre."
+          },
+          "syncRead": {
+            "label": "Lire les données de synchronisation",
+            "description": "Lire les données propres à ce plugin synchronisées entre vos appareils, et consulter l'état de la synchronisation de votre configuration."
+          },
+          "syncWrite": {
+            "label": "Écrire les données de synchronisation",
+            "description": "Stocker et modifier les données synchronisées entre vos appareils."
+          },
+          "panesRead": {
+            "label": "Lire la disposition du terminal",
+            "description": "Voir vos onglets ouverts et vos panneaux divisés, et quelle session se trouve dans chacun."
+          },
+          "panesWrite": {
+            "label": "Organiser les panneaux du terminal",
+            "description": "Diviser, déplacer, détacher et activer des panneaux. Les sessions restent ouvertes ; rien n'est fermé."
+          },
+          "teamRead": {
+            "label": "Lire vos équipes",
+            "description": "Voir vos équipes, leurs membres, leurs rôles, et quels membres détiennent la clé du coffre d'équipe."
+          },
+          "teamWrite": {
+            "label": "Gérer les membres d'équipe",
+            "description": "Inviter des personnes dans vos équipes, retirer des membres et modifier leur rôle."
+          },
+          "sharingRead": {
+            "label": "Lire les terminaux partagés",
+            "description": "Voir lesquelles de vos sessions de terminal sont partagées, qui les regarde et qui en détient le contrôle."
+          },
+          "sharingWrite": {
+            "label": "Partager des terminaux en direct",
+            "description": "Diffuser une session de terminal en direct aux membres de vos équipes, arrêter le partage et céder le contrôle à un participant qui l'a demandé."
+          },
+          "settingsRead": {
+            "label": "Lire les réglages",
+            "description": "Voir chaque réglage de l'application et sa valeur actuelle."
+          },
+          "settingsWrite": {
+            "label": "Modifier les réglages",
+            "description": "Modifier n'importe quel réglage, y compris ceux qui désactivent une protection."
+          },
+          "accountRead": {
+            "label": "Lire votre abonnement",
+            "description": "Voir votre formule, votre essai, vos sièges et votre facturation."
+          },
+          "pluginsManage": {
+            "label": "Gérer les plugins",
+            "description": "Installer, mettre à jour, supprimer, activer et désactiver des plugins, et ajouter des sources de marketplace. Un plugin installé exécute du code dans Voltius avec les permissions qu'il déclare."
+          },
+          "importExportRead": {
+            "label": "Exporter vos données",
+            "description": "Exporter connexions, identités, clés SSH, snippets et règles de redirection de ports. Un export contenant des mots de passe ou des clés privées ne sort que chiffré."
+          },
+          "importExportWrite": {
+            "label": "Importer des données",
+            "description": "Importer connexions, identités, clés SSH, snippets et règles de redirection de ports dans un coffre. Rien d'existant n'est écrasé."
+          },
+          "storage": {
+            "label": "Stocker les données du plugin",
+            "description": "Enregistrer les réglages et données propres à ce plugin sur votre appareil."
+          },
+          "http": {
+            "label": "Accéder au réseau",
+            "description": "Effectuer des requêtes réseau vers des services externes."
+          },
+          "cryptoDerive": {
+            "label": "Dériver des clés de chiffrement",
+            "description": "Dériver une clé de chiffrement à partir d'une phrase secrète que vous fournissez. Ne donne pas accès à vos secrets stockés."
+          },
+          "fs": {
+            "label": "Accéder aux fichiers",
+            "description": "Lire et écrire des fichiers sur votre appareil."
+          },
+          "ui": {
+            "label": "Afficher des éléments d'interface",
+            "description": "Ajouter ses propres panneaux et contrôles à l'application."
+          },
+          "notifications": {
+            "label": "Afficher des notifications",
+            "description": "Vous afficher des notifications et des messages."
+          },
+          "settingsPage": {
+            "label": "Ajouter une page de réglages",
+            "description": "Ajouter sa propre page dans les Réglages."
+          },
+          "rightPanel": {
+            "label": "Ajouter un panneau latéral",
+            "description": "Ajouter un panneau à la zone latérale de session."
+          },
+          "globalPanel": {
+            "label": "Ajouter un panneau global",
+            "description": "Ajouter un panneau disponible dans toute l'application."
+          },
+          "themes": {
+            "label": "Ajouter des thèmes de couleurs",
+            "description": "Ajouter ses propres thèmes de couleurs sélectionnables dans l'application."
+          },
+          "omniCommands": {
+            "label": "Ajouter des actions à la palette de commandes",
+            "description": "Ajouter ses propres actions à la palette de commandes."
+          },
+          "uiContributions": {
+            "label": "Ajouter des éléments d'interface",
+            "description": "Ajouter ses propres éléments à l'interface de l'application."
+          }
         }
       }
     },
@@ -1037,9 +1251,18 @@
           "label": "Supprimer la sélection",
           "desc": "Supprimer les éléments sélectionnés"
         },
-        "copy": { "label": "Copier", "desc": "Copier les éléments sélectionnés dans le presse-papiers" },
-        "cut": { "label": "Couper", "desc": "Couper les éléments sélectionnés dans le presse-papiers" },
-        "paste": { "label": "Coller", "desc": "Coller les éléments du presse-papiers dans le dossier actuel" },
+        "copy": {
+          "label": "Copier",
+          "desc": "Copier les éléments sélectionnés dans le presse-papiers"
+        },
+        "cut": {
+          "label": "Couper",
+          "desc": "Couper les éléments sélectionnés dans le presse-papiers"
+        },
+        "paste": {
+          "label": "Coller",
+          "desc": "Coller les éléments du presse-papiers dans le dossier actuel"
+        },
         "undo": {
           "label": "Annuler",
           "desc": "Annuler la dernière action"

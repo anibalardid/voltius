@@ -3,18 +3,13 @@ import { reportAuditClientEvent, type ClientAuditAction } from "@/services/audit
 import type { AuditContext, AuditTarget } from "@/services/auditContext";
 
 export function useAuditReporter(context: AuditContext | null) {
-  const kind = context?.kind ?? null;
-  const teamId = context?.kind === "team" ? context.teamId : null;
   const vaultId = context?.vaultId ?? null;
 
   return useCallback(
     (action: ClientAuditAction, opts: AuditTarget = {}) => {
-      if (!kind) return;
-      const auditContext: AuditContext | null = kind === "team"
-        ? teamId ? { kind, teamId, vaultId: vaultId ?? undefined } : null
-        : vaultId ? { kind, vaultId } : null;
-      reportAuditClientEvent(auditContext, action, opts);
+      if (!vaultId) return;
+      reportAuditClientEvent({ kind: "local", vaultId }, action, opts);
     },
-    [kind, teamId, vaultId],
+    [vaultId],
   );
 }

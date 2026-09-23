@@ -9,11 +9,8 @@ import { useFolderStore } from "@/stores/folderStore";
 import { useSnippetStore } from "@/stores/snippetStore";
 import { useSnippetFolderStore } from "@/stores/snippetFolderStore";
 import { usePortForwardingStore } from "@/stores/portForwardingStore";
-import { useTeamStore } from "@/stores/teamStore";
-import { fetchTeamData } from "@/services/teamVaultSync";
 
 vi.mock("@/services/teamService", () => ({ getMyUserId: vi.fn(async () => "u1") }));
-vi.mock("@/services/teamVaultSync", () => ({ fetchTeamData: vi.fn(async () => {}) }));
 vi.mock("@/services/vault", () => ({
   getSecret: vi.fn(async () => null),
   storeSecret: vi.fn(async () => {}),
@@ -62,8 +59,6 @@ function stubLoaders() {
 
 beforeEach(() => {
   vi.restoreAllMocks();
-  vi.mocked(fetchTeamData).mockReset().mockResolvedValue();
-  useTeamStore.setState({ teams: [], membersByTeam: {}, rolesByTeam: {} });
   useVaultStore.setState({ vaults: [{ id: "personal", name: "Personal" }], selectedVaultIds: ["personal"] });
   useConnectionStore.setState({ connections: [conn], teamConnections: {} });
   useKeyStore.setState({ keys: [key], teamKeys: {} });
@@ -142,18 +137,16 @@ describe("api.objects permission gate", () => {
 
 describe("api.objects against the real stores", () => {
   it("hydrates the lazily-loaded stores once per call, not once per gate", async () => {
-    // Hydration is a full store sweep plus a team-vault sync; gating outside the
-    // verb and hydrating inside it too meant paying for all of it twice.
+    // Hydration is a full store sweep; gating outside the verb and hydrating
+    // inside it too meant paying for all of it twice.
     const loadSnippets = vi.spyOn(useSnippetStore.getState(), "loadSnippets").mockResolvedValue();
     const loadRules = vi.spyOn(usePortForwardingStore.getState(), "loadRules").mockResolvedValue();
-    useTeamStore.setState({ teams: [{ id: "team-1", name: "Ops", role_ids: [] }] as never });
 
     const api = createHostPluginAPI("test:objects-hydrate", HOSTS_GRANT);
     await api.objects.move({ ids: ["c1"], folderId: null, vaultId: null }).catch(() => {});
 
     expect(loadSnippets).toHaveBeenCalledTimes(1);
     expect(loadRules).toHaveBeenCalledTimes(1);
-    expect(fetchTeamData).toHaveBeenCalledTimes(1);
   });
 
   it("files a connection into a folder through the folder store", async () => {
@@ -192,43 +185,6 @@ describe("api.objects against the real stores", () => {
     expect(await api.objects.move({ ids: ["s1"], folderId: "sf1", vaultId: null }))
       .toEqual({ moved: 1, created: 0, skipped: 0, vault_id: "personal", folder_id: "sf1" });
     expect(update).toHaveBeenCalledWith("s1", expect.objectContaining({ folder_id: "sf1" }));
-  });
-
-  it("resolves a team-vault object in a session where no page ever opened it", async () => {
-    // The team maps are filled by fetchTeamData alone, which the UI drives.
-    useTeamStore.setState({ teams: [{ id: "team-1", name: "Ops", role_ids: [] }] as never });
-    vi.mocked(fetchTeamData).mockImplementation(async () => {
-      useConnectionStore.setState({
-        teamConnections: { "team-1": [{ ...conn, id: "c-team", vault_id: "team-1" }] },
-      });
-    });
-    const api = createHostPluginAPI("test:objects-team", HOSTS_GRANT);
-    // Resolved, not "not found": the refusal it reaches is the team-vault one.
-    await expect(api.objects.copy({ ids: ["c-team"], folderId: null, vaultId: null }))
-      .rejects.toThrow(/team vault/);
-    expect(fetchTeamData).toHaveBeenCalledWith("team-1", { background: true });
-  });
-
-  it("refuses to MOVE an object out of a team vault, leaving the record untouched", async () => {
-    // A move rewrites the team's record and withdraws its secrets: the object
-    // and its credentials would vanish for every teammate. api.connections
-    // .update/delete refuse a team vault; this is the same ruling.
-    useTeamStore.setState({ teams: [{ id: "team-1", name: "Ops", role_ids: [] }] as never });
-    vi.mocked(fetchTeamData).mockImplementation(async () => {
-      useConnectionStore.setState({
-        teamConnections: { "team-1": [{ ...conn, id: "c-team", vault_id: "team-1" }] },
-      });
-    });
-    const update = vi.spyOn(useConnectionStore.getState(), "updateConnection").mockResolvedValue();
-    const del = vi.spyOn(useConnectionStore.getState(), "deleteConnection").mockResolvedValue();
-    const api = createHostPluginAPI("test:objects-team-move", HOSTS_GRANT);
-    await expect(api.objects.move({
-      ids: ["c-team"], folderId: null, vaultId: "personal", allowCrossVault: true,
-    })).rejects.toThrow(/team vault "Ops"/);
-    expect(update).not.toHaveBeenCalled();
-    expect(del).not.toHaveBeenCalled();
-    expect(useConnectionStore.getState().teamConnections["team-1"][0])
-      .toMatchObject({ id: "c-team", vault_id: "team-1" });
   });
 
   it("refuses an id that belongs to no tab", async () => {

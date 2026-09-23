@@ -203,8 +203,6 @@ vi.mock("@/stores/syncPrefsStore", () => ({
 vi.mock("@/services/vault", () => ({
   storeSecret: h.storeSecret, getSecret: h.getSecret, deleteSecret: vi.fn(async () => {}),
 }));
-vi.mock("@/services/teamVaultSecrets", () => ({ saveTeamVaultSecretForVault: h.saveTeamVaultSecretForVault }));
-vi.mock("@/services/teamVaultPermissions", () => ({ buildTeamVaultTransferPlan: () => ({ allowed: true }) }));
 
 import KeychainPage from "./KeychainPage";
 import { useVaultClipboardStore } from "@/stores/vaultClipboardStore";
@@ -327,64 +325,9 @@ test("a folder paste at the root does not migrate the subtree out of its vault",
   expect(h.updateKey).not.toHaveBeenCalled();
 });
 
-test("a cut into a team-vault folder migrates the key instead of only reparenting it", async () => {
-  h.folders = [folder("tf", { vault_id: "team-1" })];
-  h.keys = [key("k1", { vault_id: "personal" })];
-  h.selected = ["k1"];
-  h.activeFolderId = "tf";
-  render(<KeychainPage />);
 
-  await dispatch("voltius:clipboard-cut");
-  await dispatch("voltius:clipboard-paste");
 
-  expect(h.moveObjectsToFolder).not.toHaveBeenCalled();
-  expect(h.updateKey).toHaveBeenCalledWith("k1", expect.objectContaining({ vault_id: "team-1", folder_id: "tf" }));
-});
 
-test("a cut into a team vault republishes the key's private material to that vault", async () => {
-  h.folders = [folder("tf", { vault_id: "team-1" })];
-  h.keys = [key("k1", { vault_id: "personal" })];
-  h.selected = ["k1"];
-  h.activeFolderId = "tf";
-  h.getSecret.mockImplementation(async (k: string) => (k === "key:k1:private" ? "PRIV" : null));
-  render(<KeychainPage />);
-
-  await dispatch("voltius:clipboard-cut");
-  await dispatch("voltius:clipboard-paste");
-
-  expect(h.saveTeamVaultSecretForVault).toHaveBeenCalledWith("team-1", "key:k1:private", "PRIV");
-});
-
-test("a cut into a team vault republishes an identity's password to that vault", async () => {
-  h.folders = [folder("tf", { vault_id: "team-1" })];
-  h.identities = [identity("i1", { vault_id: "personal" })];
-  h.selected = ["i1"];
-  h.activeFolderId = "tf";
-  h.getSecret.mockImplementation(async (k: string) => (k === "identity:i1:password" ? "pw" : null));
-  render(<KeychainPage />);
-
-  await dispatch("voltius:clipboard-cut");
-  await dispatch("voltius:clipboard-paste");
-
-  expect(h.updateIdentity).toHaveBeenCalledWith("i1", expect.objectContaining({ vault_id: "team-1", folder_id: "tf" }));
-  expect(h.saveTeamVaultSecretForVault).toHaveBeenCalledWith("team-1", "identity:i1:password", "pw");
-});
-
-test("a copy into a team-vault folder creates the duplicate there with its secret", async () => {
-  h.folders = [folder("tf", { vault_id: "team-1" })];
-  h.keys = [key("k1", { vault_id: "personal" })];
-  h.selected = ["k1"];
-  h.activeFolderId = "tf";
-  h.getSecret.mockImplementation(async (k: string) => (k === "key:k1:private" ? "PRIV" : null));
-  render(<KeychainPage />);
-
-  await dispatch("voltius:clipboard-copy");
-  await dispatch("voltius:clipboard-paste");
-
-  expect(h.saveKey).toHaveBeenCalledWith(expect.objectContaining({ vault_id: "team-1", folder_id: "tf" }));
-  expect(h.storeSecret).toHaveBeenCalledWith("key:new-key:private", "PRIV");
-  expect(h.saveTeamVaultSecretForVault).toHaveBeenCalledWith("team-1", "key:new-key:private", "PRIV");
-});
 
 test("cloning a folder suffixes the root only, not the keys inside it", async () => {
   h.folders = [folder("f1", { name: "Prod" })];

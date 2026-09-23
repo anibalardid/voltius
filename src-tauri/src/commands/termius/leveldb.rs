@@ -23,6 +23,13 @@ pub(super) fn decode_idb_key(key: &[u8]) -> Option<IdbKey> {
     })
 }
 
+/// The object-store id is not stable across IndexedDB schema revisions, while
+/// the primary data index remains index 1. Keep the filter tolerant of that
+/// layout change without accepting database metadata entries.
+pub(super) fn is_primary_data_entry(key: &IdbKey) -> bool {
+    key.object_store_id != 0 && key.index_id == 0x01
+}
+
 // ─── Database name map ────────────────────────────────────────────────────────
 //
 // Per-database metadata lives under keys of the form
@@ -34,13 +41,14 @@ pub(super) fn decode_idb_key(key: &[u8]) -> Option<IdbKey> {
 pub(super) fn build_db_name_map(entries: &[(Vec<u8>, Vec<u8>)]) -> HashMap<u8, String> {
     let mut out = HashMap::new();
     for (k, v) in entries {
-        // We're looking for keys starting `00 <db_id> 00 00 32 01 00`.
+        // We're looking for keys starting `00 <db_id> 00 00 32 <store> 00`.
+        // The object-store id changed in newer IndexedDB layouts.
         if k.len() < 7
             || k[0] != 0x00
             || k[2] != 0x00
             || k[3] != 0x00
             || k[4] != 0x32
-            || k[5] != 0x01
+            || k[5] == 0x00
             || k[6] != 0x00
         {
             continue;
@@ -68,21 +76,12 @@ pub(super) fn build_db_name_map(entries: &[(Vec<u8>, Vec<u8>)]) -> HashMap<u8, S
 /// Raw `(key, value)` byte pairs read straight out of a LevelDB.
 pub(super) type RawLevelDbEntries = Vec<(Vec<u8>, Vec<u8>)>;
 
+/// Reads every entry by parsing the SSTables and logs directly. `rusty_leveldb`
+/// cannot open a Chromium IndexedDB database (custom `idb_cmp1` comparator over
+/// a bytewise one), so the comparator-free reader does the work; see
+/// `raw_leveldb` for the format handling.
 pub(super) fn read_all_entries(dir: &Path) -> Result<RawLevelDbEntries, String> {
-    use rusty_leveldb::{LdbIterator, Options, DB};
-    let opts = Options {
-        create_if_missing: false,
-        ..Options::default()
-    };
-    let mut db = DB::open(dir, opts).map_err(|e| format!("Failed to open leveldb: {e}"))?;
-    let mut iter = db
-        .new_iter()
-        .map_err(|e| format!("Failed to iterate leveldb: {e}"))?;
-    let mut out = Vec::new();
-    while let Some((k, v)) = iter.next() {
-        out.push((k, v));
-    }
-    Ok(out)
+    super::raw_leveldb::read_all_entries(dir)
 }
 
 #[cfg(test)]
@@ -97,6 +96,17 @@ mod tests {
         assert_eq!(k.db_id, 0x10);
         assert_eq!(k.object_store_id, 0x01);
         assert_eq!(k.index_id, 0x01);
+        assert!(is_primary_data_entry(&k));
+    }
+
+    #[test]
+    fn primary_data_filter_allows_a_changed_object_store_id() {
+        let key = decode_idb_key(&hex_to_bytes("0010020103000000000000f03f")).unwrap();
+        assert_eq!(key.object_store_id, 0x02);
+        assert!(is_primary_data_entry(&key));
+
+        let sidecar = decode_idb_key(&hex_to_bytes("0010020203000000000000f03f")).unwrap();
+        assert!(!is_primary_data_entry(&sidecar));
     }
 
     #[test]

@@ -1,28 +1,17 @@
-import { isSessionId, isUuid } from "@/services/sessionId";
 import { isSettingsSection, type SettingsSection } from "@/stores/uiStore";
 import { isValidPluginId } from "@/plugins/pluginId";
 
-export type JoinIntent = { route: "join"; sessionId: string; token: string };
-export type InviteIntent = { route: "invite"; handle: string };
-export type VerifiedIntent = { route: "verified"; userId: string };
 export type NotificationIntent = { route: "notification"; entryId: string | null };
 export type SettingsIntent = { route: "settings"; section: SettingsSection };
 export type BillingIntent = { route: "billing" };
 export type SnippetInstallIntent = { route: "snippet-install"; entryId: string };
 export type PluginInstallIntent = { route: "plugin-install"; pluginId: string; sourceId: string };
-/** Carries a grant id and its secret only — never key material, never
- *  `account_id`, which is the KDF salt for the user's password. */
-export type VaultJoinIntent = { route: "vault-join"; grantId: string; secret: string };
 export type DeepLinkIntent =
-  | JoinIntent
-  | InviteIntent
-  | VerifiedIntent
   | NotificationIntent
   | SettingsIntent
   | BillingIntent
   | SnippetInstallIntent
-  | PluginInstallIntent
-  | VaultJoinIntent;
+  | PluginInstallIntent;
 
 type TrustClass = "confirm" | "attenuated" | "silent" | "navigate";
 type Route = DeepLinkIntent["route"];
@@ -73,11 +62,6 @@ type Route = DeepLinkIntent["route"];
  *   deliberately does not start a checkout.
  */
 const TRUST = {
-  join: "confirm",
-  // Grants a stranger access to a live terminal, so nothing happens until the
-  // host accepts.
-  invite: "confirm",
-  verified: "attenuated",
   notification: "navigate",
   settings: "navigate",
   billing: "navigate",
@@ -88,9 +72,6 @@ const TRUST = {
   // the sheet names the plugin, its catalogue and its permissions before the
   // accept button does anything.
   "plugin-install": "confirm",
-  // Membership is a capability even though no key travels in the link, and
-  // leaving again is a separate act.
-  "vault-join": "confirm",
 } as const satisfies Record<Route, TrustClass>;
 
 type RouteOfClass<C extends TrustClass> = {
@@ -131,47 +112,7 @@ export const DEFAULT_PLUGIN_SOURCE_ID = "voltius";
 /** A source id is a catalogue key, not a URL; this only stops an absurd one. */
 const MAX_SOURCE_ID = 100;
 
-/** As the server mints it: 32 random bytes, unpadded base64url, 43 chars. */
-const GRANT_SECRET_RE = /^[A-Za-z0-9_-]{43}$/;
-
-/**
- * Mirrors the server's custom-handle rule (server: `src/handles.rs`,
- * `validate_custom_handle`): 3–30 ASCII lowercase/digit/`-`/`_`, never starting
- * or ending in a separator. Generated handles (`adjective-noun-1234`) satisfy it
- * too. The reserved-name list is deliberately not mirrored: it governs *claiming*
- * a handle, not looking one up, and a link naming a reserved handle resolves to
- * nobody anyway.
- */
-const HANDLE_RE = /^[a-z0-9][a-z0-9_-]{1,28}[a-z0-9]$/;
-
 const ROUTES: { [K in Route]: RouteCodec<K> } = {
-  join: {
-    parse: (params) => {
-      const sessionId = params.get("s") ?? "";
-      const token = params.get("t") ?? "";
-      if (!isSessionId(sessionId) || !token) return null;
-      return { route: "join", sessionId, token };
-    },
-    params: ({ sessionId, token }) => ({ s: sessionId, t: token }),
-  },
-  invite: {
-    // The `@` is how a handle is written throughout the UI, so links carry it;
-    // it is display sugar and never part of the stored value.
-    parse: (params) => {
-      const handle = (params.get("h") ?? "").replace(/^@/, "").toLowerCase();
-      if (!HANDLE_RE.test(handle)) return null;
-      return { route: "invite", handle };
-    },
-    params: ({ handle }) => ({ h: `@${handle}` }),
-  },
-  verified: {
-    parse: (params) => {
-      const userId = params.get("u") ?? "";
-      if (!isSessionId(userId)) return null;
-      return { route: "verified", userId };
-    },
-    params: ({ userId }) => ({ u: userId }),
-  },
   notification: {
     // The id is opaque here: inbox ids are re-derived from server state on every
     // reconcile, so this cannot check one exists. It is length-capped and the
@@ -221,16 +162,6 @@ const ROUTES: { [K in Route]: RouteCodec<K> } = {
       return { route: "plugin-install", pluginId, sourceId };
     },
     params: ({ pluginId, sourceId }) => ({ id: pluginId, src: sourceId }),
-  },
-  "vault-join": {
-    parse: (params) => {
-      const grantId = params.get("g") ?? "";
-      if (!isUuid(grantId)) return null;
-      const secret = params.get("k") ?? "";
-      if (!GRANT_SECRET_RE.test(secret)) return null;
-      return { route: "vault-join", grantId, secret };
-    },
-    params: ({ grantId, secret }) => ({ g: grantId, k: secret }),
   },
 };
 

@@ -1,61 +1,28 @@
 import { Icon } from "@iconify/react";
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useUIStore } from "@/stores/uiStore";
 import { useThemeStore } from "@/stores/themeStore";
 import { useRipple } from "@/hooks/useRipple";
-import { getAccountMode, getMyHandle, lockVaultSession, logout } from "@/services/account";
-import { getSwitchTargets, saveCurrentAccount, signOutToAddAccount, switchToAccount, removeSavedAccount, type ActiveAccount, type SavedAccount } from "@/services/savedAccounts";
-import { ConfirmModal } from "@/components/shared/ConfirmModal";
+import { getAccountMode, lockVaultSession } from "@/services/account";
 import { DropdownMenuItem } from "@/components/shared/DropdownMenuItem";
-import { useCopyHandle } from "@/hooks/useCopyHandle";
-import { useNotificationStore } from "@/stores/notificationStore";
 import { useSecurityStore } from "@/stores/securityStore";
 import { canLockVault } from "@/utils/accountMode";
-import { instanceLabel } from "@/utils/serverInstance";
 import { sessionTimeoutLabel, sessionTimeoutValue } from "@/utils/sessionTimeout";
-
-/**
- * An account on the official cloud keeps the plain user icon; a self-hosted one
- * is drawn as what it is, so two accounts sharing an email still read apart.
- */
-const accountIcon = (instance: string | null) => (instance ? "lucide:server" : "lucide:circle-user");
 
 export function SidebarAccountButton() {
   const { t } = useTranslation();
   const { createRipple, rippleEls } = useRipple();
-  const openCloudAuth = useUIStore((s) => s.openCloudAuth);
   const uiScale = useUIStore((s) => s.uiScale);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ bottom: 0, left: 0 });
   const [accountMode, setAccountMode] = useState<string | null>(null);
-  const [accountEmail, setAccountEmail] = useState<string | null>(null);
-  const [switchTargets, setSwitchTargets] = useState<SavedAccount[]>([]);
-  const [accountHandle, setAccountHandle] = useState<string | null>(null);
-  const [accountServerUrl, setAccountServerUrl] = useState<string | null>(null);
-  const [pendingSwitch, setPendingSwitch] = useState<SavedAccount | null>(null);
-  const { copied: handleCopied, copy: copyHandle } = useCopyHandle(accountHandle);
   const sessionTimeoutMinutes = useSecurityStore((s) => s.sessionTimeoutMinutes);
 
-  const refreshAccountInfo = async (): Promise<ActiveAccount> => {
-    const { invoke: inv } = await import("@tauri-apps/api/core");
-    const [mode, email, accountId, serverUrl] = await Promise.all([
-      getAccountMode().catch(() => null),
-      inv<string | null>("keychain_get", { key: "email" }).catch(() => null),
-      inv<string | null>("keychain_get", { key: "account_id" }).catch(() => null),
-      inv<string | null>("keychain_get", { key: "server_url" }).catch(() => null),
-    ]);
-    setAccountMode(mode);
-    setAccountEmail(email);
-    setAccountServerUrl(serverUrl);
-    void getMyHandle().then((handle) => setAccountHandle(handle || null)).catch(() => {});
-    return { account_id: accountId, email, server_url: serverUrl };
-  };
-
-  useEffect(() => { refreshAccountInfo(); }, []);
+  useEffect(() => { getAccountMode().then(setAccountMode).catch(() => setAccountMode(null)); }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -74,33 +41,14 @@ export function SidebarAccountButton() {
     };
   }, [open]);
 
-  const openDropdown = async () => {
-    // Close without waiting on the keychain — the refresh below only matters
-    // when the menu is about to be shown.
+  const openDropdown = () => {
     if (open) { setOpen(false); return; }
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       setPos({ bottom: window.innerHeight - rect.bottom, left: rect.right + 8 });
     }
-    const [active] = await Promise.all([
-      refreshAccountInfo(),
-      // A keychain that refuses this write is exactly how an account goes
-      // missing from the switcher, so it is said out loud rather than swallowed.
-      saveCurrentAccount().catch((e) => reportAccountError("saveFailed", e)),
-    ]);
-    const targets = await getSwitchTargets(active).catch(() => [] as SavedAccount[]);
-    setSwitchTargets(targets);
+    getAccountMode().then(setAccountMode).catch(() => {});
     setOpen(true);
-  };
-
-  const reportAccountError = (key: "switchFailed" | "saveFailed", e: unknown) => {
-    useNotificationStore.getState().addToast({
-      source: { kind: "plugin", id: "system", name: "Voltius" },
-      type: "toast",
-      message: t(`layout.sidebarAccount.${key}`, { error: e instanceof Error ? e.message : String(e) }),
-      severity: "error",
-      duration: 8000,
-    });
   };
 
   const handleLockVault = async () => {
@@ -109,62 +57,21 @@ export function SidebarAccountButton() {
     window.location.reload();
   };
 
-  const handleDisconnect = async () => {
-    setOpen(false);
-    await logout();
-    window.location.reload();
-  };
-
-  const handleAddAccount = async () => {
-    setOpen(false);
-    try {
-      await signOutToAddAccount();
-    } catch (e) {
-      // It signs this account out to reach the auth screen, so it must not run
-      // when the switcher could not keep it: that is a one-way trip out.
-      reportAccountError("saveFailed", e);
-    }
-  };
-
-  const handleSwitchAccount = async (account: SavedAccount) => {
-    setOpen(false);
-    try {
-      await switchToAccount(account);
-    } catch (e) {
-      // The switch tears the session down before it rebuilds it; a silent
-      // rejection would leave the user staring at an unchanged window.
-      reportAccountError("switchFailed", e);
-    }
-  };
-
-  /**
-   * Leaving a local account destroys it: the switch wipes secrets.enc and the
-   * config dir, and a local vault has no cloud copy to come back from. Ask first.
-   */
-  const requestSwitch = (account: SavedAccount) => {
-    setOpen(false);
-    if (accountMode === "server") { void handleSwitchAccount(account); return; }
-    setPendingSwitch(account);
-  };
-
   const canLock = canLockVault(accountMode);
   const autoLockSublabel = sessionTimeoutMinutes === null
     ? t("layout.sidebarAccount.autoLockOff")
     : t("layout.sidebarAccount.autoLockAfter", { duration: sessionTimeoutLabel(t, sessionTimeoutValue(sessionTimeoutMinutes)) });
 
-  const currentInstance = accountMode === "server" ? instanceLabel(accountServerUrl) : null;
-
-  const handleRemoveSavedAccount = async (e: React.MouseEvent, account_id: string) => {
-    e.stopPropagation();
-    await removeSavedAccount(account_id);
-    setSwitchTargets((prev) => prev.filter((a) => a.account_id !== account_id));
-  };
+  const modeLabel =
+    accountMode === "local" ? t("layout.sidebarAccount.modeLocalPassword") :
+    accountMode === "local-nopassword" ? t("layout.sidebarAccount.modeLocal") :
+    t("layout.sidebarAccount.localAccountFallback");
 
   return (
     <>
       <button
         ref={buttonRef}
-        onClick={() => void openDropdown()}
+        onClick={openDropdown}
         onPointerDown={createRipple}
         title={t("layout.sidebarAccount.accountTitle")}
         className="flex items-center justify-center relative overflow-hidden transition-all shrink-0"
@@ -205,36 +112,15 @@ export function SidebarAccountButton() {
           }}
           onMouseDown={(e) => e.stopPropagation()}
         >
-          {(accountEmail || accountMode) && (
-            <>
-              <div className="px-3 py-2">
-                <div className="flex items-center gap-2">
-                  <Icon icon={accountIcon(currentInstance)} width={16} style={{ color: "var(--t-text-dim)" }} />
-                  <span className="text-sm font-medium truncate" style={{ color: "var(--t-text-primary)" }}>
-                    {accountEmail ?? t("layout.sidebarAccount.localAccountFallback")}
-                  </span>
-                </div>
-                {accountHandle && (
-                  <button
-                    type="button"
-                    onClick={copyHandle}
-                    title={t("layout.sidebarAccount.copyHandle")}
-                    className="flex items-center gap-1 mt-0.5 text-xs transition-colors"
-                    style={{ color: "var(--t-text-dim)" }}
-                  >
-                    <span className="truncate">@{accountHandle}</span>
-                    <Icon icon={handleCopied ? "lucide:check" : "lucide:copy"} width={11} />
-                  </button>
-                )}
-                {accountMode && (
-                  <span className="text-xs mt-0.5 block truncate" style={{ color: "var(--t-text-dim)" }} title={currentInstance ? accountServerUrl ?? undefined : undefined}>
-                    {currentInstance ?? (accountMode === "server" ? t("layout.sidebarAccount.modeCloud") : accountMode === "local" ? t("layout.sidebarAccount.modeLocalPassword") : t("layout.sidebarAccount.modeLocal"))}
-                  </span>
-                )}
-              </div>
-              <div className="h-px bg-(--t-bg-input) -mx-1.5 my-0.5" />
-            </>
-          )}
+          <div className="px-3 py-2">
+            <div className="flex items-center gap-2">
+              <Icon icon="lucide:hdd" width={16} style={{ color: "var(--t-text-dim)" }} />
+              <span className="text-sm font-medium truncate" style={{ color: "var(--t-text-primary)" }}>
+                {modeLabel}
+              </span>
+            </div>
+          </div>
+          <div className="h-px bg-(--t-bg-input) -mx-1.5 my-0.5" />
 
           {canLock && (
             <DropdownMenuItem
@@ -249,7 +135,7 @@ export function SidebarAccountButton() {
             <DropdownMenuItem
               icon="lucide:timer"
               label={t("layout.sidebarAccount.autoLock")}
-              onClick={() => { setOpen(false); useUIStore.getState().openSettings("account"); }}
+              onClick={() => { setOpen(false); useUIStore.getState().openSettings("security"); }}
             />
           )}
 
@@ -269,75 +155,8 @@ export function SidebarAccountButton() {
             label={t("layout.sidebarAccount.toggleTheme")}
             onClick={() => { setOpen(false); useThemeStore.getState().toggleLightDark(); }}
           />
-
-          {accountMode !== "server" && (
-            <DropdownMenuItem
-              icon="lucide:log-in"
-              label={t("layout.sidebarAccount.signInSignUp")}
-              onClick={() => { openCloudAuth("signin"); setOpen(false); }}
-            />
-          )}
-
-          {accountMode === "server" && (
-            <DropdownMenuItem
-              icon="lucide:user-plus"
-              label={t("layout.sidebarAccount.addAccount")}
-              onClick={() => void handleAddAccount()}
-            />
-          )}
-
-          {accountMode === "server" && (
-            <DropdownMenuItem icon="lucide:log-out" label={t("common.action.disconnect")} onClick={() => void handleDisconnect()} />
-          )}
-
-          {switchTargets.length > 0 && (
-            <>
-              <div className="h-px bg-(--t-bg-input) -mx-1.5 my-0.5" />
-              <div className="px-3 pt-2 pb-1">
-                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--t-text-dim)" }}>
-                  {t("layout.sidebarAccount.switchAccount")}
-                </span>
-              </div>
-              {switchTargets.map((account) => {
-                const instance = instanceLabel(account.server_url);
-                return (
-                  <DropdownMenuItem
-                    key={account.account_id}
-                    icon={accountIcon(instance)}
-                    iconSize={16}
-                    label={account.email ?? t("layout.sidebarAccount.localAccountFallback")}
-                    sublabel={instance ?? (account.mode === "server" ? t("layout.sidebarAccount.savedAccountCloud") : t("layout.sidebarAccount.savedAccountLocal"))}
-                    title={instance ? account.server_url ?? undefined : undefined}
-                    onClick={() => requestSwitch(account)}
-                    trailing={
-                      <button
-                        type="button"
-                        title={t("layout.sidebarAccount.removeSavedAccount")}
-                        className="opacity-0 group-hover:opacity-100 p-0.5 rounded-sm transition-opacity text-(--t-text-dim) hover:text-(--t-status-error)"
-                        onClick={(e) => void handleRemoveSavedAccount(e, account.account_id)}
-                      >
-                        <Icon icon="lucide:x" width={12} />
-                      </button>
-                    }
-                  />
-                );
-              })}
-            </>
-          )}
         </div>,
         document.body,
-      )}
-
-      {pendingSwitch && (
-        <ConfirmModal
-          title={t("layout.sidebarAccount.leaveLocalTitle")}
-          message={t("layout.sidebarAccount.leaveLocalMessage", {
-            account: pendingSwitch.email ?? t("layout.sidebarAccount.localAccountFallback"),
-          })}
-          confirmLabel={t("layout.sidebarAccount.leaveLocalConfirm")}
-          onConfirm={() => { const account = pendingSwitch; setPendingSwitch(null); void handleSwitchAccount(account); }}
-          onCancel={() => setPendingSwitch(null)}
-        />
       )}
     </>
   );

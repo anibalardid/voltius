@@ -17,19 +17,36 @@ pub const ERR_ENCRYPTED: &str = "ENCRYPTED";
 pub const ERR_INVALID: &str = "INVALID";
 
 fn derive_public_key(private_key: &str, passphrase: Option<&str>) -> Result<String, String> {
-    let key = PrivateKey::from_openssh(private_key.trim()).map_err(|_| ERR_INVALID.to_string())?;
-    let key = if key.is_encrypted() {
-        let passphrase = passphrase
-            .filter(|p| !p.is_empty())
-            .ok_or_else(|| ERR_ENCRYPTED.to_string())?;
-        key.decrypt(passphrase)
-            .map_err(|_| ERR_ENCRYPTED.to_string())?
-    } else {
-        key
-    };
+    let passphrase = passphrase.filter(|p| !p.is_empty());
+    let key = russh::keys::decode_secret_key(private_key.trim(), passphrase).map_err(|_| {
+        if looks_encrypted(private_key) {
+            ERR_ENCRYPTED.to_string()
+        } else {
+            ERR_INVALID.to_string()
+        }
+    })?;
     key.public_key()
         .to_openssh()
         .map_err(|_| ERR_INVALID.to_string())
+}
+
+/// `decode_secret_key` deliberately keeps parse and passphrase failures in one
+/// error type. Preserve the UI's existing distinction without attempting to
+/// parse or log any key material ourselves.
+fn looks_encrypted(private_key: &str) -> bool {
+    let trimmed = private_key.trim();
+    if let Ok(key) = PrivateKey::from_openssh(trimmed) {
+        return key.is_encrypted();
+    }
+
+    let upper = trimmed.to_ascii_uppercase();
+    upper.contains("-----BEGIN ENCRYPTED PRIVATE KEY-----")
+        || upper.contains("PROC-TYPE: 4,ENCRYPTED")
+        || upper.contains("DEK-INFO:")
+        || trimmed.lines().any(|line| {
+            line.strip_prefix("Encryption:")
+                .is_some_and(|value| !value.trim().eq_ignore_ascii_case("none"))
+        })
 }
 
 #[tauri::command]

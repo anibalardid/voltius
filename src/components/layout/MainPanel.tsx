@@ -3,10 +3,6 @@ import { useSessionStore } from "@/stores/sessionStore";
 import { sessionClosed } from "@/stores/reconnectBackoff";
 import { useUIStore } from "@/stores/uiStore";
 import { useVaultStore } from "@/stores/vaultStore";
-import { useBlockedTeamVault } from "@/hooks/useBlockedTeamVault";
-import TeamVaultStatePanel from "@/components/team/TeamVaultStatePanel";
-import MultiplayerTerminalView from "@/components/terminal/MultiplayerTerminalView";
-import { MultiplayerBar } from "@/components/terminal/MultiplayerBar";
 import { HostAwareTerminalView, SessionConnectionOverlay } from "@/components/terminal/SessionView";
 import HomePage from "@/components/home/HomePage";
 import HostsPage from "@/components/hosts/HostsPage";
@@ -16,7 +12,6 @@ import PlaceholderPage from "@/components/placeholder/PlaceholderPage";
 import SFTPPage from "@/components/filetransfer/SFTPPage";
 import { SnippetsPage } from "@/components/snippets/SnippetsPage";
 import { PortForwardingPage } from "@/components/port_forwarding/PortForwardingPage";
-import MembersPage from "@/components/members/MembersPage";
 import AuditLogsPage from "@/components/logs/AuditLogsPage";
 import { Icon } from "@iconify/react";
 import { useHostPingPolling } from "@/hooks/useHostPingPolling";
@@ -75,9 +70,6 @@ export default function MainPanel() {
   const noVaultSelected = selectedVaultIds.length === 0;
   useHostPingPolling();
 
-  // Check if selected vault is a team vault in a non-loaded state
-  const blockedTeamVault = useBlockedTeamVault();
-  const showTeamVaultState = blockedTeamVault !== null && !homeView;
   const showSplitWorkspace = activeNav === "terminal" && splitTabActive && !sftpPanelOpen;
 
   // Determine vault/home overlay to show on top of terminals
@@ -94,8 +86,6 @@ export default function MainPanel() {
     overlayContent = <KnownHostsPage />;
   } else if (activeNav === "port-forwarding") {
     overlayContent = <PortForwardingPage />;
-  } else if (activeNav === "members") {
-    overlayContent = <MembersPage />;
   } else if (activeNav === "logs") {
     overlayContent = <AuditLogsPage />;
   } else {
@@ -110,10 +100,6 @@ export default function MainPanel() {
       {noVaultSelected ? (
         <div className="absolute inset-0 flex flex-col overflow-hidden">
           <NoVaultSelected />
-        </div>
-      ) : showTeamVaultState ? (
-        <div className="absolute inset-0 flex flex-col overflow-hidden">
-          <TeamVaultStatePanel status={blockedTeamVault!.status} teamId={blockedTeamVault!.teamId} />
         </div>
       ) : sessions.length === 0 && !showSplitWorkspace ? (
         <div className="absolute inset-0 flex flex-col overflow-hidden">
@@ -151,28 +137,18 @@ export default function MainPanel() {
                         onRetryWithAuth={session.type === "ssh" ? (override, save) => void retryConnect(session.id, override, save) : undefined}
                       />
                     )}
-                    {session.type === "multiplayer" ? (
-                      <div className="absolute inset-0 flex flex-col">
-                        <MultiplayerTerminalView
-                          localSessionId={session.id}
-                          active={session.id === activeSessionId && !overlayContent}
-                        />
-                        <MultiplayerBar localSessionId={session.id} />
-                      </div>
-                    ) : (
-                      <HostAwareTerminalView
-                        session={session}
-                        active={session.id === activeSessionId && session.status === "connected" && !overlayContent}
-                        statusBarVisible={isStatusBarVisible({
-                          sessionId: session.id,
-                          activeSessionId,
-                          showSplitWorkspace,
-                          overlayContent: !!overlayContent,
-                          sftpPanelOpen,
-                        })}
-                        onClosed={(remoteExit) => sessionClosed(session.type, session.id, remoteExit)}
-                      />
-                    )}
+                    <HostAwareTerminalView
+                      session={session}
+                      active={session.id === activeSessionId && session.status === "connected" && !overlayContent}
+                      statusBarVisible={isStatusBarVisible({
+                        sessionId: session.id,
+                        activeSessionId,
+                        showSplitWorkspace,
+                        overlayContent: !!overlayContent,
+                        sftpPanelOpen,
+                      })}
+                      onClosed={(remoteExit) => sessionClosed(session.type, session.id, remoteExit)}
+                    />
                     {session.id === activeSessionId && !overlayContent && (
                       <DropZones target={{ type: "session", sessionId: session.id }} />
                     )}

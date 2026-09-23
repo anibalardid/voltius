@@ -5,12 +5,7 @@ import type { Locale } from "@/stores/localeStore";
 import type { PluginAuditAction } from "@/services/auditContext";
 import type { PaneNode } from "@/stores/layoutStore";
 import type { DomainResult } from "./domains/result";
-import type {
-  PluginTeam, PluginTeamMember, PluginTeamKeyStatus, PluginMemberKeyState,
-} from "./domains/team";
-import type { PluginSharedSession } from "./domains/sharing";
 import type { SettingView } from "./domains/settings";
-import type { SubscriptionView } from "./domains/account";
 import type { PluginView, SourceView } from "./domains/plugins";
 import type { MarketplacePlugin } from "@/stores/marketplaceStore";
 import type { ExportResult, ExportType, ImportResult } from "./domains/importexport";
@@ -18,12 +13,7 @@ export type { ExportResult, ExportType, ImportResult } from "./domains/importexp
 
 export type { PluginAuditAction } from "@/services/auditContext";
 export type { DomainResult } from "./domains/result";
-export type {
-  PluginTeam, PluginTeamMember, PluginTeamKeyStatus, PluginMemberKeyState,
-} from "./domains/team";
-export type { PluginSharedSession } from "./domains/sharing";
 export type { SettingView } from "./domains/settings";
-export type { SubscriptionView } from "./domains/account";
 export type { PluginView, SourceView } from "./domains/plugins";
 
 // ─── Types exposés aux plugins ─────────────────────────────────────────────
@@ -958,51 +948,8 @@ export interface PluginAPI {
   };
 
   /**
-   * Teams, members and vault-key distribution (requires team:read / team:write).
-   *
-   * Writes are bounded by the caller's own server-side role bits: a member
-   * without PERM_MANAGE_MEMBERS is refused by the server, not by this layer.
-   * `keyStatus` reports the window where a member can be keyed but has not
-   * been yet, and never repairs it.
-   */
-  team: {
-    list(): Promise<PluginTeam[]>;
-    members(teamId: string): Promise<PluginTeamMember[]>;
-    /** Every team the caller can see when `teamId` is omitted. */
-    keyStatus(teamId?: string): Promise<PluginTeamKeyStatus[]>;
-    /** Exactly one of `email` or `userId`. */
-    invite(input: { teamId: string; email?: string; userId?: string; role?: string }):
-      Promise<DomainResult<{ status: "pending" | "already_member" | "invited"; key: PluginMemberKeyState | null }>>;
-    removeMember(teamId: string, userId: string): Promise<DomainResult<null>>;
-    /** Replaces every role the member holds with `role`, a role id or role name
-     *  as reported by `list` and `members`. An unresolvable role is refused
-     *  before any role is removed. */
-    setMemberRole(teamId: string, userId: string, role: string): Promise<DomainResult<null>>;
-  };
-
-  /**
-   * Live terminal sharing (requires sharing:read / sharing:write).
-   *
-   * Team-scoped only: the invite-link path mints a bearer token and is not
-   * exposed. Writes return a DomainResult rather than throwing.
-   */
-  sharing: {
-    list(): Promise<PluginSharedSession[]>;
-    /** Why `share` would refuse this session, or null when it may proceed —
-     *  callable before an approval is asked for, so a doomed share raises no
-     *  card and records nothing. */
-    shareRefusal(sessionId: string): string | null;
-    share(input: { sessionId: string; vaultIds: string[]; allowedRoles?: string[] }):
-      Promise<DomainResult<{ multiplayerSessionId: string }>>;
-    unshare(sessionId: string): Promise<DomainResult<null>>;
-    /** Only approves a control request the participant already made. */
-    handoffControl(sessionId: string, userId: string): Promise<DomainResult<null>>;
-  };
-
-  /**
    * The state of the user's own configuration sync (requires sync:read).
-   * Distinct from the plugin-scoped `sync` domain above, which is a plugin's
-   * own blob storage and gist sync — this is the app's own cross-device sync.
+   * Local-only: always idle, since there is no cloud sync engine.
    */
   appSync: {
     status(): PluginSyncState;
@@ -1102,11 +1049,6 @@ export interface PluginAPI {
     set(key: string, value: unknown): DomainResult<{
       key: string; requested: unknown; effective: unknown; coerced: boolean;
     }>;
-  };
-
-  // The user's own plan and billing state (requires the gated "account:read")
-  account: {
-    subscription(): Promise<SubscriptionView>;
   };
 
   // Themes (requires "themes")

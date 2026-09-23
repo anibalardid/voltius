@@ -1,7 +1,7 @@
 import { Icon } from "@iconify/react";
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
-import type { AuditLog } from "@/services/auditService";
+import type { AuditLog } from "@/services/auditContext";
 import { avatarColor } from "@/components/shared/AvatarStack";
 
 // ─── Action metadata ──────────────────────────────────────────────────────────

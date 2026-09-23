@@ -9,12 +9,10 @@ import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/components/
 import { useDragStore, shouldSuppressDragClick } from "@/stores/dragStore";
 import { useHostPingStore } from "@/stores/hostPingStore";
 import { useMcpOwnershipStore } from "@/stores/mcpOwnershipStore";
-import { McpMark, mcpOwnerTitle, mcpTint } from "@/components/shared/McpMark";
-import { useToggle } from "@/stores/toggleSettingsStore";
+import { McpMark, mcpOwnerTitle, mcpTint } from "@/components/shared/McpMark";import { useToggle } from "@/stores/toggleSettingsStore";
 import { findLeaf, findSessionPane, useLayoutStore, type SplitPosition } from "@/stores/layoutStore";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useSessionStore } from "@/stores/sessionStore";
-import { useTeamSessionStore } from "@/stores/teamSessionStore";
 import { useAllConnections } from "@/hooks/useAllConnections";
 import { getConnectionIcon, getConnectionIconColor, getDistroColor, getDistroIcon, getDistroLabel } from "@/utils/icons";
 import { sshGetSystemInfo, type SystemInfo } from "@/services/ssh";
@@ -102,7 +100,6 @@ export function PaneHeader({ paneId, session, active }: { paneId: string; sessio
   const broadcastActive = useLayoutStore((s) => s.broadcastActive);
   const toggleBroadcast = useLayoutStore((s) => s.toggleBroadcast);
   const sessions = useSessionStore((s) => s.sessions);
-  const mpState = useTeamSessionStore((s) => s.connections[session.id]);
   const mcpOwner = useMcpOwnershipStore((s) => s.owners[session.id]);
   const { pos, open, close } = useContextMenu();
 
@@ -132,7 +129,7 @@ export function PaneHeader({ paneId, session, active }: { paneId: string; sessio
   const [latencyRect, setLatencyRect] = useState<DOMRect | null>(null);
 
   const isMaximized = maximizedPaneId === paneId;
-  const excludedFromBroadcast = broadcastActive && (session.type === "multiplayer" || (!!mpState && mpState.controlHolder !== "" && mpState.controlHolder !== mpState.myUserId));
+  const excludedFromBroadcast = broadcastActive && session.type === "multiplayer";
   const connectionIcon = session.type === "ssh" && connection ? (connection.icon || connection.distro) : null;
   const displayConnectionIcon = connectionIcon ? getConnectionIcon(connectionIcon) : null;
   const localOsName = localSystemInfo?.os_name ?? "linux";

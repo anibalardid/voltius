@@ -31,8 +31,8 @@ test("cut and copy carry their shortcut hints and dispatch the clipboard events"
 // only discoverable by first multi-selecting.
 test("the single-item connection menu offers cut and copy", () => {
   const labels = buildConnectionMenuItems({
-    t, canEdit: true, contributions: [], isSynced: true, pingDisabled: false,
-    onConnect: () => {}, onToggleSync: () => {}, onTogglePing: () => {}, onDelete: () => {},
+    t, canEdit: true, contributions: [], pingDisabled: false,
+    onConnect: () => {}, onTogglePing: () => {}, onDelete: () => {},
   }).map((i) => i.label);
 
   expect(labels).toContain("common.action.cut");

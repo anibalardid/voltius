@@ -1,9 +1,6 @@
 import { create } from "zustand";
 import type { Identity, IdentityFormData } from "@/types";
 import * as api from "@/services/identities";
-import { scheduleSync } from "@/services/sync";
-import { isServerMode } from "@/services/account";
-import { useSyncPrefsStore } from "@/stores/syncPrefsStore";
 import { useHistoryStore } from "@/stores/historyStore";
 import { pushCreateHistory, pushDeleteHistory } from "@/stores/recreateHistory";
 import { isTeamVaultId, findTeamEntry, setTeamMapEntry, clearTeamMapEntry, upsertInTeamMap, removeFromTeamMap, applyVaultTransition, saveStampedTeamObject } from "@/stores/teamVaultMap";
@@ -84,8 +81,6 @@ export const useIdentityStore = create<IdentityStore>((set, get) => ({
     const identity = await api.saveIdentity(data);
     const identities = await api.listIdentities();
     set({ identities });
-    const prefs = useSyncPrefsStore.getState();
-    isServerMode().then((s) => { if (s && prefs.isTypeSynced("identity")) scheduleSync(); });
     reportAuditMutation("identity", "created", { id: identity.id, name: identity.name ?? identity.username, vault_id: identity.vault_id });
     pushCreateHistory({
       label: `Created identity "${identity.name ?? identity.username}"`,
@@ -166,8 +161,6 @@ export const useIdentityStore = create<IdentityStore>((set, get) => ({
         ? applyVaultTransition(s.teamIdentities, classifyVaultTransition(prev.vault_id, updated.vault_id, isTeamVaultId), id, updated)
         : s.teamIdentities,
     }));
-    const prefs = useSyncPrefsStore.getState();
-    isServerMode().then((s) => { if (s && prefs.isObjectSynced(id, "identity")) scheduleSync(); });
     if (prev) reportAuditMutation("identity", "updated", { id, name: data.name ?? prev.name ?? prev.username, vault_id: data.vault_id ?? prev.vault_id });
     if (prev) {
       const prevData = identityToFormData(prev);
@@ -192,8 +185,6 @@ export const useIdentityStore = create<IdentityStore>((set, get) => ({
     await api.updateIdentity(id, { ...identityToFormData(identity), pinned: nextPinned });
     const identities = await api.listIdentities();
     set({ identities });
-    const prefs = useSyncPrefsStore.getState();
-    isServerMode().then((s) => { if (s && prefs.isObjectSynced(id, "identity")) scheduleSync(); });
   },
 
   pinIdentityForTeam: async (id, pinned) => {
@@ -226,8 +217,6 @@ export const useIdentityStore = create<IdentityStore>((set, get) => ({
     await api.deleteIdentity(id);
     const identities = await api.listIdentities();
     set({ identities });
-    const prefs = useSyncPrefsStore.getState();
-    isServerMode().then((s) => { if (s && prefs.isObjectSynced(id, "identity")) scheduleSync(); });
     if (prev) reportAuditMutation("identity", "deleted", { id: prev.id, name: prev.name ?? prev.username, vault_id: prev.vault_id });
     if (prev) {
       const prevData = identityToFormData(prev);

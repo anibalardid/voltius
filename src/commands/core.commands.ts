@@ -2,7 +2,6 @@ import type { OmniCommand } from "@/plugins/api";
 import { useUIStore } from "@/stores/uiStore";
 import { useSessionStore } from "@/stores/sessionStore";
 import { checkForUpdate } from "@/services/updater";
-import { useTeamSessionStore } from "@/stores/teamSessionStore";
 import { defineCommand, navCommand, pendingActionCommand } from "./defineCommand";
 
 export const commands: OmniCommand[] = [
@@ -88,39 +87,15 @@ export const commands: OmniCommand[] = [
     nav: "snippets",
   }),
   defineCommand({
-    id: "core:team-members",
-    label: "Team Members",
-    icon: "lucide:users",
-    keywords: ["team", "members", "people", "invite", "manage", "roles"],
-    execute: () => {
-      const { setActiveNav, setHomeView } = useUIStore.getState();
-      setActiveNav("members");
-      setHomeView(false);
-    },
-  }),
-  defineCommand({
     id: "core:disconnect-all",
     label: "Disconnect All",
     icon: "lucide:unplug",
     keywords: ["close", "end", "stop", "quit", "sessions", "all", "kill"],
     execute: () => {
-      const { sessions, disconnect, removeSession } = useSessionStore.getState();
-      const mpStore = useTeamSessionStore.getState();
+      const { sessions, disconnect } = useSessionStore.getState();
       sessions
         .filter((s) => s.status === "connected" || s.status === "connecting")
-        .forEach((s) => {
-          const mpConn = mpStore.connections[s.id];
-          if (mpConn) {
-            if (mpConn.role === "host") {
-              mpStore.stopSharing(s.id).catch(() => {});
-            } else {
-              mpStore.leaveSession(s.id);
-            }
-            removeSession(s.id);
-          } else {
-            disconnect(s.id).catch(() => {});
-          }
-        });
+        .forEach((s) => { disconnect(s.id).catch(() => {}); });
     },
   }),
 ];

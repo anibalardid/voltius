@@ -4,14 +4,11 @@ import {
   startWorkspaceSnapshotSync,
 } from "./workspaceSnapshotStore";
 import { getToggle } from "./toggleSettingsStore";
-import { resolveRemoteSessions } from "./liveSessionManifestCore";
-import { useCrossDeviceSessionsStore } from "./crossDeviceSessionsStore";
 import { useSessionStore } from "./sessionStore";
 import { resumeIfStranded } from "./reconnectBackoff";
 import { useLayoutStore, getPaneSessionIds, type SplitTab } from "./layoutStore";
 import { useUIStore } from "./uiStore";
 import { localConnect } from "@/services/local";
-import { isReplaceSyncPending, whenLoginSyncSettled } from "@/services/loginSyncGate";
 import { setRestoreScrollOffset } from "@/hooks/useTerminal";
 import type { SerialConnectParams, TerminalSession } from "@/types";
 import type { SnapshotSession } from "./workspaceSnapshotCore";
@@ -93,14 +90,7 @@ export async function restoreWorkspaceOnLaunch(): Promise<void> {
   await waitForTerminalMount();
   startWorkspaceSnapshotSync();
 
-  // 3. An account switch reaches this point with a wiped config dir: the
-  // connections and secrets these sessions need are still on their way down
-  // from the cloud. Reconnecting now would find no connection at all and error
-  // every restored tab, so wait for the pull that refills them. A normal launch
-  // reads its cache from disk and never waits here.
-  if (isReplaceSyncPending()) await whenLoginSyncSettled();
-
-  // 4. Reconnect everything in parallel. Persistent SSH re-attaches its tmux
+  // 3. Reconnect everything in parallel. Persistent SSH re-attaches its tmux
   // (same session id → same key) and replays history (restore flag). Vault
   // unlock happens lazily inside credential resolution; failures land in the
   // existing per-session error overlay (retry affordances included).
@@ -109,22 +99,8 @@ export async function restoreWorkspaceOnLaunch(): Promise<void> {
     if (s.scrollLinesFromBottom) setRestoreScrollOffset(s.id, s.scrollLinesFromBottom);
   }
 
-  // Cross-device: a cached remote tombstone means the session's multiplexer
-  // was killed — drop it instead of restoring a dead tab. (Attach-only
-  // reconnects also catch this server-side; the tombstone just saves a probe.)
-  const cds = useCrossDeviceSessionsStore.getState();
-  const { closedIds } = resolveRemoteSessions({
-    manifests: Object.values(cds.manifests),
-    myDeviceId: localStorage.getItem("voltius.device_id") ?? "",
-    myTombstones: cds.tombstones,
-    myOpenSessionIds: snapshot.sessions.map((s) => s.id),
-  });
-  const closed = new Set(closedIds);
-  for (const id of closedIds) useSessionStore.getState().removeSession(id);
-
   await Promise.allSettled(
     snapshot.sessions.map(async (s) => {
-      if (closed.has(s.id)) return; // killed on another device
       if (s.type === "ssh" || s.type === "serial") {
         await reconnect(s.id, { restore: s.persist });
         // Launched offline, the `online` event may never come: the loop must own the retry.

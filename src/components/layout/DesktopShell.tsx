@@ -7,7 +7,6 @@ import { HostSessionsPanel } from "@/components/layout/HostSessionsPanel";
 import OmniSearch from "@/components/omni/OmniSearch";
 import GlobalPanelHost from "@/components/layout/GlobalPanelHost";
 import RightPanel from "@/components/terminal/RightPanel";
-import { EmailVerificationBanner } from "@/components/notifications/EmailVerificationBanner";
 import { useUIStore } from "@/stores/uiStore";
 
 export default function DesktopShell() {
@@ -26,7 +25,6 @@ export default function DesktopShell() {
   return (
     <>
       <TitleBar />
-      <EmailVerificationBanner />
       <div className="flex flex-1 overflow-hidden" data-shell-body>
         {showFrame && <VaultSidebar />}
         <div

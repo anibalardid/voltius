@@ -1,42 +1,20 @@
-use keyring_core::Entry;
-
-/// Base service name. If VOLTIUS_KEYCHAIN_NS is set, it is appended
-/// (e.g. "voltius-2") so multiple simultaneous instances (dev:2) each
-/// get an isolated keychain namespace without interfering with each other.
-fn service() -> String {
-    match std::env::var("VOLTIUS_KEYCHAIN_NS") {
-        Ok(ns) if !ns.is_empty() => format!("voltius-{ns}"),
-        _ => "voltius".to_string(),
-    }
-}
-
-fn entry(key: &str) -> Result<Entry, String> {
-    Entry::new(&service(), key).map_err(|e| format!("Keyring error: {e}"))
-}
+// The app's own small values (account metadata, cached roles, tokens) live in
+// the local file store beside the other config files, never the OS keychain:
+// launching Voltius or writing a vault object must not prompt for keychain
+// access. These commands keep their names so existing callers keep working.
+use crate::commands::local_store::{local_kv_delete, local_kv_get, local_kv_set};
 
 #[tauri::command]
 pub fn keychain_get(key: String) -> Result<Option<String>, String> {
-    let e = entry(&key)?;
-    match e.get_password() {
-        Ok(val) => Ok(Some(val)),
-        Err(keyring_core::Error::NoEntry) => Ok(None),
-        Err(err) => Err(format!("Keychain read error: {err}")),
-    }
+    local_kv_get(key)
 }
 
 #[tauri::command]
 pub fn keychain_set(key: String, value: String) -> Result<(), String> {
-    entry(&key)?
-        .set_password(&value)
-        .map_err(|e| format!("Keychain write error: {e}"))
+    local_kv_set(key, value)
 }
 
 #[tauri::command]
 pub fn keychain_delete(key: String) -> Result<(), String> {
-    let e = entry(&key)?;
-    match e.delete_credential() {
-        Ok(()) => Ok(()),
-        Err(keyring_core::Error::NoEntry) => Ok(()), // already gone
-        Err(err) => Err(format!("Keychain delete error: {err}")),
-    }
+    local_kv_delete(key)
 }

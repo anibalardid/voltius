@@ -100,6 +100,9 @@
       "invalidPublicKey": "Ce n'est pas une clé publique SSH — format attendu : « ssh-ed25519 AAAA… commentaire » sur une seule ligne. Elle ne sera pas enregistrée et ne peut pas être ajoutée à un hôte.",
       "keyPassphrasePlaceholder": "Phrase secrète de la clé"
     },
+    "detectedKeys": {
+      "sectionLabel": "Détectées dans ~/.ssh"
+    },
     "identityForm": {
       "titleEdit": "Modifier l'identité",
       "sectionCredentials": "Identifiants",

@@ -2,13 +2,9 @@ import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSessionStore, type ConnectRetryOverride } from "@/stores/sessionStore";
 import { wakeBackoff } from "@/stores/reconnectBackoffCore";
-import { useTeamSessionStore } from "@/stores/teamSessionStore";
-import { hasInputControl } from "@/services/broadcast";
 import TerminalView from "@/components/terminal/Terminal";
 import { TerminalSearch } from "@/components/terminal/TerminalSearch";
-import { MultiplayerBar } from "@/components/terminal/MultiplayerBar";
 import { TerminalStatusBar } from "@/components/terminal/TerminalStatusBar";
-import { useMultiplayerHostBroadcast } from "@/hooks/useMultiplayerHostBroadcast";
 import ConnectionOverlay, { getSshSteps, getSerialSteps } from "@/components/terminal/connection-overlay";
 import { useAllConnections } from "@/hooks/useAllConnections";
 import { getConnectionIcon } from "@/utils/icons";
@@ -33,11 +29,8 @@ export function HostAwareTerminalView({
   /** Whether this session's status bar, if rendered, is the one currently on screen. */
   statusBarVisible?: boolean;
 }) {
-  useMultiplayerHostBroadcast(session.id, session.type);
-  const isSharing = useTeamSessionStore((s) => !!s.connections[session.id]);
-
   const inputGateRef = useRef<() => boolean>(() => true);
-  inputGateRef.current = () => hasInputControl(session.id);
+  inputGateRef.current = () => true;
 
   const [dimensions, setDimensions] = useState<{ cols: number; rows: number } | undefined>();
 
@@ -62,7 +55,6 @@ export function HostAwareTerminalView({
         />
         <TerminalSearch sessionId={session.id} />
       </div>
-      {isSharing && <MultiplayerBar localSessionId={session.id} />}
       {showStatusBar && !compact && (
         <TerminalStatusBar
           sessionId={session.id}

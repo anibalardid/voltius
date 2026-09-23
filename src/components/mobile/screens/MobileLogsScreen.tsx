@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
 import { useTranslation } from "react-i18next";
 import { useAuditStore } from "@/stores/auditStore";
-import { usePermissions } from "@/hooks/usePermission";
 import { useSelectedAuditContext } from "@/hooks/useAuditContext";
 import { AuditGate } from "@/components/logs/AuditGate";
 import { AuditTimeline } from "@/components/logs/AuditTimeline";
@@ -14,13 +13,8 @@ import LogsExportSheet from "@/components/mobile/sheets/LogsExportSheet";
 export default function MobileLogsScreen() {
   const { t } = useTranslation();
   const context = useSelectedAuditContext();
-  const can = usePermissions();
-  const canFetchAudit = context?.kind === "local" || !!(context && can("VIEW_AUDIT_LOG", context.teamId));
-  const auditKey = context
-    ? context.kind === "team"
-      ? `team:${context.teamId}:${context.vaultId ?? ""}`
-      : `local:${context.vaultId}`
-    : null;
+  const canFetchAudit = !!context;
+  const auditKey = context ? `local:${context.vaultId}` : null;
 
   const logs = useAuditStore((s) => s.logs);
   const total = useAuditStore((s) => s.total);

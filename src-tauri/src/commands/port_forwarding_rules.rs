@@ -9,7 +9,6 @@ use crate::storage::config::{
     load_port_forwarding_rules, save_port_forwarding_rules, PortForwardingRule,
     PortForwardingRuleFormData,
 };
-use crate::vault_auth::check_vault_write;
 use chrono::Utc;
 
 impl_vault_object!(PortForwardingRule, "Rule");
@@ -77,7 +76,6 @@ pub fn pf_rule_update(
     let rule = find_mut(&mut rules, &id)?;
     let now = Utc::now().to_rfc3339();
     let effective = retarget_vault(rule, &data.vault_id, &now);
-    check_vault_write(std::slice::from_ref(&effective))?;
 
     merge_fields!(
         rule,

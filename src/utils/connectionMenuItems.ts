@@ -9,7 +9,6 @@ export interface ConnectionMenuOptions {
   canEdit?: boolean;
   contributions: ContextMenuItem[];
   vaults?: VaultOption[];
-  isSynced: boolean;
   pingDisabled: boolean;
   connectShortcut?: string;
   duplicateShortcut?: string;
@@ -17,7 +16,6 @@ export interface ConnectionMenuOptions {
   onDuplicate?: () => void;
   onMoveToVault?: (vaultId: string) => void;
   onCopyToVault?: (vaultId: string) => void;
-  onToggleSync: () => void;
   onTogglePing: () => void;
   onDelete?: () => void;
   /** Items inserted between Duplicate and contributions (e.g. Pin for HostCard) */
@@ -30,7 +28,6 @@ export function buildConnectionMenuItems({
   canEdit,
   contributions,
   vaults,
-  isSynced,
   pingDisabled,
   connectShortcut,
   duplicateShortcut,
@@ -38,7 +35,6 @@ export function buildConnectionMenuItems({
   onDuplicate,
   onMoveToVault,
   onCopyToVault,
-  onToggleSync,
   onTogglePing,
   onDelete,
   extras = [],
@@ -51,15 +47,10 @@ export function buildConnectionMenuItems({
     ...contributions.map((a, i) => ({ ...a, divider: i === 0 })),
     ...vaultMenuItems(vaults, canEdit, onMoveToVault, onCopyToVault, t),
     {
-      label: isSynced ? t("hosts.card.disableCloudSync") : t("hosts.card.enableCloudSync"),
-      icon: isSynced ? "lucide:cloud-off" : "lucide:cloud",
-      onClick: onToggleSync,
-      divider: true,
-    },
-    {
       label: pingDisabled ? t("hosts.card.enableReachability") : t("hosts.card.disableReachability"),
       icon: pingDisabled ? "lucide:wifi" : "lucide:wifi-off",
       onClick: onTogglePing,
+      divider: true,
     },
     ...clipboardMenuItems(t),
     ...(onDelete ? [{ label: t("common.action.delete"), icon: "lucide:trash-2", onClick: onDelete, danger: true, divider: true, shortcut: getShortcutHint("delete") }] : []),

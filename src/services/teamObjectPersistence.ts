@@ -1,29 +1,22 @@
-import { deleteTeamObject, upsertTeamObject, type TeamObjectType } from "@/services/teamObjects";
-import { encodeObjectMetadata } from "@/services/teamObjectEnvelope";
+/**
+ * Local-only: there is no team-vault backend to persist to. The team maps the
+ * object stores keep beside their local lists are therefore always empty, and
+ * these verbs are no-ops that preserve the call shape those stores use.
+ */
 
-interface PersistableTeamObject {
-  id: string;
-  name?: string;
-  folder_id?: string;
-}
+export type TeamObjectType =
+  | "connection"
+  | "identity"
+  | "key"
+  | "folder"
+  | "snippet"
+  | "snippet_folder"
+  | "port_forwarding_rule";
 
-export async function saveTeamVaultObject<T extends PersistableTeamObject>(
-  teamId: string,
-  objectType: TeamObjectType,
-  item: T,
-): Promise<void> {
-  // name and folder_id are sent as null: the server stopped persisting them
-  // (#229) and no client ever read them back — every field comes from the
-  // metadata blob, which is now encrypted under the team DEK.
-  await upsertTeamObject(teamId, {
-    object_id: item.id,
-    object_type: objectType,
-    name: null,
-    folder_id: null,
-    metadata: await encodeObjectMetadata(teamId, item),
-  });
-}
+export async function saveTeamVaultObject(
+  _teamId: string,
+  _objectType: TeamObjectType,
+  _item: unknown,
+): Promise<void> {}
 
-export async function removeTeamVaultObject(teamId: string, objectId: string): Promise<void> {
-  await deleteTeamObject(teamId, objectId);
-}
+export async function removeTeamVaultObject(_teamId: string, _objectId: string): Promise<void> {}

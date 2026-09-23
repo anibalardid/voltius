@@ -1,4 +1,4 @@
-import type { AuditFilters, AuditLog } from "@/services/auditService";
+import type { AuditFilters, AuditLog } from "@/services/auditContext";
 import type { AnyAuditAction, AuditTarget } from "@/services/auditContext";
 import { applyAuditFilters, csvEscape } from "@/services/auditExportCore";
 

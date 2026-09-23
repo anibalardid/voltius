@@ -84,8 +84,7 @@ pub fn initial_clocks(fields: &[&str], now: &str) -> HashMap<String, String> {
 }
 
 /// The vault a create or adopt writes into: what the form asked for, else
-/// personal. Returned as an array so it can be passed straight to
-/// `check_vault_write`.
+/// personal. Returned as an array so callers get a consistent vault-id shape.
 pub fn requested_vault(vault_id: &Option<String>) -> [String; 1] {
     [vault_id.clone().unwrap_or_else(|| PERSONAL.to_string())]
 }
@@ -244,9 +243,6 @@ pub fn refile_into_folder<T: VaultObject>(
     now: &str,
     folder_of: impl Fn(&mut T) -> &mut Option<String>,
 ) -> Result<(), String> {
-    let named = |item: &T| ids.iter().any(|id| id == item.id());
-    let vaults: Vec<String> = vaults_of(items, named).into_iter().collect();
-    crate::vault_auth::check_vault_write(&vaults)?;
     for item in items.iter_mut() {
         if !ids.iter().any(|id| id == item.id()) {
             continue;
@@ -289,9 +285,6 @@ macro_rules! vault_create_command {
         pub fn $name(data: $form) -> Result<$ty, String> {
             let mut items = $load()?;
             let now = chrono::Utc::now().to_rfc3339();
-            $crate::vault_auth::check_vault_write(
-                &$crate::commands::vault_object::requested_vault(&data.vault_id),
-            )?;
             let created = $build(uuid::Uuid::new_v4().to_string(), data, &now, None);
             items.push(created.clone());
             $save(&items)?;
@@ -310,9 +303,6 @@ macro_rules! vault_adopt_command {
         pub fn $name(id: String, data: $form) -> Result<$ty, String> {
             let mut items = $load()?;
             let now = chrono::Utc::now().to_rfc3339();
-            $crate::vault_auth::check_vault_write(
-                &$crate::commands::vault_object::requested_vault(&data.vault_id),
-            )?;
             let created_at = $crate::commands::vault_object::created_at_of(&items, &id);
             let adopted = $build(id, data, &now, created_at);
             $crate::commands::vault_object::adopt_into(&mut items, adopted.clone());
@@ -332,7 +322,6 @@ macro_rules! vault_delete_command {
             let mut items = $load()?;
             let now = chrono::Utc::now().to_rfc3339();
             let item = $crate::commands::vault_object::find_mut(&mut items, &id)?;
-            $crate::vault_auth::check_vault_write(std::slice::from_ref(&item.vault_id))?;
             $crate::commands::vault_object::tombstone(item, &now);
             $save(&items)
         }

@@ -116,6 +116,9 @@
       "invalidPublicKey": "Это не открытый ключ SSH — ожидается «ssh-ed25519 AAAA… комментарий» в одну строку. Он не будет сохранён и не может быть добавлен на хост.",
       "keyPassphrasePlaceholder": "Кодовая фраза ключа"
     },
+    "detectedKeys": {
+      "sectionLabel": "Обнаружены в ~/.ssh"
+    },
     "identityForm": {
       "titleEdit": "Изменить личность",
       "sectionCredentials": "Учётные данные",

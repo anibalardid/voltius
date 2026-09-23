@@ -1,11 +1,6 @@
 import type { ReactNode } from "react";
 import type { TFunction } from "i18next";
 import type { ConfirmIntent } from "@/services/deepLinkUrl";
-import { joinTeamSessionAndOpenTab } from "@/services/teamSessionJoin";
-import { searchUsers } from "@/services/teamService";
-import { useSessionStore } from "@/stores/sessionStore";
-import { useTeamSessionStore } from "@/stores/teamSessionStore";
-import type { InviteTarget } from "@/services/teamSharing";
 import { fetchCatalog as fetchSnippetCatalog } from "@/services/snippetCatalogFetch";
 import { installCatalogEntries } from "@/services/snippetCatalogInstall";
 import { resolveInstallVault } from "@/services/import-export/storeAccess";
@@ -15,14 +10,6 @@ import { PluginPermissionList } from "@/components/settings/sections/PluginPermi
 import { useMarketplaceStore, type MarketplacePlugin } from "@/stores/marketplaceStore";
 import { pluginInstallErrorMessage, type TranslatableMessage } from "@/plugins/installErrors";
 import type { PluginManifest } from "@/plugins/api";
-import {
-  JoinGrantError,
-  previewJoinGrant,
-  redeemJoinGrant,
-  type JoinGrantPreview,
-} from "@/services/teamJoinGrants";
-import { refreshAfterJoiningTeam } from "@/services/teamJoin";
-import { getMyX25519Keypair } from "@/services/multiplayerService";
 
 export type ConfirmRoute = ConfirmIntent["route"];
 type IntentOf<K extends ConfirmRoute> = Extract<ConfirmIntent, { route: K }>;
@@ -58,12 +45,6 @@ export interface ConfirmSpec<K extends ConfirmRoute, L> {
   accept: (intent: IntentOf<K>, loaded: L | null, t: TFunction) => Promise<void>;
 }
 
-export interface InviteLoad {
-  target: InviteTarget | null;
-  /** The local session this device can invite into, or null when there is none. */
-  localSessionId: string | null;
-}
-
 export interface PluginInstallLoad {
   plugin: MarketplacePlugin;
   manifest: PluginManifest;
@@ -83,93 +64,11 @@ export interface SnippetInstallLoad {
 
 /** What each route's `load` produces. `void` for a route with nothing to fetch. */
 export interface ConfirmLoad {
-  join: void;
-  invite: InviteLoad;
   "snippet-install": SnippetInstallLoad;
   "plugin-install": PluginInstallLoad;
-  "vault-join": JoinGrantPreview;
-}
-
-/** Matched on code, never on the translated message. */
-function joinGrantErrorMessage(e: unknown, fallbackKey: string): TranslatableMessage {
-  if (!(e instanceof JoinGrantError)) return { key: fallbackKey };
-  switch (e.code) {
-    case "not_found":
-      return { key: "members.joinLinks.error.notFound" };
-    case "revoked_or_expired":
-      return { key: "members.joinLinks.error.revokedOrExpired" };
-    case "exhausted":
-      return { key: "members.joinLinks.error.exhausted" };
-    case "seat_limit":
-      return { key: "members.joinLinks.error.seatLimit" };
-    case "no_public_key":
-      return { key: "members.joinLinks.error.noPublicKey" };
-    default:
-      return { key: fallbackKey };
-  }
-}
-
-/**
- * The local session this device is currently sharing *and* still holds a per-user
- * session key for. An `invite_link` session keeps no such key, so inviting into
- * one would always throw `cannotInviteWithoutSessionKey`.
- */
-function shareableSessionId(): string | null {
-  const id = useSessionStore.getState().activeSessionId;
-  if (!id) return null;
-  return useTeamSessionStore.getState().connections[id]?.sessionKeyBytes ? id : null;
 }
 
 export const CONFIRM_SPECS: { [K in ConfirmRoute]: ConfirmSpec<K, ConfirmLoad[K]> } = {
-  join: {
-    icon: "lucide:users",
-    acceptLabelKey: "terminal.share.deepLinkJoinAction",
-    errorKey: "terminal.share.deepLinkJoinFailed",
-    details: (_intent, _loaded, t) => ({
-      title: t("terminal.share.deepLinkJoinTitle"),
-      body: t("terminal.share.deepLinkJoinBody"),
-      // The link carries no host name, so naming one would mean inventing it.
-      note: t("terminal.share.deepLinkJoinUnknownHost"),
-    }),
-    accept: async (intent, _loaded, t) => {
-      await joinTeamSessionAndOpenTab({
-        sessionId: intent.sessionId,
-        connectionName: t("hosts.teamSessions.sharedTerminalFallback"),
-        inviteToken: intent.token,
-      });
-    },
-  },
-  invite: {
-    icon: "lucide:user-plus",
-    acceptLabelKey: "terminal.share.deepLinkInviteAction",
-    errorKey: "terminal.share.deepLinkInviteFailed",
-    load: async ({ handle }) => {
-      const results = await searchUsers(handle);
-      // Exact match only. A fuzzy hit would let `@kev` land on `@kevin-p`, which
-      // is the impersonation shape the unified invite design set out to close.
-      const match = results.find((user) => user.handle.toLowerCase() === handle);
-      return {
-        target: match ? { user_id: match.user_id, handle: match.handle } : null,
-        localSessionId: shareableSessionId(),
-      };
-    },
-    details: (intent, loaded, t) => ({
-      title: t("terminal.share.deepLinkInviteTitle", { handle: intent.handle }),
-      body: t("terminal.share.deepLinkInviteBody", { handle: intent.handle }),
-      note: !loaded
-        ? undefined
-        : !loaded.target
-          ? t("terminal.share.deepLinkInviteUnknownUser", { handle: intent.handle })
-          : !loaded.localSessionId
-            ? t("terminal.share.deepLinkInviteNoActiveSession")
-            : undefined,
-    }),
-    canAccept: (loaded) => !!loaded?.target && !!loaded.localSessionId,
-    accept: async (_intent, loaded) => {
-      if (!loaded?.target || !loaded.localSessionId) return;
-      await useTeamSessionStore.getState().inviteToActiveSession(loaded.localSessionId, loaded.target);
-    },
-  },
   "snippet-install": {
     icon: "lucide:scroll-text",
     acceptLabelKey: "snippets.deepLinkInstall.action",
@@ -259,38 +158,6 @@ export const CONFIRM_SPECS: { [K in ConfirmRoute]: ConfirmSpec<K, ConfirmLoad[K]
     accept: async (_intent, loaded) => {
       if (!loaded) return;
       await useMarketplaceStore.getState().installPlugin(loaded.plugin, loaded.manifestText);
-    },
-  },
-  "vault-join": {
-    icon: "lucide:users",
-    acceptLabelKey: "members.joinLinks.confirm.action",
-    errorKey: "members.joinLinks.confirm.failed",
-    errorMessage: joinGrantErrorMessage,
-    // Consumes no use; the server re-validates inside the redeem transaction.
-    load: ({ grantId, secret }) => previewJoinGrant(grantId, secret),
-    details: (_intent, loaded, t) => ({
-      title: loaded
-        ? t("members.joinLinks.confirm.title", { team: loaded.team_name })
-        : t("members.joinLinks.confirm.titleGeneric"),
-      body: loaded
-        ? loaded.inviter_handle
-          ? t("members.joinLinks.confirm.bodyNamed", {
-              team: loaded.team_name,
-              role: loaded.role,
-              inviter: `@${loaded.inviter_handle}`,
-            })
-          : t("members.joinLinks.confirm.body", { team: loaded.team_name, role: loaded.role })
-        : t("members.joinLinks.confirm.loading"),
-      // A link confers membership only; the key follows separately.
-      note: loaded ? t("members.joinLinks.confirm.keyFollowsLater") : undefined,
-    }),
-    accept: async (intent, _loaded) => {
-      // Sent so a key-holder can wrap for this member at once.
-      const publicKey = await getMyX25519Keypair()
-        .then(({ publicKey }) => publicKey)
-        .catch(() => null);
-      const { team_id } = await redeemJoinGrant(intent.grantId, intent.secret, publicKey);
-      await refreshAfterJoiningTeam(team_id);
     },
   },
 };

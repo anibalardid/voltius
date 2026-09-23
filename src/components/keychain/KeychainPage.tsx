@@ -12,7 +12,6 @@ import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { VaultCascadeModal } from "@/components/shared/VaultCascadeModal";
 import { useEffectivePinnedPredicate } from "@/hooks/useEffectivePinned";
 import { useVaultCascade } from "@/hooks/useVaultCascade";
-import { useSyncPrefsStore } from "@/stores/syncPrefsStore";
 import { usePermissions } from "@/hooks/usePermission";
 import { useVaultStore } from "@/stores/vaultStore";
 import { useAccessibleVaultIds, useScopedVaultId } from "@/hooks/useAccessibleVaultIds";
@@ -39,8 +38,7 @@ import { getSecret, storeSecret, deleteSecret } from "@/services/vault";
 import type { Folder, Identity, IdentityFormData, SshKey, SshKeyFormData } from "@/types";
 import { SidePanelLayout } from "@/components/shared/SidePanelLayout";
 import { useSyncedFormKey } from "@/hooks/useSyncedFormKey";
-import { buildTeamVaultTransferPlan, type TransferOperation } from "@/services/teamVaultPermissions";
-import { saveTeamVaultSecretForVault } from "@/services/teamVaultSecrets";
+import { buildTeamVaultTransferPlan, type TransferOperation } from "@/services/vaultTransferPlan";
 import { publishIdentitySecrets, publishKeySecrets } from "@/services/vaultObjectSecrets";
 import { transferKeySecrets, transferIdentitySecrets } from "@/services/vaultSecrets";
 import { usePageClipboard } from "@/hooks/usePageClipboard";
@@ -255,9 +253,6 @@ export default function KeychainPage() {
   const { pos: bgMenuPos, open: openBgMenu, close: closeBgMenu } = useContextMenu();
   const [confirmDeleteIds, setConfirmDeleteIds] = useState<string[] | null>(null);
 
-  const excludedIds = useSyncPrefsStore((s) => s.excludedIds);
-  const syncTypes = useSyncPrefsStore((s) => s.syncTypes);
-
   const selectedKeyIds = useMemo(
     () => filteredKeys.filter((k) => selectedIdSet.has(k.id)).map((k) => k.id),
     [filteredKeys, selectedIdSet],
@@ -277,11 +272,6 @@ export default function KeychainPage() {
     const selectedKeys = filteredKeys.filter((k) => selectedIdSet.has(k.id));
     const selectedIdentities = filteredIdentities.filter((i) => selectedIdSet.has(i.id));
     const selectedFolderIds = selectedFolders.map((f) => f.id);
-    const { isObjectSynced } = useSyncPrefsStore.getState();
-    const allSynced = allIds.every((id) => {
-      const typeId = selectedKeyIds.includes(id) ? "key" : "identity";
-      return isObjectSynced(id, typeId);
-    });
     const bulkVaultChildren = (operation: TransferOperation): ContextMenuItem[] => vaultOptions
       .filter((v) => [...selectedKeys.map((k) => k.vault_id ?? "personal"), ...selectedIdentities.map((i) => i.vault_id ?? "personal"), ...selectedFolders.map((f) => f.vault_id ?? "personal")].some((sourceVaultId) => sourceVaultId !== v.id))
       .filter((v) => buildTeamVaultTransferPlan({
@@ -324,21 +314,6 @@ export default function KeychainPage() {
         icon: "lucide:copy-plus",
         children: copyChildren,
       }] : []),
-      {
-        label: allSynced
-          ? t("keychain.page.bulk.disableCloudSync", { count: allIds.length })
-          : t("keychain.page.bulk.enableCloudSync", { count: allIds.length }),
-        icon: allSynced ? "lucide:cloud-off" : "lucide:cloud",
-        onClick: () => {
-          const store = useSyncPrefsStore.getState();
-          for (const id of allIds) {
-            const typeId = selectedKeyIds.includes(id) ? "key" : "identity";
-            const isSynced = store.isObjectSynced(id, typeId);
-            if (allSynced && isSynced) store.toggleExcluded(id);
-            else if (!allSynced && !isSynced) store.toggleExcluded(id);
-          }
-        },
-      },
     ];
     if (selectedKeyIds.length > 0) {
       items.push({
@@ -357,7 +332,7 @@ export default function KeychainPage() {
     });
     return items;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedIdSet, filteredKeys, filteredIdentities, selectedKeyIds, selectedIdentityIds, selectedFolders, excludedIds, syncTypes, vaultOptions, can, identities, keys, scopedFolders, t]);
+  }, [selectedIdSet, filteredKeys, filteredIdentities, selectedKeyIds, selectedIdentityIds, selectedFolders, vaultOptions, can, identities, keys, scopedFolders, t]);
 
   useEffect(() => {
     void loadKeys();
@@ -461,21 +436,18 @@ export default function KeychainPage() {
           const localKey = `key:${editingKey.id}:private`;
           if (privateKey) {
             await storeSecret(localKey, privateKey);
-            await saveTeamVaultSecretForVault(data.vault_id ?? editingKey.vault_id, localKey, privateKey).catch(() => {});
           } else await deleteSecret(localKey).catch(() => {});
         }
         if (publicKey !== null) {
           const localKey = `key:${editingKey.id}:public`;
           if (publicKey) {
             await storeSecret(localKey, publicKey);
-            await saveTeamVaultSecretForVault(data.vault_id ?? editingKey.vault_id, localKey, publicKey).catch(() => {});
           } else await deleteSecret(localKey).catch(() => {});
         }
         if (passphrase !== null) {
           const localKey = `key:${editingKey.id}:passphrase`;
           if (passphrase) {
             await storeSecret(localKey, passphrase);
-            await saveTeamVaultSecretForVault(data.vault_id ?? editingKey.vault_id, localKey, passphrase).catch(() => {});
           } else await deleteSecret(localKey).catch(() => {});
         }
       } else {
@@ -483,17 +455,14 @@ export default function KeychainPage() {
         if (privateKey) {
           const localKey = `key:${key.id}:private`;
           await storeSecret(localKey, privateKey);
-          await saveTeamVaultSecretForVault(key.vault_id, localKey, privateKey).catch(() => {});
         }
         if (publicKey) {
           const localKey = `key:${key.id}:public`;
           await storeSecret(localKey, publicKey);
-          await saveTeamVaultSecretForVault(key.vault_id, localKey, publicKey).catch(() => {});
         }
         if (passphrase) {
           const localKey = `key:${key.id}:passphrase`;
           await storeSecret(localKey, passphrase);
-          await saveTeamVaultSecretForVault(key.vault_id, localKey, passphrase).catch(() => {});
         }
         setEditingKeyId(key.id);
       }
@@ -532,7 +501,6 @@ export default function KeychainPage() {
           const localKey = `identity:${editingIdentity.id}:password`;
           if (password) {
             await storeSecret(localKey, password);
-            await saveTeamVaultSecretForVault(resolvedData.vault_id ?? editingIdentity.vault_id, localKey, password).catch(() => {});
           } else await deleteSecret(localKey).catch(() => {});
         }
       } else {
@@ -540,7 +508,6 @@ export default function KeychainPage() {
         if (password) {
           const localKey = `identity:${identity.id}:password`;
           await storeSecret(localKey, password);
-          await saveTeamVaultSecretForVault(identity.vault_id, localKey, password).catch(() => {});
         }
         setEditingIdentityId(identity.id);
       }
@@ -823,7 +790,6 @@ export default function KeychainPage() {
       if (!value) continue;
       const localKey = `key:${newKey.id}:${part}`;
       await storeSecret(localKey, value);
-      await saveTeamVaultSecretForVault(vaultId, localKey, value).catch(() => {});
     }
     return newKey;
   }
@@ -848,7 +814,6 @@ export default function KeychainPage() {
     if (pwd) {
       const localKey = `identity:${newIdentity.id}:password`;
       await storeSecret(localKey, pwd);
-      await saveTeamVaultSecretForVault(vaultId, localKey, pwd).catch(() => {});
     }
     return newIdentity;
   }

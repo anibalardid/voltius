@@ -2,8 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { matchesSearch, compareConnections } from "@/utils/connectionFilter";
 import { ErrorBanner } from "@/components/shared/ErrorBanner";
-import { TeamCredentialsNote } from "@/components/shared/VaultUnavailableNote";
-import { useTeamCredentialsUnavailable } from "@/hooks/useBlockedTeamVault";
 import { Icon } from "@iconify/react";
 import { AvatarTile } from "@/components/shared/AvatarTile";
 import { useConnectionStore, connectionToFormData } from "@/stores/connectionStore";
@@ -27,8 +25,6 @@ import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/components/
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { VaultCascadeModal } from "@/components/shared/VaultCascadeModal";
 import { useVaultCascade } from "@/hooks/useVaultCascade";
-import { useSyncPrefsStore } from "@/stores/syncPrefsStore";
-import { useVaultStore } from "@/stores/vaultStore";
 import { useEffectivePinnedPredicate } from "@/hooks/useEffectivePinned";
 import { usePermissions } from "@/hooks/usePermission";
 import { useAccessibleVaultIds, useScopedVaultId } from "@/hooks/useAccessibleVaultIds";
@@ -49,16 +45,13 @@ import HostCard from "./HostCard";
 import ConnectionForm, { type ConnectionFormHandle } from "@/components/connections/ConnectionForm";
 import SerialConnectionForm from "@/components/connections/SerialConnectionForm";
 import { HomeToolbar } from "./HostsToolbar";
-import { TeamSessions } from "./TeamSessions";
-import { RemoteDeviceSessions } from "./RemoteDeviceSessions";
 import { SidePanelLayout } from "@/components/shared/SidePanelLayout";
 import { useSyncedFormKey } from "@/hooks/useSyncedFormKey";
 import { useAllConnections } from "@/hooks/useAllConnections";
 import { useAllFolders } from "@/hooks/useAllFolders";
 import { SnippetPickerPanel } from "./SnippetPickerPanel";
 import { getHostDeleteTargetIds, shouldUseBulkHostContextMenu } from "./hostSelection";
-import { buildTeamVaultTransferPlan, type TransferOperation } from "@/services/teamVaultPermissions";
-import { saveTeamVaultSecretForVault } from "@/services/teamVaultSecrets";
+import { buildTeamVaultTransferPlan, type TransferOperation } from "@/services/vaultTransferPlan";
 import {
   publishConnectionSecrets,
   publishIdentitySecrets,
@@ -77,7 +70,6 @@ import { FolderBreadcrumb } from "@/components/folders/FolderBreadcrumb";
 import { FolderEjectZone } from "@/components/folders/FolderEjectZone";
 import { cloneFolderTree, copyFolderSubtree } from "@/utils/folderCopy";
 import { moveFolderTreeToVault } from "@/utils/folderMove";
-
 
 export default function HostsPage() {
   const { t } = useTranslation();
@@ -119,7 +111,6 @@ export default function HostsPage() {
   const [showSnippetPicker, setShowSnippetPicker] = useState(false);
   const [snippetConnectionIds, setSnippetConnectionIds] = useState<string[]>([]);
 
-
   useEffect(() => {
     void loadConnections();
     void loadFolders();
@@ -154,14 +145,15 @@ export default function HostsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [homePendingAction, connections, setHomePendingAction]);
 
-  const selectedVaultIds = useVaultStore((s) => s.selectedVaultIds);
   const accessibleVaultIds = useAccessibleVaultIds();
   const scopedVaultId = useScopedVaultId();
   const defaultVaultId = useDefaultVaultId();
   const can = usePermissions();
-  const canCreate = selectedVaultIds.some((vid) => can("EDIT_CONNECTIONS", vid));
-  const teamCredentialsUnavailable = useTeamCredentialsUnavailable();
-  const canCreateFolder = selectedVaultIds.some((vid) => can("EDIT_FOLDERS", vid));
+  // New hosts are local by default. A team/cloud vault is still available from
+  // the form picker, but its selection must be explicit rather than inherited
+  // from stale or account-backed page state.
+  const canCreate = can("EDIT_CONNECTIONS", defaultVaultId);
+  const canCreateFolder = can("EDIT_FOLDERS", defaultVaultId);
 
   const vaultOptions = useVaultOptions();
 
@@ -477,9 +469,6 @@ export default function HostsPage() {
     setEditingFolderId(null);
   }, []);
 
-  const excludedIds = useSyncPrefsStore((s) => s.excludedIds);
-  const syncTypes = useSyncPrefsStore((s) => s.syncTypes);
-
   const handleBulkConnect = useCallback(async (conns: Connection[]) => {
     const connectionIds = conns.map((c) => c.id);
     if (connectionIds.length === 0) return;
@@ -527,8 +516,6 @@ export default function HostsPage() {
     const folderIds = selectedFolders.map((f) => f.id);
     const totalSelected = ids.length + folderIds.length;
     if (totalSelected === 0) return undefined;
-    const { isObjectSynced } = useSyncPrefsStore.getState();
-    const allSynced = selectedConns.every((c) => isObjectSynced(c.id, "connection"));
     const allCanEdit = selectedConns.every((c) => can("EDIT_CONNECTIONS", c.vault_id ?? "personal"));
     const bulkVaultChildren = (operation: TransferOperation): ContextMenuItem[] => vaultOptions
       .filter((v) => [...selectedConns.map((c) => c.vault_id ?? "personal"), ...selectedFolders.map((f) => f.vault_id ?? "personal")].some((sourceVaultId) => sourceVaultId !== v.id))
@@ -589,19 +576,6 @@ export default function HostsPage() {
         children: copyChildren,
       }] : []),
       {
-        label: allSynced ? t("hosts.page.bulk.disableCloudSync", { count: ids.length }) : t("hosts.page.bulk.enableCloudSync", { count: ids.length }),
-        icon: allSynced ? "lucide:cloud-off" : "lucide:cloud",
-        onClick: () => {
-          const store = useSyncPrefsStore.getState();
-          for (const c of selectedConns) {
-            const isSynced = store.isObjectSynced(c.id, "connection");
-            if (allSynced && isSynced) store.toggleExcluded(c.id);
-            else if (!allSynced && !isSynced) store.toggleExcluded(c.id);
-          }
-        },
-        divider: true,
-      },
-      {
         label: selectedConns.every((c) => c.ping_disabled) ? t("hosts.page.bulk.enableReachability", { count: ids.length }) : t("hosts.page.bulk.disableReachability", { count: ids.length }),
         icon: selectedConns.every((c) => c.ping_disabled) ? "lucide:wifi" : "lucide:wifi-off",
         onClick: () => {
@@ -623,11 +597,11 @@ export default function HostsPage() {
         divider: true,
       },
     ];
-  }, [t, selectedIdSet, selectedConnections, selectedFolders, excludedIds, syncTypes, handleDuplicate, can, updateConnection, handleBulkConnect, openSnippetPicker, vaultOptions, connections, identities, keys, scopedFolders]);
+  }, [t, selectedIdSet, selectedConnections, selectedFolders, handleDuplicate, can, updateConnection, handleBulkConnect, openSnippetPicker, vaultOptions, connections, identities, keys, scopedFolders]);
 
   const handleSubmit = async (data: ConnectionFormData, password: string | null, privateKey: string | null, passphrase: string | null) => {
     try {
-      const saved = await saveHostFromForm(editing, data, password, privateKey, passphrase, selectedVaultIds[0] ?? "personal");
+      const saved = await saveHostFromForm(editing, data, password, privateKey, passphrase, defaultVaultId);
       if (!editing && saved) setEditingId(saved.id);
     } catch (err) {
       setError(String(err));
@@ -730,13 +704,11 @@ export default function HostsPage() {
             const pwd = await getSecret(`password:${conn.id}`);
             if (pwd) {
               await storeSecret(`password:${newConn.id}`, pwd);
-              await saveTeamVaultSecretForVault(vaultId, `password:${newConn.id}`, pwd).catch(() => {});
             }
             if (!conn.key_id) {
               const k = await getSecret(`key:${conn.id}`);
               if (k) {
                 await storeSecret(`key:${newConn.id}`, k);
-                await saveTeamVaultSecretForVault(vaultId, `key:${newConn.id}`, k).catch(() => {});
               }
             }
           }
@@ -849,11 +821,9 @@ export default function HostsPage() {
             ]);
             if (priv) {
               await storeSecret(`key:${newKey.id}:private`, priv);
-              await saveTeamVaultSecretForVault(vaultId, `key:${newKey.id}:private`, priv).catch(() => {});
             }
             if (pub) {
               await storeSecret(`key:${newKey.id}:public`, pub);
-              await saveTeamVaultSecretForVault(vaultId, `key:${newKey.id}:public`, pub).catch(() => {});
             }
             keyIdMap.set(key.id, newKey.id);
           }
@@ -866,7 +836,6 @@ export default function HostsPage() {
             const pwd = await getSecret(`identity:${identity.id}:password`);
             if (pwd) {
               await storeSecret(`identity:${newIdentity.id}:password`, pwd);
-              await saveTeamVaultSecretForVault(vaultId, `identity:${newIdentity.id}:password`, pwd).catch(() => {});
             }
             identityIdMap.set(identity.id, newIdentity.id);
           }
@@ -881,13 +850,11 @@ export default function HostsPage() {
               const pwd = await getSecret(`password:${conn.id}`);
               if (pwd) {
                 await storeSecret(`password:${newConn.id}`, pwd);
-                await saveTeamVaultSecretForVault(vaultId, `password:${newConn.id}`, pwd).catch(() => {});
               }
               if (!conn.key_id) {
                 const k = await getSecret(`key:${conn.id}`);
                 if (k) {
                   await storeSecret(`key:${newConn.id}`, k);
-                  await saveTeamVaultSecretForVault(vaultId, `key:${newConn.id}`, k).catch(() => {});
                 }
               }
             }
@@ -1055,7 +1022,6 @@ export default function HostsPage() {
 
         {error && <ErrorBanner error={error} onDismiss={() => setError(null)} />}
 
-        {teamCredentialsUnavailable && <TeamCredentialsNote className="mx-5 mt-3" />}
 
         <DragSelectSurface
           selectionAreaRef={selectionAreaRef}
@@ -1083,12 +1049,6 @@ export default function HostsPage() {
             <EmptyState onAdd={canCreate ? () => { setShowForm(true); setShowSerialForm(false); setEditingFolderId(null); } : undefined} />
           ) : (
             <div ref={itemAreaRef} data-drag-surface="true" className="space-y-6">
-
-              {/* ── Sessions live on the user's other devices ── */}
-              <RemoteDeviceSessions />
-
-              {/* ── Team Sessions (live multiplayer) ── */}
-              <TeamSessions />
 
               {/* ── Folder breadcrumb (when inside a folder) ── */}
               <FolderBreadcrumb

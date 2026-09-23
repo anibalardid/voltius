@@ -2,12 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Modal, ModalCard } from "@/components/shared/Modal";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
-import { useTeamStore } from "@/stores/teamStore";
 import { useVaultContents } from "@/hooks/useVaultContents";
 import { useVaultAdminActions } from "./useVaultAdminActions";
-import { makePrivateMemberMessage, type VaultAdminTarget } from "./vaultAdminTarget";
+import type { VaultAdminTarget } from "./vaultAdminTarget";
 
-export type VaultDialog = "rename" | "makePrivate" | "delete" | null;
+export type VaultDialog = "rename" | "delete" | null;
 
 export function VaultAdminDialogs({
   target, dialog, onClose, onRenamed, onDone,
@@ -19,9 +18,8 @@ export function VaultAdminDialogs({
   onDone?: () => void;
 }) {
   const { t } = useTranslation();
-  const { membersByTeam } = useTeamStore();
-  const counts = useVaultContents(target.vaultId ?? undefined);
-  const { busy, rename, remove, makePrivate } = useVaultAdminActions(target, {
+  const counts = useVaultContents(target.vaultId);
+  const { busy, rename, remove } = useVaultAdminActions(target, {
     onRenamed,
     onDone: () => { onClose(); onDone?.(); },
   });
@@ -68,34 +66,15 @@ export function VaultAdminDialogs({
     );
   }
 
-  if (dialog === "delete") {
-    const items = counts.filter((c) => c.count > 0).map((c) => c.count).reduce((a, b) => a + b, 0);
-    return (
-      <ConfirmModal
-        title={t("settings.vaults.general.deleteVault.title")}
-        message={t("settings.vaults.general.deleteVault.confirmDesc", { count: items })}
-        confirmLabel={t("settings.vaults.general.deleteVault.confirmBtn")}
-        busy={busy}
-        busyLabel={t("settings.vaults.general.deleteVault.deleting")}
-        onConfirm={() => void remove()}
-        onCancel={onClose}
-      />
-    );
-  }
-
-  const memberN = target.teamId ? (membersByTeam[target.teamId]?.length ?? 0) : 0;
+  const items = counts.filter((c) => c.count > 0).map((c) => c.count).reduce((a, b) => a + b, 0);
   return (
     <ConfirmModal
-      tone="warning"
-      title={t("settings.vaults.general.makePrivate.title")}
-      message={makePrivateMemberMessage(memberN, t, {
-        others: "settings.vaults.general.makePrivate.confirm",
-        alone: "settings.vaults.general.makePrivate.confirmAll",
-      })}
-      confirmLabel={t("settings.vaults.general.makePrivate.confirmBtn")}
+      title={t("settings.vaults.general.deleteVault.title")}
+      message={t("settings.vaults.general.deleteVault.confirmDesc", { count: items })}
+      confirmLabel={t("settings.vaults.general.deleteVault.confirmBtn")}
       busy={busy}
-      busyLabel={t("settings.vaults.general.makePrivate.converting")}
-      onConfirm={() => void makePrivate()}
+      busyLabel={t("settings.vaults.general.deleteVault.deleting")}
+      onConfirm={() => void remove()}
       onCancel={onClose}
     />
   );

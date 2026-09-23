@@ -1,10 +1,7 @@
 import { create } from "zustand";
 import type { PortForwardingRule, PortForwardingRuleFormData } from "@/types";
 import * as api from "@/services/portForwardingRules";
-import { scheduleSync } from "@/services/sync";
-import { isServerMode } from "@/services/account";
 import { reportAuditMutation } from "@/services/auditMutations";
-import { useSyncPrefsStore } from "@/stores/syncPrefsStore";
 import { isTeamVaultId, upsertById, findTeamEntry, setTeamMapEntry, clearTeamMapEntry, upsertInTeamMap, removeFromTeamMap } from "@/stores/teamVaultMap";
 import { removeTeamVaultObject, saveTeamVaultObject } from "@/services/teamObjectPersistence";
 
@@ -102,7 +99,6 @@ export const usePortForwardingStore = create<PortForwardingStore>((set, get) => 
     const rule = await api.createPfRule(data);
     const rules = await api.listPfRules();
     set({ rules });
-    isServerMode().then((s) => { if (s && useSyncPrefsStore.getState().isTypeSynced("port-forwarding-rule")) scheduleSync(); });
     reportAuditMutation("port_forward", "created", { id: rule.id, name: rule.name, vault_id: rule.vault_id }, { tunnel_type: rule.tunnel_type });
     return rule;
   },
@@ -119,7 +115,6 @@ export const usePortForwardingStore = create<PortForwardingStore>((set, get) => 
         set((s) => ({ teamRules: removeFromTeamMap(s.teamRules, teamId, id) }));
         const rules = await api.listPfRules();
         set({ rules });
-        isServerMode().then((s) => { if (s && useSyncPrefsStore.getState().isTypeSynced("port-forwarding-rule")) scheduleSync(); });
         return;
       }
       const now = new Date().toISOString();
@@ -163,14 +158,12 @@ export const usePortForwardingStore = create<PortForwardingStore>((set, get) => 
       const rule = await get().createRule(data, id);
       set((s) => ({ rules: s.rules.filter((r) => r.id !== id) }));
       void rule;
-      isServerMode().then((s) => { if (s && useSyncPrefsStore.getState().isObjectSynced(id, "port-forwarding-rule")) scheduleSync(); });
       return;
     }
 
     await api.updatePfRule(id, data);
     const rules = await api.listPfRules();
     set({ rules });
-    isServerMode().then((s) => { if (s && useSyncPrefsStore.getState().isObjectSynced(id, "port-forwarding-rule")) scheduleSync(); });
     reportAuditMutation("port_forward", "updated", { id, name: data.name, vault_id: data.vault_id }, { tunnel_type: data.tunnel_type });
   },
 
@@ -187,7 +180,6 @@ export const usePortForwardingStore = create<PortForwardingStore>((set, get) => 
     await api.deletePfRule(id);
     const rules = await api.listPfRules();
     set({ rules });
-    isServerMode().then((s) => { if (s && useSyncPrefsStore.getState().isObjectSynced(id, "port-forwarding-rule")) scheduleSync(); });
     if (prev) reportAuditMutation("port_forward", "deleted", { id: prev.id, name: prev.name, vault_id: prev.vault_id }, { tunnel_type: prev.tunnel_type });
   },
 
@@ -200,7 +192,6 @@ export const usePortForwardingStore = create<PortForwardingStore>((set, get) => 
     const rule = await api.duplicatePfRule(id);
     const rules = await api.listPfRules();
     set({ rules });
-    isServerMode().then((s) => { if (s && useSyncPrefsStore.getState().isTypeSynced("port-forwarding-rule")) scheduleSync(); });
     return rule;
   },
 
@@ -214,6 +205,5 @@ export const usePortForwardingStore = create<PortForwardingStore>((set, get) => 
     await api.movePfRuleFolder(id, folderId);
     const rules = await api.listPfRules();
     set({ rules });
-    isServerMode().then((s) => { if (s && useSyncPrefsStore.getState().isObjectSynced(id, "port-forwarding-rule")) scheduleSync(); });
   },
 }));
