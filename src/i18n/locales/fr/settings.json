@@ -36,6 +36,48 @@
       "ignoreBracketedPaste": {
         "title": "Collage simple (sans collage entre crochets)",
         "desc": "Coller en texte brut sans les marqueurs \\x1b[200~ / \\x1b[201~. Corrige un affichage corrompu (ex. « 200~ ») lors d'un collage dans un prompt sudo ou une application CLI qui ne prend pas en charge le collage entre crochets."
+      },
+      "zmodem": {
+        "title": "Experimental Zmodem transfers",
+        "desc": "Enable explicit Send and Receive actions for non-persistent SSH sessions on desktop. Remote offers are never accepted automatically.",
+        "privacyWarning": "Experimental and privacy-sensitive: transferred data is written to a local destination you choose. Zmodem protocol bytes are kept out of terminal output and session logs."
+      },
+      "remotePathCompletion": {
+        "title": "Complétion des chemins distants",
+        "desc": "Permet au sélecteur de suggestions du terminal d'ajouter les chemins distants via la session SSH active. Désactivée par défaut ; la touche Tab complète les chemins SSH fiables lorsqu'elle est disponible."
+      },
+      "sessionLogging": {
+        "title": "Journalisation de la sortie des sessions",
+        "desc": "Enregistrez localement la sortie du terminal pour la consulter plus tard. Les entrées, frappes, historique des commandes et octets entrants ne sont jamais enregistrés.",
+        "privacyWarning": "Attention : la sortie du terminal peut contenir des mots de passe, des jetons et d'autres secrets. Consultez et effacez régulièrement les enregistrements.",
+        "location": "Dossier des enregistrements",
+        "chooseDirectory": "Choisir un dossier",
+        "useDefault": "Utiliser le dossier de données par défaut",
+        "retention": "Conservation et rotation",
+        "maxFileSize": "Taille maximale d'un fichier",
+        "maxTotalSize": "Taille totale maximale",
+        "maxAge": "Ancienneté maximale",
+        "days": "jours",
+        "recordings": "Enregistrements",
+        "refresh": "Actualiser",
+        "noRecordings": "Aucun enregistrement pour le moment.",
+        "clearOne": "Effacer l'enregistrement",
+        "clearAll": "Effacer tous les enregistrements",
+        "confirmClearOne": "Effacer l'enregistrement {{fileName}} ? Cette action est irréversible.",
+        "confirmClearAll": "Effacer tous les enregistrements de session ? Cette action est irréversible.",
+        "loadError": "Impossible de charger les paramètres de journalisation des sessions.",
+        "changeDirectoryError": "Impossible de modifier le dossier des enregistrements.",
+        "retentionError": "Impossible d'enregistrer les paramètres de conservation.",
+        "clearError": "Impossible d'effacer l'enregistrement.",
+        "toggleError": "Impossible de modifier la journalisation des sessions."
+      },
+      "notifications": {
+        "title": "Notifications du cycle de vie du terminal",
+        "desc": "Choisissez où apparaissent les signaux fiables du terminal. Toutes les destinations sont désactivées par défaut.",
+        "terminal": { "title": "Retour du terminal", "desc": "Afficher une brève ligne d'état dans le terminal concerné." },
+        "inApp": { "title": "Centre de notifications et notification contextuelle dans l'application", "desc": "Ajouter le signal aux notifications de Voltius et afficher une notification contextuelle." },
+        "system": { "title": "Notification système", "desc": "Utiliser le service de notifications du système d'exploitation lorsqu'il est disponible." },
+        "commandFinishNote": "Les notifications de fin de commande ne sont pas activées tant qu'une commande ne fournit pas un marqueur de cycle de vie explicite et un code de sortie. Une déconnexion n'est jamais considérée comme une fin réussie."
       }
     },
     "appearance": {
@@ -1278,6 +1320,10 @@
         "terminalSearch": {
           "label": "Rechercher dans le terminal",
           "desc": "Rechercher dans l'historique du terminal"
+        },
+        "terminalSuggestions": {
+          "label": "Suggestions du terminal",
+          "desc": "Ouvrir le sélecteur d'insertion pour l'historique local et les suggestions de chemins distants activées. La touche Tab complète les chemins SSH distants fiables lorsqu'elle est disponible."
         },
         "history": {
           "label": "Panneau d'historique",

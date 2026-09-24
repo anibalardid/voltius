@@ -3,7 +3,7 @@ import type { ToastSeverity } from "@/plugins/api";
 
 export type NotificationSource =
   | { kind: "plugin"; id: string; name: string }
-  | { kind: "app"; area: "team" };
+  | { kind: "app"; area: "team" | "terminal" };
 
 export function sourceKey(source: NotificationSource): string {
   return source.kind === "plugin" ? source.id : "app";

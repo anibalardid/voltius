@@ -18,6 +18,7 @@ const HAND_WRITTEN: SettingKeyDef[] = [
     deviceScoped: true,
   },
   { id: "appSettings.terminal.cursorStyle", labelKey: "settings.terminal.cursorStyle.title" },
+  { id: "appSettings.terminal.remotePathCompletion", labelKey: "settings.terminal.remotePathCompletion.title" },
   { id: "appSettings.sftp.autoRefreshIntervalMs", labelKey: "settings.sftp.filePanel.refreshInterval.title" },
   { id: "appSettings.plugins.overrides", labelKey: "settings.sync.settingKey.pluginOverrides" },
   { id: "appSettings.keepalivePreset", labelKey: "settings.hosts.keepalive.title" },

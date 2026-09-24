@@ -33,7 +33,7 @@ function mkDeps(over: Partial<HostCommandDeps> = {}): HostCommandDeps {
     runSequence: vi.fn(async () => OK),
     report: vi.fn(),
     enqueue: vi.fn(),
-    inject: vi.fn(async () => {}),
+    inject: vi.fn(async () => true),
     notifyError: vi.fn(),
     ...over,
   };

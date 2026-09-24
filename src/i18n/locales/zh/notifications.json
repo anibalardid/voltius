@@ -41,6 +41,12 @@
     "progressToast": {
       "timedOut": "操作超时"
     },
+    "terminalLifecycle": {
+      "bell": { "title": "Terminal bell", "body": "The terminal session {{session}} sent an explicit bell." },
+      "sessionEnded": { "title": "Terminal session ended", "body": "The terminal session {{session}} ended.", "disconnected": "The terminal session {{session}} disconnected. Command completion is unknown." },
+      "commandSucceeded": { "title": "Command finished", "body": "A command in {{session}} finished successfully (exit code {{exitCode}})." },
+      "commandFailed": { "title": "Command failed", "body": "A command in {{session}} finished with exit code {{exitCode}}." }
+    },
     "seededPluginsFailed": {
       "message": "内置插件加载失败，应用正在没有它们的情况下运行。这是一个缺陷——请报告此问题。",
       "action": "诊断"

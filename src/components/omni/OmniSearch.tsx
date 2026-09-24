@@ -12,14 +12,9 @@ import { useIdentityStore } from "@/stores/identityStore";
 import { useKeyStore } from "@/stores/keyStore";
 import { usePluginStore } from "@/stores/pluginStore";
 import { useSnippetStore } from "@/stores/snippetStore";
-import {
-  parseVariables, needsUserInput, buildDynamicValues, buildDefaultValues,
-  resolveTemplate, type DynamicContext,
-} from "@/services/snippetParser";
-import { broadcastSnippetInject } from "@/services/snippetInject";
 import { runSnippetSequence, reportSequenceResult } from "@/services/snippetSequence";
-import { getActiveRunnableSession } from "@/services/snippetRun";
-import { snippetScriptText, snippetSearchText } from "@/services/snippetSteps";
+import { getActiveRunnableSession, runSnippetIntoSessions } from "@/services/snippetRun";
+import { snippetSearchText } from "@/services/snippetSteps";
 import type { Connection, TerminalSession, SshKey, Identity, Snippet } from "@/types";
 import { ConnectionAvatar } from "@/components/shared/ConnectionAvatar";
 import { AvatarTile } from "@/components/shared/AvatarTile";
@@ -396,34 +391,11 @@ export default function OmniSearch({ onClose }: OmniSearchProps) {
           return;
         }
 
-        const conn = connections.find((c) => c.id === activeSession.connectionId);
-        const ctx: DynamicContext = activeSession.type === "local"
-          ? { connectionHost: "localhost", connectionUsername: "local", connectionName: "Local Shell" }
-          : { connectionHost: conn?.host ?? "", connectionUsername: conn?.username ?? "", connectionName: activeSession.connectionName };
-
-        const snippetText = snippetScriptText(item.snippet);
-        const allVars = parseVariables(snippetText);
-        const dynamicValues = buildDynamicValues(allVars, ctx);
-        const userVars = allVars.filter((v) => !v.dynamic);
-        const defaultValues = buildDefaultValues(userVars);
-        const partialTemplate = resolveTemplate(snippetText, dynamicValues);
-
-        trackUsed(item.snippet.id);
         onClose();
-
-        if (userVars.some(needsUserInput)) {
-          setGlobalPendingInject({
-            snippet: item.snippet,
-            userVars,
-            partialTemplate,
-            execute: true,
-            sessionIds: [activeSession.id],
-            initialValues: defaultValues,
-          });
-        } else {
-          const resolved = resolveTemplate(partialTemplate, defaultValues);
-          broadcastSnippetInject([activeSession], resolved, true).catch(console.error);
-        }
+        void runSnippetIntoSessions(item.snippet, [activeSession.id], true, {
+          forcePreview: true,
+          onNeedVars: (pending) => setGlobalPendingInject(pending),
+        });
       } else if (item.kind === "toggle") {
         item.onToggle(!item.value);
         // Stay in palette so the user can see the updated state

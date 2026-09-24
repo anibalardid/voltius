@@ -6,21 +6,13 @@ import { useSnippetStore } from "@/stores/snippetStore";
 import { useSnippetFolderStore } from "@/stores/snippetFolderStore";
 import { useSessionStore } from "@/stores/sessionStore";
 import { useConnectionStore } from "@/stores/connectionStore";
-import { broadcastSnippetInject } from "@/services/snippetInject";
-import {
-  parseVariables,
-  needsUserInput,
-  buildDynamicValues,
-  buildDefaultValues,
-  resolveTemplate,
-  type ParsedVariable,
-  type DynamicContext,
-} from "@/services/snippetParser";
-import { buildDynamicContext } from "@/services/snippetRunCore";
+import { broadcastSnippetInject, getSnippetInjectTargetCount } from "@/services/snippetInject";
+import type { DynamicContext } from "@/services/snippetParser";
+import { buildDynamicContext, resolveSnippetPayload } from "@/services/snippetRunCore";
 import { PickerSurface } from "@/components/shared/PickerSurface";
 import { MenuItemList, type ContextMenuItem } from "@/components/shared/ContextMenu";
 import { runSnippetSequence, reportSequenceResult } from "@/services/snippetSequence";
-import { snippetScriptText, snippetSearchText } from "@/services/snippetSteps";
+import { snippetSearchText } from "@/services/snippetSteps";
 import { SnippetVariableModal } from "@/components/terminal/SnippetVariableModal";
 import { SnippetForm } from "@/components/snippets/SnippetForm";
 import { useSyncedFormKey } from "@/hooks/useSyncedFormKey";
@@ -258,8 +250,9 @@ function SectionHeader({ label, count, collapsible, collapsed, onToggle }: {
 
 interface PendingInject {
   snippet: Snippet;
-  userVars: ParsedVariable[];
+  userVars: import("@/services/snippetParser").ParsedVariable[];
   partialTemplate: string;
+  displayPartialTemplate: string;
   initialValues: Record<string, string>;
 }
 
@@ -333,7 +326,7 @@ export function SnippetsPanel() {
     return () => window.removeEventListener("voltius:focus-panel-search", focus);
   }, []);
 
-  const canInject = !!activeSession && activeSession.type !== "multiplayer";
+  const canInject = !!activeSession && activeSession.status === "connected" && activeSession.type !== "multiplayer";
 
   const allFiltered = snippets.filter(
     (s) =>
@@ -350,13 +343,17 @@ export function SnippetsPanel() {
   }
 
   async function inject(text: string, execute: boolean) {
-    if (!activeSession || activeSession.type === "multiplayer") return;
-    try { await broadcastSnippetInject([activeSession], text, execute); }
+    const current = useSessionStore.getState().sessions.find(
+      (session) => session.id === useSessionStore.getState().activeSessionId,
+    );
+    if (!current || current.status !== "connected" || current.type === "multiplayer") return;
+    try { await broadcastSnippetInject([current], text, execute); }
     catch (e) { console.error("snippet inject failed:", e); }
   }
 
   async function handleTrigger(snippet: Snippet, execute: boolean) {
     if (!activeSession || activeSession.type === "multiplayer") return;
+    void execute; // Both row actions open the same explicit preview; the modal chooses the action.
     trackUsed(snippet.id);
 
     if (snippet.steps.some((s) => s.kind !== "script")) {
@@ -370,19 +367,15 @@ export function SnippetsPanel() {
       return;
     }
 
-    const text = snippetScriptText(snippet);
-    const allVars = parseVariables(text);
     const ctx = await buildContext();
-    const dynamicValues = buildDynamicValues(allVars, ctx);
-    const userVars = allVars.filter((v) => !v.dynamic);
-    const defaultValues = buildDefaultValues(userVars);
-    const partialTemplate = resolveTemplate(text, dynamicValues);
-
-    if (!userVars.some(needsUserInput)) {
-      inject(resolveTemplate(partialTemplate, defaultValues), execute);
-      return;
-    }
-    setPendingInject({ snippet, userVars, partialTemplate, initialValues: defaultValues });
+    const resolved = resolveSnippetPayload(snippet, ctx);
+    setPendingInject({
+      snippet,
+      userVars: resolved.userVars,
+      partialTemplate: resolved.partialTemplate,
+      displayPartialTemplate: resolved.displayPartialTemplate,
+      initialValues: resolved.initialValues,
+    });
   }
 
   async function handleMoveToFolder(snippet: Snippet, folderId: string | null) {
@@ -640,10 +633,12 @@ export function SnippetsPanel() {
 
       {pendingInject !== null && (
         <SnippetVariableModal
-          snippetName={pendingInject.snippet.name}
-          partialTemplate={pendingInject.partialTemplate}
-          userVars={pendingInject.userVars}
-          initialValues={pendingInject.initialValues}
+           snippetName={pendingInject.snippet.name}
+           partialTemplate={pendingInject.partialTemplate}
+           displayPartialTemplate={pendingInject.displayPartialTemplate}
+           userVars={pendingInject.userVars}
+           initialValues={pendingInject.initialValues}
+           executeTargetCount={activeSession ? getSnippetInjectTargetCount(activeSession, true) : 0}
           onInject={(resolvedText, execute) => {
             inject(resolvedText, execute);
             setPendingInject(null);

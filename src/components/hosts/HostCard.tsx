@@ -25,6 +25,7 @@ import {
   useEffectivePinSource,
   nextPersonalPinValue,
 } from "@/hooks/useEffectivePinned";
+import { getHostListMetadata, HOST_LIST_ROW_CLASS, HOST_LIST_TRUNCATE_CLASS } from "./hostListLayout";
 
 const EMPTY_TEAM_MEMBERS: TeamMember[] = [];
 
@@ -64,6 +65,7 @@ export default function HostCard({
   const isSerial = connection.connection_type === "serial";
   const isFtp = connection.connection_type === "ftp";
   const protocolLabel = isSerial ? "SERIAL" : isFtp ? (connection.ftp_secure ? "FTPS" : "FTP") : "SSH";
+  const { source: sourceTag, tags: displayTags } = getHostListMetadata(connection.tags);
   const contributions = useUIContributions("connection.contextMenu", connection);
   const pinConnection = useConnectionStore((s) => s.pinConnection);
   const pinConnectionForTeam = useConnectionStore((s) => s.pinConnectionForTeam);
@@ -210,7 +212,7 @@ export default function HostCard({
       isEditing={isEditing}
       isActive={isActive}
       isFocused={isFocused}
-      className={dimmed ? "opacity-50" : ""}
+      className={`${isList ? HOST_LIST_ROW_CLASS : ""}${dimmed ? " opacity-50" : ""}`}
       onPointerDown={onPointerDown}
       onClick={(e) => onSelect?.(connection.id, e)}
       onDoubleClick={() => onConnect(connection)}
@@ -219,25 +221,27 @@ export default function HostCard({
     >
       {isList ? (
         <>
-          <div className="relative shrink-0">
+          <div data-host-list-slot="avatar" className="relative min-w-0">
             <ConnectionAvatar connection={connection} size={28} />
             {showPingDot && (
               <StatusDot tone={pingTone} motion={pingMotion} halo="var(--t-bg-card)" corner />
             )}
           </div>
-          <p className="text-sm font-medium-bold truncate flex-[1.5] min-w-0 text-(--t-text-bright)">
+          <p data-host-list-slot="name" className={`${HOST_LIST_TRUNCATE_CLASS} text-sm font-medium-bold text-(--t-text-bright)`}>
             {connectionDisplayName(connection)}
           </p>
-          <p className="text-xs truncate flex-1 min-w-0 text-(--t-text-secondary)">
+          <p data-host-list-slot="endpoint" className={`${HOST_LIST_TRUNCATE_CLASS} text-xs text-(--t-text-secondary)`}>
             {isSerial
               ? `serial · ${connection.serial_baud ?? 115200} baud`
               : `${connection.username}@${connection.host}:${connection.port}${showPingDot && pingStatus === "up" && pingLatency !== undefined ? ` · ${pingLatency}ms` : ""}`
             }
           </p>
-          {connection.tags.length > 0 && (
-            <OverflowTagList tags={connection.tags} className="max-w-32 shrink-0" />
-          )}
-          <div className="flex items-center gap-1 shrink-0">
+          <span data-host-list-slot="type" className="host-list-meta hidden min-w-0 truncate text-[11px] font-semibold text-(--t-text-dim) lg:block">{protocolLabel}</span>
+          <span data-host-list-slot="source" className="host-list-meta hidden min-w-0 truncate text-[11px] text-(--t-text-dim) lg:block">{sourceTag ?? ""}</span>
+          <div data-host-list-slot="tag" className="host-list-meta hidden min-w-0 overflow-hidden lg:block">
+            {displayTags.length > 0 && <OverflowTagList tags={displayTags} />}
+          </div>
+          <div data-host-list-slot="actions" className="flex min-w-0 items-center justify-self-end gap-1">
             {canEdit && <CardActionButton icon="lucide:square-pen" title={t("common.action.edit")} onClick={() => onEdit(connection)} />}
             {canEdit && <CardActionButton icon="lucide:trash-2" title={t("common.action.delete")} onClick={() => onDelete(connection.id)} danger />}
             {!isSerial && !isFtp && <CardActionButton icon="lucide:folder-open" title={t("hosts.card.openInSftp")} onClick={() => useUIStore.getState().openSftpWith(connection.id)} />}

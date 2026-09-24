@@ -11,9 +11,13 @@ interface TerminalSettingsStore {
   preferredShell: string | null;
   scrollbackLines: number;
   cursorStyle: TerminalCursorStyle;
+  zmodemEnabled: boolean;
+  remotePathCompletionEnabled: boolean;
   setPreferredShell: (shell: string | null) => void;
   setScrollbackLines: (lines: number) => void;
   setCursorStyle: (style: TerminalCursorStyle) => void;
+  setZmodemEnabled: (enabled: boolean) => void;
+  setRemotePathCompletionEnabled: (enabled: boolean) => void;
 }
 
 export const useTerminalSettingsStore = create<TerminalSettingsStore>()(
@@ -22,9 +26,13 @@ export const useTerminalSettingsStore = create<TerminalSettingsStore>()(
       preferredShell: null,
       scrollbackLines: DEFAULT_SCROLLBACK_LINES,
       cursorStyle: DEFAULT_CURSOR_STYLE,
+      zmodemEnabled: false,
+      remotePathCompletionEnabled: false,
       setPreferredShell: (shell) => { set({ preferredShell: shell }); useAppSettingsTimestampStore.getState().touch(); },
       setScrollbackLines: (lines) => { set({ scrollbackLines: clampScrollbackLines(lines) }); useAppSettingsTimestampStore.getState().touch(); },
       setCursorStyle: (style) => { set({ cursorStyle: style }); useAppSettingsTimestampStore.getState().touch(); },
+      setZmodemEnabled: (enabled) => { set({ zmodemEnabled: enabled }); useAppSettingsTimestampStore.getState().touch(); },
+      setRemotePathCompletionEnabled: (enabled) => { set({ remotePathCompletionEnabled: enabled }); useAppSettingsTimestampStore.getState().touch(); },
     }),
     {
       name: "voltius-terminal-settings",
@@ -32,6 +40,8 @@ export const useTerminalSettingsStore = create<TerminalSettingsStore>()(
         const state = { ...current, ...(persisted as Partial<TerminalSettingsStore>) };
         state.scrollbackLines = clampScrollbackLines(state.scrollbackLines);
         if (!CURSOR_STYLES.includes(state.cursorStyle)) state.cursorStyle = DEFAULT_CURSOR_STYLE;
+        state.zmodemEnabled = state.zmodemEnabled === true;
+        state.remotePathCompletionEnabled = state.remotePathCompletionEnabled === true;
         return state;
       },
     },

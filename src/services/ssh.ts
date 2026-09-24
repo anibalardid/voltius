@@ -100,6 +100,16 @@ export async function sshResize(sessionId: string, cols: number, rows: number): 
   return invoke("ssh_resize", { sessionId, cols, rows });
 }
 
+export interface RemoteDirectoryEntry {
+  name: string;
+  isDir: boolean;
+}
+
+/** List one bounded directory through the authenticated SSH session's SFTP channel. */
+export async function sshListRemoteDir(sessionId: string, path: string): Promise<RemoteDirectoryEntry[]> {
+  return invoke("ssh_list_remote_dir", { sessionId, path });
+}
+
 export async function sshDetectDistro(sessionId: string): Promise<string> {
   return invoke("ssh_detect_distro", { sessionId });
 }
@@ -171,6 +181,16 @@ export async function onSshOutput(
   callback: (data: Uint8Array) => void,
 ): Promise<UnlistenFn> {
   return listen<number[]>(`ssh-output-${sessionId}`, (event) => {
+    callback(new Uint8Array(event.payload));
+  });
+}
+
+/** Workspace restore scrollback: render it in xterm, but do not record it as live output. */
+export async function onSshRestoreOutput(
+  sessionId: string,
+  callback: (data: Uint8Array) => void,
+): Promise<UnlistenFn> {
+  return listen<number[]>(`ssh-restore-output-${sessionId}`, (event) => {
     callback(new Uint8Array(event.payload));
   });
 }

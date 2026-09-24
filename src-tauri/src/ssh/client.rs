@@ -383,6 +383,10 @@ fn emit_step(app: &AppHandle, session_id: &str, step: SshStep, detail: impl Into
     );
 }
 
+fn restore_output_event(session_id: &str) -> String {
+    format!("ssh-restore-output-{session_id}")
+}
+
 /// A server that never answers a userauth request would otherwise leave the UI on
 /// "Authenticating" forever — every other blocking step here is already bounded.
 const AUTH_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
@@ -840,7 +844,9 @@ pub async fn connect(
                     for _ in 0..pty_rows {
                         out.extend_from_slice(b"\r\n");
                     }
-                    let _ = app.emit(&format!("ssh-output-{}", session_id), out.as_slice());
+                    // Restore history is rendered into xterm but is not live
+                    // session output: recording it would duplicate scrollback.
+                    let _ = app.emit(&restore_output_event(&session_id), out.as_slice());
                 }
             }
         }
@@ -863,7 +869,11 @@ pub async fn connect(
     // (writes a temp rcfile under /tmp). Falling back to request_shell keeps
     // the historical behavior available via the setting.
     let exec_cmd = if shell_integration {
-        let inner = crate::shell_integration::ssh_exec_command(&cd_prefix);
+        let inner = if persist {
+            crate::shell_integration::ssh_exec_command_without_blocks(&cd_prefix)
+        } else {
+            crate::shell_integration::ssh_exec_command(&cd_prefix)
+        };
         Some(if persist {
             let key = crate::shell_integration::tmux_session_key(&session_id);
             if attach_only {
@@ -1098,7 +1108,10 @@ fn legacy_preferred() -> russh::Preferred {
 
 #[cfg(test)]
 mod tests {
-    use super::{choose_rsa_hash, client_config, is_windows_sshid, legacy_preferred, AUTH_TIMEOUT};
+    use super::{
+        choose_rsa_hash, client_config, is_windows_sshid, legacy_preferred, restore_output_event,
+        AUTH_TIMEOUT,
+    };
     use russh::keys::ssh_key::HashAlg;
 
     #[test]
@@ -1149,6 +1162,15 @@ mod tests {
         ));
         assert!(!is_windows_sshid(b"SSH-2.0-dropbear_2022.83"));
         assert!(!is_windows_sshid(b""));
+    }
+
+    #[test]
+    fn restore_output_uses_a_non_recorded_event() {
+        assert_eq!(
+            restore_output_event("session-1"),
+            "ssh-restore-output-session-1"
+        );
+        assert_ne!(restore_output_event("session-1"), "ssh-output-session-1");
     }
 
     #[tokio::test]

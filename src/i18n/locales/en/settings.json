@@ -36,6 +36,57 @@
       "ignoreBracketedPaste": {
         "title": "Plain paste (no bracketed paste)",
         "desc": "Paste as plain text without the \\x1b[200~ / \\x1b[201~ markers. Fixes garbled input (e.g. \"200~\") when pasting into sudo prompts or CLI apps that don't support bracketed paste."
+      },
+      "zmodem": {
+        "title": "Experimental Zmodem transfers",
+        "desc": "Enable explicit Send and Receive actions for non-persistent SSH sessions on desktop. Remote offers are never accepted automatically.",
+        "privacyWarning": "Experimental and privacy-sensitive: transferred data is written to a local destination you choose. Zmodem protocol bytes are kept out of terminal output and session logs."
+      },
+      "remotePathCompletion": {
+        "title": "Remote path completion",
+        "desc": "Enable trusted remote SSH path completion with Tab. This is off by default; the explicit terminal suggestions picker remains available as a fallback."
+      },
+      "sessionLogging": {
+        "title": "Session output logging",
+        "desc": "Record terminal output locally for later review. Input, keystrokes, command history, and input bytes are never recorded.",
+        "privacyWarning": "Warning: terminal output can contain passwords, tokens, and other secrets. Review and clear recordings regularly.",
+        "location": "Recording directory",
+        "chooseDirectory": "Choose directory",
+        "useDefault": "Use app-data default",
+        "retention": "Retention and rotation",
+        "maxFileSize": "Maximum file size",
+        "maxTotalSize": "Maximum total size",
+        "maxAge": "Maximum age",
+        "days": "days",
+        "recordings": "Recordings",
+        "refresh": "Refresh",
+        "noRecordings": "No recordings yet.",
+        "clearOne": "Clear recording",
+        "clearAll": "Clear all recordings",
+        "confirmClearOne": "Clear the recording {{fileName}}? This cannot be undone.",
+        "confirmClearAll": "Clear all session recordings? This cannot be undone.",
+        "loadError": "Session logging settings could not be loaded.",
+        "changeDirectoryError": "The recording directory could not be changed.",
+        "retentionError": "Retention settings could not be saved.",
+        "clearError": "The recording could not be cleared.",
+        "toggleError": "Session logging could not be changed."
+      },
+      "notifications": {
+        "title": "Terminal lifecycle notifications",
+        "desc": "Choose where reliable terminal signals appear. All destinations are off by default.",
+        "terminal": {
+          "title": "Terminal feedback",
+          "desc": "Show a short status line in the affected terminal."
+        },
+        "inApp": {
+          "title": "In-app notification center and toast",
+          "desc": "Add the signal to Voltius notifications and show a toast."
+        },
+        "system": {
+          "title": "System notification",
+          "desc": "Use the operating system notification service when available."
+        },
+        "commandFinishNote": "Command-finished notifications are not enabled until a command provides an explicit lifecycle marker and exit status. A disconnect is never treated as successful completion."
       }
     },
     "appearance": {
@@ -1278,6 +1329,10 @@
         "terminalSearch": {
           "label": "Find in Terminal",
           "desc": "Search the terminal scrollback"
+        },
+        "terminalSuggestions": {
+          "label": "Terminal Suggestions",
+          "desc": "Open the insert-only picker for local history and opt-in remote path suggestions. Tab completes trusted remote SSH paths when available."
         },
         "history": {
           "label": "History Panel",

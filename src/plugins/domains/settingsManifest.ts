@@ -20,6 +20,11 @@ import { useLocaleStore, SUPPORTED_LOCALES } from "@/stores/localeStore";
 import { useSecurityStore } from "@/stores/securityStore";
 import { useUpdaterPrefStore } from "@/stores/updaterPrefStore";
 import { useShortcutStore } from "@/stores/shortcutStore";
+import {
+  DEFAULT_TERMINAL_NOTIFICATION_DESTINATIONS,
+  useTerminalNotificationSettingsStore,
+  type TerminalNotificationDestination,
+} from "@/stores/terminalNotificationSettingsStore";
 
 /** Ce qu'une écriture ferait perdre, et dans quel sens. Une clé gardée n'est
  *  dangereuse que dans la direction qui désarme le garde-fou : réactiver
@@ -138,6 +143,7 @@ function explicitDefs(): SettingDef[] {
   const terminal = () => useTerminalSettingsStore.getState();
   const sftp = () => useSftpSettingsStore.getState();
   const theme = () => useThemeStore.getState();
+  const terminalNotifications = () => useTerminalNotificationSettingsStore.getState();
 
   return [
     {
@@ -165,6 +171,30 @@ function explicitDefs(): SettingDef[] {
       get: () => terminal().preferredShell,
       set: (v) => terminal().setPreferredShell(v === null ? null : String(v)),
     },
+    {
+      key: "terminal.zmodemEnabled",
+      type: "boolean", default: false,
+      section: "terminal", labelKey: "settings.terminal.zmodem.title", writable: true,
+      get: () => terminal().zmodemEnabled,
+      set: (v) => terminal().setZmodemEnabled(v as boolean),
+    },
+    {
+      key: "terminal.remotePathCompletion",
+      type: "boolean", default: false,
+      section: "terminal", labelKey: "settings.terminal.remotePathCompletion.title", writable: true,
+      get: () => terminal().remotePathCompletionEnabled,
+      set: (v) => terminal().setRemotePathCompletionEnabled(v as boolean),
+    },
+    ...(["terminal", "inApp", "system"] as const).map((destination: TerminalNotificationDestination) => ({
+      key: `terminalNotifications.${destination}`,
+      type: "boolean" as const,
+      default: DEFAULT_TERMINAL_NOTIFICATION_DESTINATIONS[destination],
+      section: "terminal" as const,
+      labelKey: `settings.terminal.notifications.${destination}.title`,
+      writable: true,
+      get: () => terminalNotifications().destinations[destination],
+      set: (v: unknown) => terminalNotifications().setDestination(destination, v as boolean),
+    })),
     {
       key: "sftp.autoRefreshIntervalMs",
       type: "number", min: 250, max: 60_000,

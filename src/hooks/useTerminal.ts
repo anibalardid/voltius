@@ -1,12 +1,12 @@
 import { attachTerminalClipboard, type TerminalClipboardHandle } from "@/components/terminal/terminalClipboard";
 import { useEffect, useRef, useCallback } from "react";
-import { Terminal, type IBufferCell, type IBufferRange } from "@xterm/xterm";
+import { Terminal, type IBufferCell, type IBufferRange, type IMarker } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { createWebglAddon } from "@/utils/webglAddon";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { SearchAddon, type ISearchOptions } from "@xterm/addon-search";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { onSshOutput, onSshClosed, onSshCwd } from "@/services/ssh";
+import { onSshOutput, onSshRestoreOutput, onSshClosed, onSshCwd, sshListRemoteDir } from "@/services/ssh";
 import { localReady, onLocalOutput, onLocalClosed } from "@/services/local";
 import { onSerialOutput, onSerialClosed } from "@/services/serial";
 import { sendSessionInput as sendSessionInputRaw, sendSessionResize } from "@/services/sessionInput";
@@ -18,6 +18,7 @@ import { getToggle, useToggleSettingsStore } from "@/stores/toggleSettingsStore"
 import { matchShortcut } from "@/stores/shortcutStore";
 import { matchPanelShortcut } from "@/hooks/panelShortcuts";
 import { useSessionStore } from "@/stores/sessionStore";
+import type { SessionCloseIntent } from "@/stores/reconnectBackoffCore";
 import { useTerminalCwdStore } from "@/stores/terminalCwdStore";
 import { broadcastActiveForSession, findLeaf, getPaneSessionIds, useLayoutStore } from "@/stores/layoutStore";
 import { broadcastTargets } from "@/services/broadcast";
@@ -27,16 +28,43 @@ import { sampleLineDensities, scrollDeltaForRatio, type TerminalMinimapCell, typ
 import { wheelToRows } from "@/components/terminal/terminalWheelCore";
 import { keyToBytes } from "@/services/terminalKeyCore";
 import { handleDuplicateShortcut } from "@/services/duplicateSession";
+import { recordSessionOutput } from "@/services/sessionLogging";
+import {
+  notifyTerminalLifecycle,
+  resetTerminalLifecycleNotifications,
+  type LifecycleNotification,
+} from "@/services/terminalLifecycleNotifications";
 import type { TerminalTheme } from "@/themes/types";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import { terminalFontStack } from "@/utils/fontStack";
 import { applyTerminalTheme, clampTerminalLineHeight, subscribeTerminalCursor, subscribeTerminalTheme } from "@/utils/terminalTheme";
 import { getPlatform } from "@/utils/platform";
+import {
+  applyOsc133Marker,
+  createOsc133State,
+  parseOsc133,
+  resetOsc133State,
+  type CommandBlock,
+  type Osc133State,
+} from "@/services/osc133";
+import {
+  getLocalSuggestions,
+  suggestionInsertInput,
+  type TerminalSuggestion,
+} from "@/services/terminalSuggestions";
+import {
+  canRequestRemoteCompletion,
+  isRemoteResultCurrent,
+  remoteCompletionContextFingerprint,
+  requestRemotePathSuggestions,
+  type RemoteCompletionContext,
+} from "@/services/remotePathCompletion";
+import { disposeZmodemSession, getZmodemSession, type ZmodemSession } from "@/services/zmodem";
 
 interface UseTerminalOptions {
   sessionId: string;
   sessionType: "ssh" | "local" | "serial";
-  onClosed?: (remoteExit: boolean) => void;
+  onClosed?: (remoteExit: boolean, closeIntent?: SessionCloseIntent) => void;
   /** If provided, input is only sent to the process when this returns true. */
   inputGate?: React.RefObject<() => boolean>;
   encoding?: string;
@@ -147,6 +175,31 @@ interface MinimapState {
   frame: number | null;
 }
 
+interface BlockState {
+  state: Osc133State;
+  markers: Map<number, IMarker>;
+  subscribers: Set<() => void>;
+}
+
+interface DraftState {
+  text: string;
+  trusted: boolean;
+  cursorAtEnd: boolean;
+}
+
+export interface TerminalSuggestionSnapshot {
+  open: boolean;
+  suggestions: TerminalSuggestion[];
+  selectedIndex: number;
+  draft: string;
+}
+
+interface SuggestionState {
+  snapshot: TerminalSuggestionSnapshot;
+  subscribers: Set<() => void>;
+  generation: number;
+}
+
 export interface TerminalMinimapController {
   subscribe: (fn: () => void) => () => void;
   getSnapshot: () => TerminalMinimapSnapshot;
@@ -156,6 +209,7 @@ export interface TerminalMinimapController {
 }
 
 type CacheEntry = {
+  sessionId: string;
   terminal: Terminal;
   fitAddon: FitAddon;
   searchAddon: SearchAddon;
@@ -170,8 +224,15 @@ type CacheEntry = {
   /** Mirror of the useTerminal `inputGate` so module-level senders (writeToSession)
    *  honor the same multiplayer control-holder gate as the onData handler. */
   inputGateRef: { current: (() => boolean) | undefined };
-  onClosedRef: { current: ((remoteExit: boolean) => void) | undefined };
+  onClosedRef: { current: ((remoteExit: boolean, closeIntent?: SessionCloseIntent) => void) | undefined };
   onResizeRef: { current: ((cols: number, rows: number) => void) | undefined };
+  lifecycleEventSequence: number;
+  blocks: BlockState;
+  draft: DraftState;
+  intentionalShellExit: boolean;
+  zmodem: ZmodemSession | null;
+  suggestions: SuggestionState;
+  suppressOsc133Writes: number;
   dispose: () => void; // full teardown, called only when the session is deleted
 };
 
@@ -210,6 +271,189 @@ function minimapSnapshot(entry: CacheEntry): TerminalMinimapSnapshot {
 function notifyMinimap(entry: CacheEntry) {
   entry.minimap.snapshot = minimapSnapshot(entry);
   entry.minimap.subscribers.forEach((fn) => fn());
+}
+
+function notifyBlocks(entry: CacheEntry): void {
+  entry.blocks.subscribers.forEach((fn) => fn());
+}
+
+function notifySuggestions(entry: CacheEntry): void {
+  entry.suggestions.subscribers.forEach((fn) => fn());
+}
+
+const EMPTY_SUGGESTION_SNAPSHOT: TerminalSuggestionSnapshot = {
+  open: false,
+  suggestions: [],
+  selectedIndex: 0,
+  draft: "",
+};
+
+function invalidateDraft(entry: CacheEntry): void {
+  entry.suggestions.generation += 1;
+  entry.draft.trusted = false;
+  entry.draft.cursorAtEnd = false;
+  entry.suggestions.snapshot = { ...EMPTY_SUGGESTION_SNAPSHOT, draft: entry.draft.text };
+  notifySuggestions(entry);
+}
+
+function updateDraft(entry: CacheEntry, data: string): void {
+  entry.suggestions.generation += 1;
+  if (data.startsWith("\x1b")) {
+    invalidateDraft(entry);
+    return;
+  }
+
+  for (const char of data) {
+    const code = char.charCodeAt(0);
+    if (char === "\r" || char === "\n" || code === 0x03 || code === 0x15) {
+      entry.draft.text = "";
+      entry.draft.trusted = true;
+      entry.draft.cursorAtEnd = true;
+      continue;
+    }
+    if (char === "\x7f" || char === "\b") {
+      if (entry.draft.trusted && entry.draft.cursorAtEnd) entry.draft.text = Array.from(entry.draft.text).slice(0, -1).join("");
+      continue;
+    }
+    if (code >= 0x20 && code !== 0x7f) {
+      if (entry.draft.trusted && entry.draft.cursorAtEnd) {
+        entry.draft.text += char;
+        entry.draft.trusted = true;
+        entry.draft.cursorAtEnd = true;
+      } else {
+        invalidateDraft(entry);
+        return;
+      }
+      continue;
+    }
+    invalidateDraft(entry);
+    return;
+  }
+
+  if (entry.suggestions.snapshot.open) refreshSuggestions(entry);
+}
+
+function suggestionContext(entry: CacheEntry) {
+  const session = useSessionStore.getState().sessions.find((candidate) => candidate.id === entry.sessionId);
+  const sessionType = session?.type === "multiplayer" ? "multiplayer" : entry.sessionType;
+  return {
+    draft: entry.draft.text,
+    entries: useCommandHistoryStore.getState().entries,
+    sessionId: entry.sessionId,
+    connectionId: session?.connectionId ?? "",
+    connectionName: session?.connectionName ?? "",
+    sessionType,
+    connected: entry.connectedRef.current,
+    cursorKnown: entry.draft.trusted && entry.suppressOsc133Writes === 0,
+    alternateScreen: entry.terminal.buffer.active.type === "alternate",
+    mouseTracking: entry.terminal.modes.mouseTrackingMode !== "none",
+    cwd: useTerminalCwdStore.getState().cwds[entry.sessionId],
+    persistent: session?.persist === true,
+    broadcast: broadcastActiveForSession(entry.sessionId),
+    sshSessionKnown: session?.type === "ssh",
+  } as const;
+}
+
+function refreshSuggestions(entry: CacheEntry): void {
+  const generation = ++entry.suggestions.generation;
+  const current = entry.suggestions.snapshot;
+  const context = suggestionContext(entry);
+  const suggestions = getLocalSuggestions(context);
+  const selectedIndex = Math.min(current.selectedIndex, Math.max(0, suggestions.length - 1));
+  entry.suggestions.snapshot = { ...current, suggestions, selectedIndex, draft: entry.draft.text };
+  if (suggestions.length === 0) entry.suggestions.snapshot.open = false;
+  notifySuggestions(entry);
+
+  // The explicit picker and safe Tab requests share the same bounded remote
+  // listing path. Unsafe contexts return before this request is made.
+  const remoteContext = remoteSuggestionContext(entry);
+  if (!remoteContext || !canRequestRemoteCompletion(remoteContext)) return;
+  const requestContextFingerprint = remoteCompletionContextFingerprint(remoteContext);
+  void requestRemotePathSuggestions(remoteContext, sshListRemoteDir, context.connectionName || "SSH")
+    .then((remoteSuggestions) => {
+      const currentRemoteContext = remoteSuggestionContext(entry);
+      if (
+        terminalCache.get(entry.sessionId) !== entry ||
+        !isRemoteResultCurrent(
+          generation,
+          entry.suggestions.generation,
+          requestContextFingerprint,
+          currentRemoteContext,
+        )
+      ) return;
+      if (remoteSuggestions.length === 0) return;
+      const latest = entry.suggestions.snapshot;
+      const localCommands = new Set(latest.suggestions.map((suggestion) => suggestion.command));
+      const merged = [
+        ...latest.suggestions,
+        ...remoteSuggestions.filter((suggestion) => !localCommands.has(suggestion.command)),
+      ];
+      entry.suggestions.snapshot = {
+        ...latest,
+        suggestions: merged,
+        selectedIndex: Math.min(latest.selectedIndex, merged.length - 1),
+        draft: entry.draft.text,
+      };
+      notifySuggestions(entry);
+    });
+}
+
+function remoteSuggestionContext(entry: CacheEntry): RemoteCompletionContext | null {
+  const context = suggestionContext(entry);
+  return {
+    enabled: useTerminalSettingsStore.getState().remotePathCompletionEnabled,
+    draft: context.draft,
+    cwd: context.cwd,
+    sessionId: context.sessionId,
+    connectionId: context.connectionId,
+    sessionType: context.sessionType,
+    sshSessionKnown: context.sshSessionKnown,
+    connected: context.connected,
+    cursorKnown: context.cursorKnown,
+    alternateScreen: context.alternateScreen,
+    mouseTracking: context.mouseTracking,
+    persistent: context.persistent,
+    broadcast: context.broadcast,
+  };
+}
+
+function blockLine(entry: CacheEntry, block: CommandBlock): number | null {
+  const marker = entry.blocks.markers.get(block.id);
+  if (marker && !marker.isDisposed && marker.line >= 0) return marker.line;
+  return block.startLine ?? null;
+}
+
+function navigateBlock(entry: CacheEntry, direction: "previous" | "next"): boolean {
+  if (entry.terminal.buffer.active.type === "alternate" || entry.terminal.modes.mouseTrackingMode !== "none") return false;
+  const current = entry.terminal.buffer.active.viewportY;
+  const blocks = entry.blocks.state.blocks
+    .map((block) => ({ block, line: blockLine(entry, block) }))
+    .filter((item): item is { block: CommandBlock; line: number } => item.line !== null && item.line >= 0);
+  if (blocks.length === 0) return false;
+  const target = direction === "previous"
+    ? [...blocks].reverse().find((item) => item.line < current) ?? blocks[0]
+    : blocks.find((item) => item.line > current + Math.max(0, entry.terminal.rows - 1)) ?? blocks[blocks.length - 1];
+  entry.terminal.scrollToLine(target.line);
+  return true;
+}
+
+function terminalFeedback(entry: CacheEntry, notification: LifecycleNotification): void {
+  // This is xterm display output only; it never traverses the session input path.
+  // Keep it plain text so an explicit BEL notification cannot recursively trigger
+  // another lifecycle signal.
+  entry.terminal.write(`\r\n\x1b[90m[Voltius] ${notification.title}: ${notification.body}\x1b[0m\r\n`);
+}
+
+function broadcastGroupId(sessionId: string): string | undefined {
+  if (!broadcastActiveForSession(sessionId)) return undefined;
+  return broadcastTargets().map((target) => target.id).sort().join(",");
+}
+
+function sessionIsConnected(sessionId: string, sessionType: CacheEntry["sessionType"]): boolean {
+  if (sessionType === "serial") return true;
+  return useSessionStore.getState().sessions.some(
+    (session) => session.id === sessionId && session.status === "connected",
+  );
 }
 
 // Scroll position lives in the xterm buffer, not a store, so the workspace
@@ -445,6 +689,24 @@ export interface TerminalSearchController {
   toggleRegex: () => void;
 }
 
+export interface TerminalBlockController {
+  subscribe: (fn: () => void) => () => void;
+  getBlocks: () => CommandBlock[];
+  previous: () => boolean;
+  next: () => boolean;
+}
+
+export interface TerminalSuggestionController {
+  subscribe: (fn: () => void) => () => void;
+  getSnapshot: () => TerminalSuggestionSnapshot;
+  open: () => void;
+  dismiss: () => void;
+  select: (index: number) => void;
+  previous: () => void;
+  next: () => void;
+  accept: () => void;
+}
+
 /** Live terminal dimensions, so request_pty starts at the real window size
  * (screen/tmux pin their layout to the size at creation). */
 export function getTerminalDims(sessionId: string): { cols: number; rows: number } | null {
@@ -473,6 +735,7 @@ export function writeToSession(sessionId: string, data: string): void {
   if (!entry) return;
   if (entry.inputGateRef.current && !entry.inputGateRef.current()) return;
   if (!entry.connectedRef.current) return;
+  if (entry.zmodem?.isActive()) return;
   const sess = useSessionStore.getState().sessions.find((s) => s.id === sessionId);
   if (sess) {
     useCommandHistoryStore.getState().addInput(sessionId, sess.connectionName, sess.connectionId, data);
@@ -636,6 +899,88 @@ export function getTerminalMinimapController(sessionId: string): TerminalMinimap
   };
 }
 
+export function getTerminalBlockController(sessionId: string): TerminalBlockController | null {
+  const entry = terminalCache.get(sessionId);
+  if (!entry) return null;
+  return {
+    subscribe: (fn) => { entry.blocks.subscribers.add(fn); return () => entry.blocks.subscribers.delete(fn); },
+    getBlocks: () => entry.blocks.state.blocks,
+    previous: () => navigateBlock(entry, "previous"),
+    next: () => navigateBlock(entry, "next"),
+  };
+}
+
+export function getTerminalSuggestionController(sessionId: string): TerminalSuggestionController | null {
+  const entry = terminalCache.get(sessionId);
+  if (!entry) return null;
+  return {
+    subscribe: (fn) => { entry.suggestions.subscribers.add(fn); return () => entry.suggestions.subscribers.delete(fn); },
+    getSnapshot: () => entry.suggestions.snapshot,
+    open: () => {
+      refreshSuggestions(entry);
+      const remotePending = remoteSuggestionContext(entry);
+      if (entry.suggestions.snapshot.suggestions.length === 0 && (!remotePending || !canRequestRemoteCompletion(remotePending))) return;
+      entry.suggestions.snapshot = { ...entry.suggestions.snapshot, open: true, selectedIndex: 0, draft: entry.draft.text };
+      notifySuggestions(entry);
+    },
+    dismiss: () => {
+      entry.suggestions.snapshot = { ...EMPTY_SUGGESTION_SNAPSHOT, draft: entry.draft.text };
+      notifySuggestions(entry);
+      entry.terminal.focus();
+    },
+    select: (index) => {
+      if (index < 0 || index >= entry.suggestions.snapshot.suggestions.length) return;
+      entry.suggestions.snapshot = { ...entry.suggestions.snapshot, selectedIndex: index };
+      notifySuggestions(entry);
+    },
+    previous: () => {
+      const { suggestions, selectedIndex } = entry.suggestions.snapshot;
+      if (!suggestions.length) return;
+      entry.suggestions.snapshot = { ...entry.suggestions.snapshot, selectedIndex: (selectedIndex - 1 + suggestions.length) % suggestions.length };
+      notifySuggestions(entry);
+    },
+    next: () => {
+      const { suggestions, selectedIndex } = entry.suggestions.snapshot;
+      if (!suggestions.length) return;
+      entry.suggestions.snapshot = { ...entry.suggestions.snapshot, selectedIndex: (selectedIndex + 1) % suggestions.length };
+      notifySuggestions(entry);
+    },
+    accept: () => {
+      const current = entry.suggestions.snapshot;
+      const selected = current.suggestions[current.selectedIndex];
+      if (!current.open || !selected || !entry.draft.trusted || selected.command === entry.draft.text) return;
+      entry.suggestions.generation += 1;
+        writeToSession(sessionId, suggestionInsertInput(entry.draft.text, selected.command));
+        entry.draft.text = selected.command;
+        entry.draft.trusted = true;
+        entry.draft.cursorAtEnd = true;
+      entry.suggestions.snapshot = { ...EMPTY_SUGGESTION_SNAPSHOT, draft: entry.draft.text };
+      notifySuggestions(entry);
+      entry.terminal.focus();
+    },
+  };
+}
+
+function canHandleRemoteCompletionTab(entry: CacheEntry): boolean {
+  const context = remoteSuggestionContext(entry);
+  return context !== null && canRequestRemoteCompletion(context);
+}
+
+export function isTerminalBlockNavKey(e: KeyboardEvent): boolean {
+  return e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && (e.key === "PageUp" || e.key === "PageDown");
+}
+
+export function handleTerminalBlockNav(sessionId: string, e: KeyboardEvent): boolean {
+  if (!isTerminalBlockNavKey(e)) return false;
+  const controller = getTerminalBlockController(sessionId);
+  if (!controller || controller.getBlocks().length === 0) return false;
+  if (e.type === "keydown") {
+    if (e.key === "PageUp") controller.previous();
+    else controller.next();
+  }
+  return true;
+}
+
 /** Open the search widget for a given session (no-op if the session has no cached terminal yet). */
 export function openTerminalSearch(sessionId: string): void {
   getTerminalSearchController(sessionId)?.open();
@@ -679,7 +1024,7 @@ export function handleTerminalSearchNav(sessionId: string, e: KeyboardEvent): bo
   return true;
 }
 
-useSessionStore.subscribe((state) => {
+useSessionStore.subscribe((state, previous) => {
   const currentIds = new Set(state.sessions.map((s) => s.id));
   for (const [id, entry] of terminalCache) {
     if (!currentIds.has(id)) {
@@ -693,16 +1038,68 @@ useSessionStore.subscribe((state) => {
   // backend registered it sent resizes at a session id the backend answered
   // with "Session not found".
   for (const [id, entry] of terminalCache) {
-    if (entry.sessionType === "serial") continue;
     const session = state.sessions.find((s) => s.id === id);
+    const previousSession = previous.sessions.find((s) => s.id === id);
+    const sessionContextChanged = session?.connectionId !== previousSession?.connectionId ||
+      session?.persist !== previousSession?.persist ||
+      session?.type !== previousSession?.type;
+    if (sessionContextChanged) {
+      entry.suggestions.generation += 1;
+      if (entry.suggestions.snapshot.open) refreshSuggestions(entry);
+    }
     const nowConnected = session?.status === "connected";
     if (nowConnected && !entry.connectedRef.current) {
       entry.connectedRef.current = true;
+      entry.intentionalShellExit = false;
+      // A reconnect is a new OSC generation. Replayed scrollback and a fresh
+      // shell prompt must not complete or duplicate blocks from the old PTY.
+      entry.blocks.state = resetOsc133State(entry.blocks.state);
+      entry.blocks.markers.forEach((marker) => marker.dispose());
+      entry.blocks.markers.clear();
+      entry.suppressOsc133Writes = 0;
+       entry.draft.text = "";
+       entry.draft.trusted = true;
+       entry.draft.cursorAtEnd = true;
+      entry.suggestions.snapshot = { ...EMPTY_SUGGESTION_SNAPSHOT };
+      notifyBlocks(entry);
+      notifySuggestions(entry);
+      resetTerminalLifecycleNotifications(id);
+      if (entry.sessionType === "serial") continue;
       entry.fitAddon.fit();
       sendResize(id, entry.sessionType, entry.terminal.cols, entry.terminal.rows);
     } else if (!nowConnected) {
       entry.connectedRef.current = false;
+      invalidateDraft(entry);
     }
+  }
+});
+
+// Cwd arrives asynchronously through OSC 7 or the persistent-session poller.
+// Treat it as editor context: an in-flight listing for the old directory must
+// never be allowed to populate the current picker.
+useTerminalCwdStore.subscribe((state, previous) => {
+  for (const [id, entry] of terminalCache) {
+    if (state.cwds[id] === previous.cwds[id]) continue;
+    entry.suggestions.generation += 1;
+    if (entry.suggestions.snapshot.open) refreshSuggestions(entry);
+  }
+});
+
+useLayoutStore.subscribe((state, previous) => {
+  for (const [id, entry] of terminalCache) {
+    const wasBroadcast = previous.broadcastActive && previous.splitTabActive && getPaneSessionIds(previous.root).includes(id);
+    const isBroadcast = state.broadcastActive && state.splitTabActive && getPaneSessionIds(state.root).includes(id);
+    if (wasBroadcast === isBroadcast) continue;
+    entry.suggestions.generation += 1;
+    if (entry.suggestions.snapshot.open) refreshSuggestions(entry);
+  }
+});
+
+useTerminalSettingsStore.subscribe((state, previous) => {
+  if (state.remotePathCompletionEnabled === previous.remotePathCompletionEnabled) return;
+  for (const [, entry] of terminalCache) {
+    entry.suggestions.generation += 1;
+    if (entry.suggestions.snapshot.open) refreshSuggestions(entry);
   }
 });
 
@@ -766,6 +1163,7 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
       // ── Reuse existing terminal ───────────────────────────────────────────
       if (existing) {
         const { terminal, fitAddon } = existing;
+        existing.connectedRef.current = sessionIsConnected(sessionId, existing.sessionType);
         existing.inputGateRef.current = inputGate?.current;
         existing.onClosedRef.current = onClosed;
         existing.onResizeRef.current = onResize;
@@ -870,9 +1268,24 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
 
       const encoder = new TextEncoder();
       const decoder = encoding ? new TextDecoder(encoding) : null;
+      const renderOutput = (data: Uint8Array, afterWrite?: () => void, suppressOsc133 = false) => {
+        if (suppressOsc133) entry.suppressOsc133Writes += 1;
+        term.write(decoder ? decoder.decode(data) : data, () => {
+          if (suppressOsc133) entry.suppressOsc133Writes = Math.max(0, entry.suppressOsc133Writes - 1);
+          scheduleMinimapNotify(entry);
+          if (term.buffer.active.type === "alternate" || term.modes.mouseTrackingMode !== "none") invalidateDraft(entry);
+          afterWrite?.();
+        });
+        if (term.buffer.active.type === "alternate" || term.modes.mouseTrackingMode !== "none") invalidateDraft(entry);
+      };
+      const writeOutput = (data: Uint8Array, afterWrite?: () => void) => {
+        renderOutput(data, afterWrite);
+        recordSessionOutput(sessionId, data);
+      };
 
       // Build the cache entry first so closures below can reference it
       const entry: CacheEntry = {
+        sessionId,
         terminal: term,
         fitAddon,
         searchAddon,
@@ -883,17 +1296,28 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
           frame: null,
         },
         sessionType,
-        // Serial is live the moment its port opens (the store marks it
-        // connected before the terminal mounts); ssh and local flip in the
-        // store subscription above, once the backend owns the session.
-        connectedRef: { current: sessionType === "serial" },
+        // Serial is live the moment its port opens. SSH/local can already be
+        // connected when a restored terminal mounts, so read the store's
+        // authoritative state instead of waiting for a transition that may
+        // never arrive. Unknown or non-connected states stay safely false.
+        connectedRef: { current: sessionIsConnected(sessionId, sessionType) },
         clip: null,
         inputGateRef: { current: inputGate?.current },
         onClosedRef: { current: onClosed },
         onResizeRef: { current: onResize },
+        lifecycleEventSequence: 0,
+        blocks: { state: createOsc133State(), markers: new Map(), subscribers: new Set() },
+        draft: { text: "", trusted: true, cursorAtEnd: true },
+        intentionalShellExit: false,
+        zmodem: null,
+         suggestions: { snapshot: { ...EMPTY_SUGGESTION_SNAPSHOT }, subscribers: new Set(), generation: 0 },
+        suppressOsc133Writes: 0,
         dispose: () => {}, // filled in below
       };
       terminalCache.set(sessionId, entry);
+      if (sessionType === "ssh") {
+        entry.zmodem = getZmodemSession(sessionId, (bytes) => sendSessionInputRaw(sessionId, "ssh", bytes));
+      }
       notifyMinimap(entry);
 
       const searchResultsDispose = searchAddon.onDidChangeResults(({ resultIndex, resultCount }) => {
@@ -906,6 +1330,26 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
         notifyScrollListeners();
       });
       const bufferChangeDispose = term.buffer.onBufferChange(() => scheduleMinimapNotify(entry));
+      const bellDispose = term.onBell(() => {
+        const session = useSessionStore.getState().sessions.find((candidate) => candidate.id === sessionId);
+        const groupId = broadcastGroupId(sessionId);
+        void notifyTerminalLifecycle(
+          {
+            kind: "terminal-bell",
+            sessionId,
+            sessionName: session?.title || session?.connectionName || "Terminal session",
+            sessionType,
+            // Broadcast targets do not share a transport event id. A short
+            // time bucket gives simultaneous fan-out bells one logical id
+            // without suppressing later, intentional bells.
+            eventId: groupId
+              ? `broadcast:${Math.floor(Date.now() / 500)}`
+              : `${sessionId}:${++entry.lifecycleEventSequence}`,
+            broadcastGroupId: groupId,
+          },
+          (notification) => terminalFeedback(entry, notification),
+        );
+      });
 
       // Intercept app shortcuts before xterm processes them
       term.attachCustomKeyEventHandler((e: KeyboardEvent) => {
@@ -948,6 +1392,35 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
           if (!handleTerminalSearchNav(sessionId, e)) return true;
           return claimChord(e);
         }
+        const suggestionController = getTerminalSuggestionController(sessionId);
+        const suggestionOpen = suggestionController?.getSnapshot().open ?? false;
+        if (suggestionOpen && ["ArrowUp", "ArrowDown", "Enter", "Escape"].includes(e.key)) {
+          if (e.type === "keydown") {
+            if (e.key === "ArrowUp") suggestionController?.previous();
+            else if (e.key === "ArrowDown") suggestionController?.next();
+            else if (e.key === "Enter") suggestionController?.accept();
+            else suggestionController?.dismiss();
+          }
+          return claimChord(e);
+        }
+        const isUnmodifiedTab = e.key === "Tab" && !e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey;
+        if (isUnmodifiedTab && canHandleRemoteCompletionTab(entry)) {
+          if (e.type === "keydown") {
+            const current = suggestionController?.getSnapshot();
+            const selected = current?.open && current.suggestions[current.selectedIndex];
+            if (selected) suggestionController?.accept();
+            else suggestionController?.open();
+          }
+          return claimChord(e);
+        }
+        if (matchShortcut("terminal-suggestions", e)) {
+          if (e.type === "keydown") suggestionController?.open();
+          return claimChord(e);
+        }
+        if (isTerminalBlockNavKey(e)) {
+          if (!handleTerminalBlockNav(sessionId, e)) return true;
+          return claimChord(e);
+        }
         const panelSection = matchPanelShortcut(e);
         if (panelSection) {
           if (e.type === "keydown") useUIStore.getState().toggleRightPanel(panelSection);
@@ -961,6 +1434,7 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
       // when split-pane broadcast is active. Shared by typed input (onData) and
       // synthesized alt-screen scroll arrows so both honor broadcast identically.
       const routeInputBytes = (bytes: Uint8Array) => {
+        if (entry.zmodem?.isActive()) return;
         if (broadcastActiveForSession(sessionId)) {
           for (const target of broadcastTargets()) {
             sendSessionInput(target.id, target.type === "serial" ? "serial" : target.type as "ssh" | "local", bytes);
@@ -1081,14 +1555,54 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
         return true;
       });
 
+      // OSC 133 is deliberately additive: malformed markers, unsupported
+      // shells, multiplexers, replay output, alternate-screen TUIs, and serial
+      // sessions remain ordinary terminal output with no input side effects.
+      const osc133Dispose = term.parser.registerOscHandler(133, (data) => {
+        if (entry.sessionType === "serial") return false;
+        if (entry.suppressOsc133Writes > 0 || term.buffer.active.type === "alternate" || term.modes.mouseTrackingMode !== "none") return true;
+        const parsed = parseOsc133(data);
+        if (parsed.malformed || !parsed.marker) return true;
+
+        let marker: IMarker | undefined;
+        if (parsed.marker.kind === "command-start" || parsed.marker.kind === "command-finished") {
+          try { marker = term.registerMarker(); } catch { /* marker support is optional */ }
+        }
+        const before = entry.blocks.state;
+        entry.blocks.state = applyOsc133Marker(before, parsed.marker, marker ? { line: marker.line } : undefined);
+        if (marker && parsed.marker.kind === "command-start" && entry.blocks.state.activeBlockId !== null) {
+          entry.blocks.markers.set(entry.blocks.state.activeBlockId, marker);
+        }
+        notifyBlocks(entry);
+        return true;
+      });
+
       const onDataDispose = term.onData((data) => {
         if (inputGate && !inputGate.current?.()) return;
         if (!entry.connectedRef.current) return;
+        if (entry.zmodem?.isActive()) return;
 
         // Mobile extra-keys row: apply a latched virtual Ctrl/Alt to this typed char
         // (e.g. latch Ctrl, type "c" → Ctrl-C). Inert on desktop (latch never armed).
         const latched = consumeLatchForChar(data);
         if (latched !== null) data = latched;
+
+        entry.intentionalShellExit = false;
+          if (term.buffer.active.type === "alternate" || term.modes.mouseTrackingMode !== "none") {
+            invalidateDraft(entry);
+          } else {
+            const intentionalShellExit = data === "\x04" &&
+              entry.sessionType === "ssh" &&
+              entry.connectedRef.current &&
+              term.buffer.active.type === "normal" &&
+              entry.suppressOsc133Writes === 0 &&
+              entry.draft.trusted &&
+            entry.draft.cursorAtEnd &&
+            entry.draft.text.length === 0 &&
+            !broadcastActiveForSession(sessionId);
+          entry.intentionalShellExit = intentionalShellExit;
+          updateDraft(entry, data);
+        }
 
         const sess = useSessionStore.getState().sessions.find((s) => s.id === sessionId);
         if (sess) {
@@ -1104,9 +1618,20 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
 
       if (sessionType === "local") {
         const localListeners = [
-          onLocalOutput(sessionId, (data) => { term.write(decoder ? decoder.decode(data) : data, () => scheduleMinimapNotify(entry)); }),
+          onLocalOutput(sessionId, (data) => writeOutput(data)),
           onLocalClosed(sessionId, () => {
-            term.write("\r\n\x1b[90m--- Session closed ---\x1b[0m\r\n");
+            invalidateDraft(entry);
+            const session = useSessionStore.getState().sessions.find((candidate) => candidate.id === sessionId);
+            void notifyTerminalLifecycle(
+              {
+                kind: "session-ended",
+                sessionId,
+                sessionName: session?.title || session?.connectionName || "Local session",
+                sessionType,
+                reason: "local-exit",
+              },
+              (notification) => terminalFeedback(entry, notification),
+            );
             entry.onClosedRef.current?.(false);
           }),
         ];
@@ -1120,24 +1645,58 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
           .catch((err) => log.debug(`local session ${sessionId} readiness ack failed`, err));
       } else if (sessionType === "serial") {
         unlistenPromises.push(
-          onSerialOutput(sessionId, (data) => { term.write(decoder ? decoder.decode(data) : data, () => scheduleMinimapNotify(entry)); }),
+          onSerialOutput(sessionId, (data) => writeOutput(data)),
         );
         unlistenPromises.push(
           onSerialClosed(sessionId, () => {
-            term.write("\r\n\x1b[90m--- Serial connection closed ---\x1b[0m\r\n");
+            invalidateDraft(entry);
+            const session = useSessionStore.getState().sessions.find((candidate) => candidate.id === sessionId);
+            void notifyTerminalLifecycle(
+              {
+                kind: "session-ended",
+                sessionId,
+                sessionName: session?.title || session?.connectionName || "Serial session",
+                sessionType,
+                reason: "serial-close",
+              },
+              (notification) => terminalFeedback(entry, notification),
+            );
             entry.onClosedRef.current?.(false);
           }),
         );
       } else {
         unlistenPromises.push(
           onSshOutput(sessionId, (data) => {
-            term.write(decoder ? decoder.decode(data) : data, () => scheduleMinimapNotify(entry));
-            noteRestoreOutput(sessionId);
+            const terminalBytes = entry.zmodem?.consume(data) ?? data;
+            if (terminalBytes.length) writeOutput(terminalBytes, () => noteRestoreOutput(sessionId));
+          }),
+        );
+        unlistenPromises.push(
+          onSshRestoreOutput(sessionId, (data) => {
+            // Restore output is historical replay, not a new command lifecycle.
+            // Suppress OSC 133 state updates so reattachment cannot duplicate
+            // blocks or manufacture a result from stale scrollback.
+            renderOutput(data, () => noteRestoreOutput(sessionId), true);
           }),
         );
         unlistenPromises.push(
           onSshClosed(sessionId, (remoteExit) => {
-            entry.onClosedRef.current?.(remoteExit);
+            const closeIntent = entry.intentionalShellExit ? "intentional-shell-exit" : undefined;
+            entry.intentionalShellExit = false;
+            invalidateDraft(entry);
+            if (entry.zmodem?.isActive()) void entry.zmodem.cancel();
+            const session = useSessionStore.getState().sessions.find((candidate) => candidate.id === sessionId);
+            void notifyTerminalLifecycle(
+              {
+                kind: "session-ended",
+                sessionId,
+                sessionName: session?.title || session?.connectionName || "SSH session",
+                sessionType,
+                reason: remoteExit ? "remote-exit" : "disconnect",
+              },
+              (notification) => terminalFeedback(entry, notification),
+            );
+            entry.onClosedRef.current?.(remoteExit, closeIntent);
           }),
         );
         // Persistent sessions (tmux/screen) hide the shell's OSC 7 from the
@@ -1160,18 +1719,25 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
 
       // Full teardown — only called when the session is deleted from the store
       entry.dispose = () => {
+        entry.intentionalShellExit = false;
+        entry.suggestions.generation += 1;
         onDataDispose.dispose();
         onResizeDispose.dispose();
         oscCwdDispose.dispose();
-        searchResultsDispose.dispose();
-        scrollDispose.dispose();
-        bufferChangeDispose.dispose();
+        osc133Dispose.dispose();
+         searchResultsDispose.dispose();
+         scrollDispose.dispose();
+         bufferChangeDispose.dispose();
+         bellDispose.dispose();
         if (entry.minimap.frame !== null) cancelAnimationFrame(entry.minimap.frame);
         entry.search.subscribers.clear();
         entry.minimap.subscribers.clear();
+        entry.suggestions.subscribers.clear();
         hideLinkTooltip();
         Promise.all(unlistenPromises).then((fns) => fns.forEach((fn) => fn()));
-        term.dispose();
+         term.dispose();
+         if (entry.zmodem?.isActive()) void entry.zmodem.cancel();
+         disposeZmodemSession(sessionId);
       };
 
       bindContainer(entry, container);

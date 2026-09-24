@@ -18,6 +18,8 @@ import { useImportExportContributions } from "@/hooks/useImportExportContributio
 import { useMcpServerSync } from "@/hooks/useMcpServerSync";
 import { useChangelogAutoOpen } from "@/hooks/useChangelogAutoOpen";
 import { useSnippetStore } from "@/stores/snippetStore";
+import { useSessionStore } from "@/stores/sessionStore";
+import { getSnippetInjectTargetCount } from "@/services/snippetInject";
 import { injectPendingSnippet } from "@/services/snippetPendingInject";
 import { initUpdaterListener } from "@/services/updater";
 import { useUpdaterPrefStore } from "@/stores/updaterPrefStore";
@@ -55,6 +57,7 @@ function App() {
   const platform = usePlatform();
   const globalPendingInject = useSnippetStore((s) => s.globalPendingInject);
   const setGlobalPendingInject = useSnippetStore((s) => s.setGlobalPendingInject);
+  const sessions = useSessionStore((s) => s.sessions);
 
   if (!ready) {
     return <SplashScreen onReady={() => setReady(true)} />;
@@ -79,10 +82,15 @@ function App() {
           snippets page and the mobile snippet list */}
       {globalPendingInject && (
         <SnippetVariableModal
-          snippetName={globalPendingInject.snippet.name}
-          partialTemplate={globalPendingInject.partialTemplate}
-          userVars={globalPendingInject.userVars}
-          initialValues={globalPendingInject.initialValues}
+           snippetName={globalPendingInject.snippet.name}
+           partialTemplate={globalPendingInject.partialTemplate}
+           displayPartialTemplate={globalPendingInject.displayPartialTemplate}
+           userVars={globalPendingInject.userVars}
+           initialValues={globalPendingInject.initialValues}
+           executeTargetCount={(() => {
+             const target = sessions.find((s) => s.id === globalPendingInject.sessionIds[0]);
+             return target ? getSnippetInjectTargetCount(target, true) : 0;
+           })()}
           onInject={(resolvedText, execute) => {
             void injectPendingSnippet(globalPendingInject, resolvedText, execute);
             setGlobalPendingInject(null);

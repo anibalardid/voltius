@@ -1,5 +1,5 @@
 import { writeClipboard } from "../../utils/clipboard";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@iconify/react";
 import { useCommandHistoryStore, type CommandHistoryEntry } from "@/stores/commandHistoryStore";
@@ -7,6 +7,7 @@ import { useSessionStore } from "@/stores/sessionStore";
 import { broadcastSnippetInject } from "@/services/snippetInject";
 import { useCopiedFlash } from "@/hooks/useCopiedFlash";
 import i18n from "@/i18n";
+import { rankCommandHistory } from "@/services/commandHistorySearch";
 
 function formatRelativeTime(ts: number): string {
   const diff = Date.now() - ts;
@@ -29,6 +30,7 @@ function HistoryRow({
   onExecute,
   onCopy,
   onDelete,
+  selected,
 }: {
   entry: CommandHistoryEntry;
   canInject: boolean;
@@ -36,6 +38,7 @@ function HistoryRow({
   onExecute: () => void;
   onCopy: () => void;
   onDelete: () => void;
+  selected: boolean;
 }) {
   const { t } = useTranslation();
   const { copied, flash } = useCopiedFlash(1200);
@@ -48,9 +51,10 @@ function HistoryRow({
   return (
     <div
       className="group px-3 py-2 border-b transition-colors"
-      style={{ borderColor: "var(--t-border)" }}
+      style={{ borderColor: "var(--t-border)", background: selected ? "var(--t-bg-elevated)" : "transparent" }}
+      aria-selected={selected}
       onMouseEnter={(e) => (e.currentTarget.style.background = "var(--t-bg-elevated)")}
-      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+      onMouseLeave={(e) => (e.currentTarget.style.background = selected ? "var(--t-bg-elevated)" : "transparent")}
     >
       <div className="flex items-start justify-between gap-1">
         <div className="flex-1 min-w-0">
@@ -129,9 +133,11 @@ export function HistoryPanel() {
   const [query, setQuery] = useState("");
   const [confirmClear, setConfirmClear] = useState(false);
   const [filterCurrent, setFilterCurrent] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [actionStatus, setActionStatus] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const canInject = !!activeSession && activeSession.type !== "multiplayer";
+  const canInject = !!activeSession && activeSession.status === "connected" && activeSession.type !== "multiplayer";
 
   useEffect(() => {
     const focus = () => { searchRef.current?.focus(); searchRef.current?.select(); };
@@ -144,23 +150,41 @@ export function HistoryPanel() {
     if (filterCurrent && activeSession) {
       list = list.filter((e) => e.connectionId === activeSession.connectionId);
     }
-    if (query) {
-      const q = query.toLowerCase();
-      list = list.filter(
-        (e) =>
-          e.command.toLowerCase().includes(q) ||
-          e.sessionName.toLowerCase().includes(q),
-      );
-    }
-    return [...list].reverse();
+    return rankCommandHistory(list, query);
   }, [entries, query, filterCurrent, activeSession]);
 
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [query, filterCurrent, activeSession?.connectionId]);
+
   async function inject(text: string, execute: boolean) {
-    if (!activeSession || activeSession.type === "multiplayer") return;
+    const current = useSessionStore.getState().sessions.find(
+      (session) => session.id === useSessionStore.getState().activeSessionId,
+    );
+    if (!current || current.status !== "connected" || current.type === "multiplayer") return;
     try {
-      await broadcastSnippetInject([activeSession], text, execute);
+      const result = await broadcastSnippetInject([current], text, execute);
+      setActionStatus(t(
+        execute ? "terminal.historyPanel.executedOnTargets" : "terminal.historyPanel.insertedOnTargets",
+        { count: result.targetCount },
+      ));
     } catch (e) {
       console.error("history inject failed:", e);
+    }
+  }
+
+  function handleSearchKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelectedIndex((index) => Math.min(index + 1, Math.max(0, filtered.length - 1)));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedIndex((index) => Math.max(0, index - 1));
+    } else if (e.key === "Enter") {
+      const entry = filtered[selectedIndex];
+      if (!entry) return;
+      e.preventDefault();
+      void inject(entry.command, e.shiftKey);
     }
   }
 
@@ -176,8 +200,9 @@ export function HistoryPanel() {
           <Icon icon="lucide:search" width={12}
             className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none"
             style={{ color: "var(--t-text-muted)" }} />
-          <input ref={searchRef} value={query} onChange={(e) => setQuery(e.target.value)}
+          <input ref={searchRef} value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={handleSearchKeyDown}
             placeholder={t("terminal.historyPanel.searchPlaceholder")}
+            aria-label={t("terminal.historyPanel.localHistoryLabel")}
             className="w-full pl-6 pr-2 py-1 text-xs rounded-sm border outline-hidden"
             style={{ background: "var(--t-bg-input)", borderColor: "var(--t-border)", color: "var(--t-text-primary)" }} />
         </div>
@@ -217,6 +242,17 @@ export function HistoryPanel() {
         )}
       </div>
 
+      <div className="flex items-center justify-between px-3 py-1 border-b text-[10px]" style={{ borderColor: "var(--t-border)", color: "var(--t-text-muted)" }}>
+        <span>{t("terminal.historyPanel.localHistoryLabel")}</span>
+        <span>{t("terminal.historyPanel.keyboardHint")}</span>
+      </div>
+
+      {actionStatus && (
+        <div className="px-3 py-1 text-[10px]" style={{ color: "var(--t-accent)" }} role="status">
+          {actionStatus}
+        </div>
+      )}
+
       {/* List */}
       <div className="flex-1 min-h-0 overflow-y-auto">
         {filtered.length === 0 && (
@@ -232,7 +268,7 @@ export function HistoryPanel() {
           </div>
         )}
 
-        {filtered.map((entry) => (
+        {filtered.map((entry, index) => (
           <HistoryRow
             key={entry.id}
             entry={entry}
@@ -241,6 +277,7 @@ export function HistoryPanel() {
             onExecute={() => inject(entry.command, true)}
             onCopy={() => handleCopy(entry.command)}
             onDelete={() => remove(entry.id)}
+            selected={index === selectedIndex}
           />
         ))}
       </div>

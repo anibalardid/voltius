@@ -36,6 +36,48 @@
       "ignoreBracketedPaste": {
         "title": "纯文本粘贴（无括号粘贴）",
         "desc": "不带 \\x1b[200~ / \\x1b[201~ 标记的纯文本粘贴。修复粘贴到 sudo 提示符或不支持括号粘贴的 CLI 应用时的乱码问题。"
+      },
+      "zmodem": {
+        "title": "Experimental Zmodem transfers",
+        "desc": "Enable explicit Send and Receive actions for non-persistent SSH sessions on desktop. Remote offers are never accepted automatically.",
+        "privacyWarning": "Experimental and privacy-sensitive: transferred data is written to a local destination you choose. Zmodem protocol bytes are kept out of terminal output and session logs."
+      },
+      "remotePathCompletion": {
+        "title": "远程路径补全",
+        "desc": "允许终端建议选择器通过当前 SSH 会话添加远程路径名称。默认关闭；可用时，Tab 会补全可信的远程 SSH 路径。"
+      },
+      "sessionLogging": {
+        "title": "会话输出记录",
+        "desc": "在本地记录终端输出，供日后查看。不会记录输入、按键、命令历史或输入字节。",
+        "privacyWarning": "警告：终端输出可能包含密码、令牌和其他机密信息。请定期查看并清除记录。",
+        "location": "记录目录",
+        "chooseDirectory": "选择目录",
+        "useDefault": "使用应用数据默认目录",
+        "retention": "保留与轮换",
+        "maxFileSize": "最大文件大小",
+        "maxTotalSize": "最大总大小",
+        "maxAge": "最长保留时间",
+        "days": "天",
+        "recordings": "记录",
+        "refresh": "刷新",
+        "noRecordings": "暂无记录。",
+        "clearOne": "清除记录",
+        "clearAll": "清除所有记录",
+        "confirmClearOne": "要清除记录 {{fileName}} 吗？此操作无法撤销。",
+        "confirmClearAll": "要清除所有会话记录吗？此操作无法撤销。",
+        "loadError": "无法加载会话记录设置。",
+        "changeDirectoryError": "无法更改记录目录。",
+        "retentionError": "无法保存保留设置。",
+        "clearError": "无法清除记录。",
+        "toggleError": "无法更改会话记录设置。"
+      },
+      "notifications": {
+        "title": "终端生命周期通知",
+        "desc": "选择显示可靠终端信号的位置。所有目标默认关闭。",
+        "terminal": { "title": "终端反馈", "desc": "在受影响的终端中显示一行简短状态。" },
+        "inApp": { "title": "应用内通知中心和弹窗", "desc": "将信号添加到 Voltius 通知并显示弹窗。" },
+        "system": { "title": "系统通知", "desc": "系统通知服务可用时使用该服务。" },
+        "commandFinishNote": "在命令提供明确的生命周期标记和退出状态之前，不会启用命令完成通知。连接断开绝不会被视为成功完成。"
       }
     },
     "appearance": {
@@ -1278,6 +1320,10 @@
         "terminalSearch": {
           "label": "在终端中查找",
           "desc": "搜索终端回滚"
+        },
+        "terminalSuggestions": {
+          "label": "终端建议",
+          "desc": "打开仅插入的选择器，显示本地历史和可选的远程路径建议。可用时，Tab 会补全可信的远程 SSH 路径。"
         },
         "history": {
           "label": "历史面板",

@@ -337,6 +337,18 @@ await (async () => {
   handleSessionClosed("ssh", "s1", deps("connected", true), true);
   assertEqual(calls, ["backoff"], "a persistent session still reconnects on a clean wrapper exit");
 
+  // Ctrl+D in an empty shell is an explicit user intent, including when the
+  // session normally defaults to a persistent tmux/screen wrapper.
+  calls.length = 0;
+  handleSessionClosed("ssh", "s1", deps("connected", true), false, "intentional-shell-exit");
+  assertEqual(calls, ["end"], "an intentional shell exit ends a persistent session without reconnecting");
+
+  // The close event can arrive after the store has already entered the reconnecting state.
+  // The explicit user intent must still end the session rather than being mistaken for a drop.
+  calls.length = 0;
+  handleSessionClosed("ssh", "s1", deps("connecting", true), false, "intentional-shell-exit");
+  assertEqual(calls, ["end"], "an intentional shell exit ends even after status leaves connected");
+
   // A dropped link carries no exit-status.
   calls.length = 0;
   handleSessionClosed("ssh", "s1", deps("connected"), false);

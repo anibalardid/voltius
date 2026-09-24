@@ -71,6 +71,9 @@ export const DEVICE_SCOPED_STORAGE_KEYS = [
   "voltius-sftp-settings",
   "voltius-terminal-settings",
   "voltius-toggle-settings",
+  // Session logging is a local privacy preference, never account data.
+  "voltius-session-logging",
+  "voltius-terminal-notification-settings",
   "voltius-connectivity-settings",
   "voltius-mcp-contributions",
   // Persists poll intervals only — the statuses it holds stay in memory.

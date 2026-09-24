@@ -5,6 +5,8 @@ import { DEFAULT_SCROLLBACK_LINES, MAX_SCROLLBACK_LINES, MIN_SCROLLBACK_LINES } 
 import { FormSelect } from "@/components/shared/FormSelect";
 import { Toggle } from "@/components/shared/Toggle";
 import { SettingRow } from "./shared";
+import SessionLoggingSettings from "./SessionLoggingSettings";
+import TerminalNotificationSettings from "./TerminalNotificationSettings";
 
 export default function TerminalSection() {
   const { t } = useTranslation();
@@ -17,6 +19,10 @@ export default function TerminalSection() {
   const setScrollbackLines = useTerminalSettingsStore((s) => s.setScrollbackLines);
   const cursorStyle = useTerminalSettingsStore((s) => s.cursorStyle);
   const setCursorStyle = useTerminalSettingsStore((s) => s.setCursorStyle);
+  const zmodemEnabled = useTerminalSettingsStore((s) => s.zmodemEnabled);
+  const setZmodemEnabled = useTerminalSettingsStore((s) => s.setZmodemEnabled);
+  const remotePathCompletionEnabled = useTerminalSettingsStore((s) => s.remotePathCompletionEnabled);
+  const setRemotePathCompletionEnabled = useTerminalSettingsStore((s) => s.setRemotePathCompletionEnabled);
 
   const scrollbackOptions = [1_000, 10_000, 50_000, 100_000, 250_000]
     .filter((value) => value >= MIN_SCROLLBACK_LINES && value <= MAX_SCROLLBACK_LINES)
@@ -107,6 +113,33 @@ export default function TerminalSection() {
         >
           <Toggle checked={ignoreBracketedPaste} onChange={setIgnoreBracketedPaste} />
         </SettingRow>
+        <SettingRow
+          variant="card"
+          className="mt-4"
+          title={t("settings.terminal.zmodem.title")}
+          desc={t("settings.terminal.zmodem.desc")}
+          dirty={zmodemEnabled}
+          onReset={() => setZmodemEnabled(false)}
+        >
+          <Toggle checked={zmodemEnabled} onChange={setZmodemEnabled} />
+        </SettingRow>
+        {zmodemEnabled && (
+          <p className="mt-2 px-1 text-xs text-(--t-status-warning)">
+            {t("settings.terminal.zmodem.privacyWarning")}
+          </p>
+        )}
+        <SettingRow
+          variant="card"
+          className="mt-4"
+          title={t("settings.terminal.remotePathCompletion.title")}
+          desc={t("settings.terminal.remotePathCompletion.desc")}
+          dirty={remotePathCompletionEnabled}
+          onReset={() => setRemotePathCompletionEnabled(false)}
+        >
+          <Toggle checked={remotePathCompletionEnabled} onChange={setRemotePathCompletionEnabled} />
+        </SettingRow>
+        <SessionLoggingSettings />
+        <TerminalNotificationSettings />
       </div>
     </div>
   );

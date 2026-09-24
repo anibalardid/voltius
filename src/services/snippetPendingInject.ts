@@ -19,11 +19,18 @@ export async function injectPendingSnippet(
 ): Promise<void> {
   const all = useSessionStore.getState().sessions;
   const targets = pending.sessionIds.length > 0
-    ? pending.sessionIds.map((id) => all.find((s) => s.id === id)).filter((s) => !!s)
+    ? pending.sessionIds.map((id) => all.find((s) => s.id === id)).filter((s): s is typeof all[number] => !!s && isRunnableSession(s))
     : all.filter(isRunnableSession).slice(0, 1);
   if (targets.length === 0) return;
 
-  await broadcastSnippetInject(targets, resolvedText, execute).catch(console.error);
+  let targetCount = 0;
+  try {
+    targetCount = (await broadcastSnippetInject(targets, resolvedText, execute)).targetCount;
+  } catch (error) {
+    console.error(error);
+    return;
+  }
+  if (targetCount === 0) return;
 
   const recentTargets: RecentTarget[] = targets.map((s) => ({
     connectionId: s.connectionId,

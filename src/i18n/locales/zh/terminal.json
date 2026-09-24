@@ -18,10 +18,24 @@
       "searchPlaceholder": "搜索历史…",
       "showCurrentOnly": "仅显示当前连接",
       "showAllConnections": "显示所有连接",
+      "localHistoryLabel": "Voltius 本地历史",
+      "keyboardHint": "使用方向键导航 · Enter 插入 · Shift+Enter 执行",
+      "insertedOnTargets": "已插入 {{count}} 个目标",
+      "executedOnTargets": "已在 {{count}} 个目标上执行",
       "clearAllTitle": "清除所有历史",
       "noCommandsMatch": "没有匹配的命令",
       "noHistoryForConnection": "此连接暂无历史",
       "noHistoryYet": "暂无命令历史。\n您输入的命令将显示在此处。"
+    },
+    "suggestions": {
+      "title": "Voltius 终端建议",
+      "listLabel": "Voltius 终端建议",
+      "keyboardHint": "Enter 插入 · Escape 关闭",
+      "empty": "没有可用的本地或远程建议",
+      "scopeNote": "显示本地历史记录，以及启用后可用的远程路径建议。Tab 仅补全可信的远程 SSH 路径；仍可使用显式选择器。建议只插入文本，不会执行命令。",
+      "localSource": "本地历史",
+      "remoteSource": "远程路径",
+      "optionLabel": "{{command}} — {{source}} — {{session}}"
     },
     "multiplayerBar": {
       "ended": "已结束",
@@ -287,6 +301,28 @@
         "unlock": "解锁保险库",
         "retry": "重试",
         "dismiss": "关闭标签页"
+      }
+    },
+    "zmodem": {
+      "receive": "Receive",
+      "send": "Send",
+      "armed": "Waiting for a remote Zmodem offer…",
+      "receiving": "Receiving",
+      "sending": "Sending",
+      "offer": "Remote offer: {{name}} · {{size}} · file {{count}}",
+      "chooseDestination": "Choose destination",
+      "reject": "Reject",
+      "cancel": "Cancel transfer",
+      "completed": "Transfer completed",
+      "cancelled": "Transfer cancelled",
+      "rejected": "Remote offer rejected",
+      "failed": "Transfer failed",
+      "unsupported": {
+        "sshOnly": "Zmodem is available only for interactive SSH sessions.",
+        "persistent": "Zmodem is unavailable for persistent tmux/screen sessions.",
+        "broadcast": "Zmodem is unavailable while broadcast is active.",
+        "platform": "Zmodem destinations are supported on desktop only.",
+        "supported": ""
       }
     },
     "statusBar": {

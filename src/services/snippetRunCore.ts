@@ -4,12 +4,14 @@ import type { ParsedVariable, DynamicContext } from "@/services/snippetParser";
 import {
   parseVariables, needsUserInput, buildDynamicValues, buildDefaultValues, resolveTemplate,
 } from "./snippetParser.ts";
+import { buildDisplaySafeTemplate } from "./snippetPreview";
 import { snippetScriptText } from "@/services/snippetSteps";
 
 export interface SnippetPendingInject {
   snippet: Snippet;
   userVars: ParsedVariable[];
   partialTemplate: string;
+  displayPartialTemplate?: string;
   initialValues: Record<string, string>;
   execute: boolean;
   sessionIds: string[];
@@ -18,6 +20,7 @@ export interface SnippetPendingInject {
 export interface ResolvedSnippet {
   payload: string;
   partialTemplate: string;
+  displayPartialTemplate: string;
   userVars: ParsedVariable[];
   initialValues: Record<string, string>;
   missing: ParsedVariable[];
@@ -37,11 +40,12 @@ export function resolveSnippetPayload(
   const vars = parseVariables(text);
   const dynValues = buildDynamicValues(vars, ctx);
   const partialTemplate = resolveTemplate(text, dynValues);
+  const displayPartialTemplate = buildDisplaySafeTemplate(text, vars, dynValues);
   const userVars = vars.filter((v) => !v.dynamic);
   const initialValues = buildDefaultValues(userVars);
   const missing = userVars.filter((v) => needsUserInput(v));
   const payload = resolveTemplate(partialTemplate, initialValues);
-  return { payload, partialTemplate, userVars, initialValues, missing };
+  return { payload, partialTemplate, displayPartialTemplate, userVars, initialValues, missing };
 }
 
 /** Build the dynamic-variable context from the (first) target session. Pure. */

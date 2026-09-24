@@ -4,6 +4,7 @@ import { GUARDED, settingDef, settingDefs, TOGGLE_SECTION } from "./settingsMani
 import { TOGGLE_DEFS } from "@/stores/toggleSettingsStore";
 import { useThemeStore } from "@/stores/themeStore";
 import { BUILT_IN_THEMES } from "@/themes/presets";
+import { useTerminalSettingsStore } from "@/stores/terminalSettingsStore";
 
 describe("settingsManifest", () => {
   test("génère une entrée par bascule, depuis TOGGLE_DEFS", () => {
@@ -111,6 +112,25 @@ describe("settingsManifest", () => {
   test("keepalivePreset expose ses quatre valeurs", () => {
     expect(settingDef("connectivity.keepalivePreset")!.values!.slice().sort())
       .toEqual(["balanced", "fast", "off", "tolerant"]);
+  });
+
+  test("exposes remote path completion with its explicit boolean contract", () => {
+    const definition = settingDef("terminal.remotePathCompletion")!;
+    expect(definition).toMatchObject({
+      key: "terminal.remotePathCompletion",
+      type: "boolean",
+      default: false,
+      section: "terminal",
+      labelKey: "settings.terminal.remotePathCompletion.title",
+      writable: true,
+    });
+
+    useTerminalSettingsStore.setState({ remotePathCompletionEnabled: false });
+    expect(definition.get()).toBe(false);
+    definition.set!(true);
+    expect(useTerminalSettingsStore.getState().remotePathCompletionEnabled).toBe(true);
+    definition.set!(false);
+    expect(useTerminalSettingsStore.getState().remotePathCompletionEnabled).toBe(false);
   });
 
   test("chaque entrée nomme une section réelle de l'écran Settings", () => {

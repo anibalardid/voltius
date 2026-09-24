@@ -41,6 +41,12 @@
     "progressToast": {
       "timedOut": "Operation timed out"
     },
+    "terminalLifecycle": {
+      "bell": { "title": "Terminal bell", "body": "The terminal session {{session}} sent an explicit bell." },
+      "sessionEnded": { "title": "Terminal session ended", "body": "The terminal session {{session}} ended.", "disconnected": "The terminal session {{session}} disconnected. Command completion is unknown." },
+      "commandSucceeded": { "title": "Command finished", "body": "A command in {{session}} finished successfully (exit code {{exitCode}})." },
+      "commandFailed": { "title": "Command failed", "body": "A command in {{session}} finished with exit code {{exitCode}}." }
+    },
     "seededPluginsFailed": {
       "message": "Built-in plugins failed to load, so the app is running without them. This is a bug — please report it.",
       "action": "Diagnostics"

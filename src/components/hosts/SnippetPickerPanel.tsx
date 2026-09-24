@@ -9,7 +9,6 @@ import { useAllConnections } from "@/hooks/useAllConnections";
 import { snippetInject } from "@/services/snippetInject";
 import {
   parseVariables,
-  needsUserInput,
   buildDynamicValues,
   buildDefaultValues,
   resolveTemplate,
@@ -19,6 +18,7 @@ import { snippetScriptText } from "@/services/snippetSteps";
 import { runSnippetSequence, reportSequenceResult } from "@/services/snippetSequence";
 import type { RunTarget } from "@/services/sftpTarget";
 import { SnippetVariableModal } from "@/components/terminal/SnippetVariableModal";
+import { buildDisplaySafeTemplate } from "@/services/snippetPreview";
 import { PanelShell, PanelHeader, PanelHeaderIconButton } from "@/components/shared/Panel";
 import { useFilterShortcut } from "@/components/shared/ToolbarViewControls";
 import { SnippetForm } from "@/components/snippets/SnippetForm";
@@ -29,6 +29,8 @@ import { shouldOpenSnippetTargetsInSplitTab } from "./hostSelection";
 interface PendingInject {
   snippet: Snippet;
   userVars: ParsedVariable[];
+  partialTemplate: string;
+  displayPartialTemplate: string;
   initialValues: Record<string, string>;
   execute: boolean;
 }
@@ -79,6 +81,7 @@ export function SnippetPickerPanel({ connectionIds, onClose }: Props) {
     setError(null);
     try {
       const vars = parseVariables(snippetScriptText(snippet));
+      const currentSessions = useSessionStore.getState().sessions;
 
       const toConnect: string[] = [];
       const toInject: Array<{ sessionId: string; connId: string }> = [];
@@ -86,7 +89,7 @@ export function SnippetPickerPanel({ connectionIds, onClose }: Props) {
       for (const connId of connectionIds) {
         const conn = connections.find((c) => c.id === connId);
         if (!conn || conn.connection_type === "serial") continue;
-        const live = sessions.find((s) => s.connectionId === connId && s.status === "connected" && s.type === "ssh");
+         const live = currentSessions.find((s) => s.connectionId === connId && s.status === "connected" && s.type === "ssh");
         if (live) {
           toInject.push({ sessionId: live.id, connId });
         } else {
@@ -145,12 +148,22 @@ export function SnippetPickerPanel({ connectionIds, onClose }: Props) {
     const vars = parseVariables(text);
     const userVars = vars.filter((v) => !v.dynamic);
     const initialValues = buildDefaultValues(userVars);
-
-    if (userVars.some(needsUserInput)) {
-      setPendingInject({ snippet, userVars, initialValues, execute });
-    } else {
-      void doInjectText(snippet, resolveTemplate(text, initialValues), execute);
-    }
+    const previewConnection = connections.find((c) => connectionIds.includes(c.id));
+    const previewDynamicValues = previewConnection
+      ? buildDynamicValues(vars, {
+          connectionHost: previewConnection.host,
+          connectionUsername: previewConnection.username,
+          connectionName: previewConnection.name ?? previewConnection.host,
+        })
+      : {};
+    setPendingInject({
+      snippet,
+      userVars,
+      partialTemplate: text,
+      displayPartialTemplate: buildDisplaySafeTemplate(text, vars, previewDynamicValues),
+      initialValues,
+      execute,
+    });
   }, [doInjectText, connectionIds, connections, sessions, trackUsed, onClose]);
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -245,11 +258,13 @@ export function SnippetPickerPanel({ connectionIds, onClose }: Props) {
 
       {pendingInject && (
         <SnippetVariableModal
-          snippetName={pendingInject.snippet.name}
-          partialTemplate={snippetScriptText(pendingInject.snippet)}
-          userVars={pendingInject.userVars}
-          initialValues={pendingInject.initialValues}
-          onInject={(resolvedText, execute) => {
+           snippetName={pendingInject.snippet.name}
+           partialTemplate={pendingInject.partialTemplate}
+           displayPartialTemplate={pendingInject.displayPartialTemplate}
+           userVars={pendingInject.userVars}
+           initialValues={pendingInject.initialValues}
+           executeTargetCount={connectionIds.filter((id) => connections.find((c) => c.id === id)?.connection_type !== "serial").length}
+           onInject={(resolvedText, execute) => {
             const snap = pendingInject;
             setPendingInject(null);
             void doInjectText(snap.snippet, resolvedText, execute);

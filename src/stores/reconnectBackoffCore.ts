@@ -40,6 +40,7 @@ export function retryDelay(step: number): number {
 }
 
 export type SessionStatus = "connected" | "connecting" | "disconnected" | "error" | undefined;
+export type SessionCloseIntent = "intentional-shell-exit";
 
 export type ReconnectWait = NonNullable<TerminalSession["reconnectWait"]>;
 
@@ -187,9 +188,10 @@ export async function runBackoff(
  *
  * `remoteExit` means the far side sent an exit-status/exit-signal before the
  * close: the shell ended on purpose (the user typed `exit`), not a dropped
- * link, so the session is over and reconnecting would resurrect it (#180).
- * Persistent sessions are excluded: their wrapper also exits on a tmux/screen
- * detach, so there the attach probe (SESSION_ENDED) stays the judge.
+ * link, so a non-persistent session is over and reconnecting would resurrect
+ * it (#180). `intentional-shell-exit` is the client-side Ctrl+D intent and
+ * overrides persistence because the backend may close before classifying it.
+ * Persistent sessions without that intent are still judged by the attach probe.
  *
  * Auto-reconnect turned off (serial devices that must release the port, #192):
  * the drop just marks the session disconnected, leaving the port free and the
@@ -208,9 +210,17 @@ export function handleSessionClosed(
     endSession: (id: string) => void;
   },
   remoteExit = false,
+  closeIntent?: SessionCloseIntent,
 ): void {
   if (sessionType !== "ssh" && sessionType !== "serial") {
     deps.markDisconnected(sessionId);
+    return;
+  }
+  // The close event can race the store's connecting/disconnected transition.
+  // An explicit Ctrl+D is still authoritative and must not start or continue
+  // reconnecting just because the status has already moved away from connected.
+  if (closeIntent === "intentional-shell-exit") {
+    deps.endSession(sessionId);
     return;
   }
   if (deps.status(sessionId) !== "connected") return;

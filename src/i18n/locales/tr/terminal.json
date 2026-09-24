@@ -18,10 +18,24 @@
       "searchPlaceholder": "Geçmişte ara…",
       "showCurrentOnly": "Yalnızca geçerli bağlantı gösteriliyor",
       "showAllConnections": "Tüm bağlantıları göster",
+      "localHistoryLabel": "Voltius yerel geçmişi",
+      "keyboardHint": "Ok tuşları gezinir · Enter ekler · Shift+Enter çalıştırır",
+      "insertedOnTargets": "{{count}} hedefe eklendi",
+      "executedOnTargets": "{{count}} hedefte çalıştırıldı",
       "clearAllTitle": "Tüm geçmişi temizle",
       "noCommandsMatch": "Eşleşen komut yok",
       "noHistoryForConnection": "Bu bağlantı için henüz geçmiş yok",
       "noHistoryYet": "Henüz komut geçmişi yok.\nYazdığınız komutlar burada görünür."
+    },
+    "suggestions": {
+      "title": "Voltius terminal önerileri",
+      "listLabel": "Voltius terminal önerileri",
+      "keyboardHint": "Enter ekler · Escape kapatır",
+      "empty": "Kullanılabilir yerel veya uzak öneri yok",
+      "scopeNote": "Yerel geçmişi ve etkinleştirildiğinde uzak yol önerilerini gösterir. Tab yalnızca güvenilir uzak SSH yollarını tamamlar; açık seçici kullanılmaya devam eder. Öneriler yalnızca metin ekler ve komut çalıştırmaz.",
+      "localSource": "Yerel geçmiş",
+      "remoteSource": "Uzak yol",
+      "optionLabel": "{{command}} — {{source}} — {{session}}"
     },
     "multiplayerBar": {
       "ended": "Sona erdi",
@@ -287,6 +301,28 @@
         "unlock": "Kasanın kilidini aç",
         "retry": "Tekrar dene",
         "dismiss": "Sekmeyi kapat"
+      }
+    },
+    "zmodem": {
+      "receive": "Receive",
+      "send": "Send",
+      "armed": "Waiting for a remote Zmodem offer…",
+      "receiving": "Receiving",
+      "sending": "Sending",
+      "offer": "Remote offer: {{name}} · {{size}} · file {{count}}",
+      "chooseDestination": "Choose destination",
+      "reject": "Reject",
+      "cancel": "Cancel transfer",
+      "completed": "Transfer completed",
+      "cancelled": "Transfer cancelled",
+      "rejected": "Remote offer rejected",
+      "failed": "Transfer failed",
+      "unsupported": {
+        "sshOnly": "Zmodem is available only for interactive SSH sessions.",
+        "persistent": "Zmodem is unavailable for persistent tmux/screen sessions.",
+        "broadcast": "Zmodem is unavailable while broadcast is active.",
+        "platform": "Zmodem destinations are supported on desktop only.",
+        "supported": ""
       }
     },
     "statusBar": {

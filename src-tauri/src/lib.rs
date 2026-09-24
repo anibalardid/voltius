@@ -32,6 +32,8 @@ mod storage;
 mod terminal_kbd;
 
 use commands::http::HttpSseStreamManager;
+use commands::session_logging::SessionLogManager;
+use commands::zmodem::ZmodemTempManager;
 use docker::stream::DockerLogStreamManager;
 use known_hosts::{KnownHostsStore, PendingConflicts};
 use local::session::LocalSessionManager;
@@ -454,7 +456,8 @@ pub fn run() {
                 })
                 .build(),
         )
-        .plugin(tauri_plugin_dialog::init());
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init());
 
     #[cfg(desktop)]
     {
@@ -550,6 +553,8 @@ pub fn run() {
         .manage(ProcessStreamManager::new())
         .manage(SessionManager::new())
         .manage(LocalSessionManager::new())
+        .manage(SessionLogManager::new())
+        .manage(ZmodemTempManager::new())
         .manage(SecretsStore::new())
         .manage(SftpManager::new())
         .manage(SerialSessionManager::new())
@@ -563,6 +568,20 @@ pub fn run() {
             terminal_kbd::terminal_hide_keyboard,
             commands::diagnostics::set_verbose_logging,
             commands::diagnostics::create_bug_report,
+            commands::session_logging::session_log_get_config,
+            commands::session_logging::session_log_set_enabled,
+            commands::session_logging::session_log_set_directory,
+            commands::session_logging::session_log_set_retention,
+            commands::session_logging::session_log_append,
+            commands::session_logging::session_log_list,
+            commands::session_logging::session_log_clear,
+            commands::session_logging::session_log_clear_all,
+            commands::zmodem::zmodem_source_info,
+            commands::zmodem::zmodem_source_read,
+            commands::zmodem::zmodem_temp_create,
+            commands::zmodem::zmodem_temp_write,
+            commands::zmodem::zmodem_temp_abort,
+            commands::zmodem::zmodem_temp_commit,
             commands::ping::ping_host,
             commands::ping::ping_host_via_jumps,
             commands::ping::ping_session,
@@ -630,6 +649,7 @@ pub fn run() {
             commands::ssh::ssh_disconnect,
             commands::ssh::ssh_send_input,
             commands::ssh::ssh_resize,
+            commands::ssh::ssh_list_remote_dir,
             commands::ssh::ssh_detect_distro,
             commands::ssh::ssh_get_system_info,
             commands::ssh::ssh_exec_command,

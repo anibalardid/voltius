@@ -4,12 +4,15 @@ import { useSessionStore, type ConnectRetryOverride } from "@/stores/sessionStor
 import { wakeBackoff } from "@/stores/reconnectBackoffCore";
 import TerminalView from "@/components/terminal/Terminal";
 import { TerminalSearch } from "@/components/terminal/TerminalSearch";
+import { TerminalSuggestions } from "@/components/terminal/TerminalSuggestions";
 import { TerminalStatusBar } from "@/components/terminal/TerminalStatusBar";
 import ConnectionOverlay, { getSshSteps, getSerialSteps } from "@/components/terminal/connection-overlay";
 import { useAllConnections } from "@/hooks/useAllConnections";
 import { getConnectionIcon } from "@/utils/icons";
 import type { TerminalSession } from "@/types";
+import type { SessionCloseIntent } from "@/stores/reconnectBackoffCore";
 import { EphemeralSerialConfigOverlay } from "@/components/connections/EphemeralSerialConfigOverlay";
+import { ZmodemTransferBar } from "@/components/terminal/ZmodemTransferBar";
 
 export function HostAwareTerminalView({
   session,
@@ -21,7 +24,7 @@ export function HostAwareTerminalView({
 }: {
   session: TerminalSession;
   active: boolean;
-  onClosed: (remoteExit: boolean) => void;
+  onClosed: (remoteExit: boolean, closeIntent?: SessionCloseIntent) => void;
   /** Mobile: render the terminal compact (no minimap) and suppress the status-bar footer. */
   compact?: boolean;
   /** Split panes carry no status bar of their own. */
@@ -54,7 +57,9 @@ export function HostAwareTerminalView({
           compact={compact}
         />
         <TerminalSearch sessionId={session.id} />
+         <TerminalSuggestions sessionId={session.id} />
       </div>
+      <ZmodemTransferBar session={session} />
       {showStatusBar && !compact && (
         <TerminalStatusBar
           sessionId={session.id}

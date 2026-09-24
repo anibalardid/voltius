@@ -12,7 +12,7 @@ import { lastWriteWins, type UserDataHandler } from "../handler";
 
 interface AppSettingsData {
   sftp?: { autoRefreshIntervalMs?: number };
-  terminal?: { preferredShell?: string | null; cursorStyle?: TerminalCursorStyle };
+  terminal?: { preferredShell?: string | null; cursorStyle?: TerminalCursorStyle; remotePathCompletion?: boolean };
   plugins?: { overrides?: Record<string, boolean> };
   toggles?: Partial<Record<string, boolean>>;
   keepalivePreset?: KeepalivePreset;
@@ -31,7 +31,11 @@ export const appSettingsHandler: UserDataHandler = {
     const { values } = useToggleSettingsStore.getState();
     return {
       sftp: { autoRefreshIntervalMs: sftp.autoRefreshIntervalMs },
-      terminal: { preferredShell: terminal.preferredShell, cursorStyle: terminal.cursorStyle },
+      terminal: {
+        preferredShell: terminal.preferredShell,
+        cursorStyle: terminal.cursorStyle,
+        remotePathCompletion: terminal.remotePathCompletionEnabled,
+      },
       plugins: { overrides: plugins.overrides },
       toggles: { ...values },
       keepalivePreset: useConnectivitySettingsStore.getState().keepalivePreset,
@@ -53,6 +57,9 @@ export const appSettingsHandler: UserDataHandler = {
       if ("preferredShell" in d.terminal) s.setPreferredShell(d.terminal.preferredShell ?? null);
       const style = d.terminal.cursorStyle;
       if (style && CURSOR_STYLES.includes(style)) s.setCursorStyle(style);
+      if ("remotePathCompletion" in d.terminal && typeof d.terminal.remotePathCompletion === "boolean") {
+        s.setRemotePathCompletionEnabled(d.terminal.remotePathCompletion);
+      }
     }
     if (d.plugins?.overrides) {
       const overrides = d.plugins.overrides;

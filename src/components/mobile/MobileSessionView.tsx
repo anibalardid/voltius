@@ -26,7 +26,7 @@ export default function MobileSessionView({ session, active }: { session: Termin
         session={session}
         active={active}
         compact
-        onClosed={(remoteExit) => sessionClosed(session.type, session.id, remoteExit)}
+        onClosed={(remoteExit, closeIntent) => sessionClosed(session.type, session.id, remoteExit, closeIntent)}
       />
       {session.status === "connected" && <MobileTerminalGestures sessionId={session.id} active={active} />}
     </div>

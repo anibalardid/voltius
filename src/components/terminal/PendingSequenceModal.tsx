@@ -18,7 +18,8 @@ export function PendingSequenceModal() {
       key={pending.queueId}
       snippetName={pending.snippet.name}
       contextLabel={pending.contextLabel}
-      partialTemplate={pending.partialTemplate}
+       partialTemplate={pending.partialTemplate}
+       displayPartialTemplate={pending.displayPartialTemplate}
       userVars={pending.userVars}
       initialValues={pending.initialValues}
       onInject={() => {}}

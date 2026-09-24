@@ -147,7 +147,7 @@ export default function MainPanel() {
                         overlayContent: !!overlayContent,
                         sftpPanelOpen,
                       })}
-                      onClosed={(remoteExit) => sessionClosed(session.type, session.id, remoteExit)}
+                      onClosed={(remoteExit, closeIntent) => sessionClosed(session.type, session.id, remoteExit, closeIntent)}
                     />
                     {session.id === activeSessionId && !overlayContent && (
                       <DropZones target={{ type: "session", sessionId: session.id }} />

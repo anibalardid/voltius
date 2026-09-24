@@ -26,6 +26,8 @@ export function getActiveRunnableSession(): TerminalSession | null {
 export interface RunOpts {
   /** Called when the snippet has unfilled user variables; the surface shows a modal. */
   onNeedVars: (pending: SnippetPendingInject) => void;
+  /** Keep the explicit preview path even when every variable has a default. */
+  forcePreview?: boolean;
 }
 
 /**
@@ -57,16 +59,22 @@ export async function runSnippetIntoSessions(
   const r = resolveSnippetPayload(snippet, ctx);
   useSnippetStore.getState().trackUsed(snippet.id);
 
-  if (r.missing.length > 0) {
+  if (r.missing.length > 0 || opts.forcePreview) {
     opts.onNeedVars({
       snippet, userVars: r.userVars, partialTemplate: r.partialTemplate,
+      displayPartialTemplate: r.displayPartialTemplate,
       initialValues: r.initialValues, execute, sessionIds: targets.map((t) => t.id),
     });
     return true;
   }
 
-  await broadcastSnippetInject(targets, r.payload, execute).catch(console.error);
-  return true;
+  try {
+    const result = await broadcastSnippetInject(targets, r.payload, execute);
+    return result.targetCount > 0;
+  } catch (error) {
+    console.error(error);
+    return false;
+  }
 }
 
 /**

@@ -161,6 +161,7 @@ export interface SequencePrompt {
   snippet: Snippet;
   userVars: ParsedVariable[];
   partialTemplate: string;
+  displayPartialTemplate?: string;
   initialValues: Record<string, string>;
   resume: (values: Record<string, string>) => Promise<SequenceRunResult>;
   /** Shown under the snippet name, e.g. "web-01 — Pre-command". */
@@ -294,7 +295,8 @@ async function prepareTarget(target: RunTarget, steps: LeafStep[]): Promise<Prep
   const exec: TargetExec = {
     async runScript(content) {
       if (!sessionId) throw new Error(i18n.t("snippets.sequence.error.needsTerminal"));
-      await snippetInject(sessionId, sessionType, content, true);
+      const injected = await snippetInject(sessionId, sessionType, content, true);
+      if (!injected) throw new Error(i18n.t("snippets.sequence.error.needsTerminal"));
     },
     async runTransfer(step) {
       await runTransferStep(step, channels);
@@ -473,6 +475,7 @@ export async function runSnippetSequence(
       snippet,
       userVars: vars.userVars,
       partialTemplate: vars.partialTemplate,
+      displayPartialTemplate: vars.displayPartialTemplate,
       initialValues: seeded,
       resume: runWith,
     });

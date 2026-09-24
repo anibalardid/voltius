@@ -12,7 +12,7 @@ use crate::ssh::session::SessionHandle;
 use async_trait::async_trait;
 use russh::client::Handle;
 use russh_sftp::client::error::Error as SftpError;
-use russh_sftp::client::SftpSession;
+use russh_sftp::client::{Config as SftpConfig, RawSftpSession, SftpSession};
 use russh_sftp::protocol::OpenFlags;
 use std::future::Future;
 use std::pin::Pin;
@@ -88,6 +88,16 @@ pub async fn open_sftp(
     handle: &Handle<SshClient>,
     opener: &SftpOpener,
 ) -> Result<SftpSession, String> {
+    let channel = open_sftp_channel(handle, opener).await?;
+    SftpSession::new(channel.into_stream())
+        .await
+        .map_err(|e| format!("SFTP session error: {e}"))
+}
+
+async fn open_sftp_channel(
+    handle: &Handle<SshClient>,
+    opener: &SftpOpener,
+) -> Result<russh::Channel<russh::client::Msg>, String> {
     let channel = handle
         .channel_open_session()
         .await
@@ -102,9 +112,7 @@ pub async fn open_sftp(
             .await
             .map_err(|e| format!("Exec error: {e}"))?,
     }
-    SftpSession::new(channel.into_stream())
-        .await
-        .map_err(|e| format!("SFTP session error: {e}"))
+    Ok(channel)
 }
 
 #[derive(Clone)]
@@ -126,6 +134,140 @@ impl RealSftp {
             handle,
             opener,
         })
+    }
+}
+
+/// List only the useful prefix of a directory. `SftpSession::read_dir`
+/// materializes every READDIR response and then keeps requesting until EOF;
+/// completion must instead stop as soon as its entry or response budget is
+/// reached. The raw client is also configured with the same response budget as
+/// its maximum decoded packet, so one server response cannot grow beyond the
+/// bound before this path examines its entries.
+pub async fn list_dir_bounded(
+    handle: SessionHandle,
+    opener: SftpOpener,
+    path: &str,
+    max_entries: usize,
+    max_response_bytes: usize,
+) -> Result<Vec<RemoteFile>, String> {
+    // Match RealSftp's transport recovery: an SFTP request can outlive a
+    // reconnect between channel open and the first READDIR response.
+    match list_dir_bounded_once(&handle, &opener, path, max_entries, max_response_bytes).await {
+        Ok(files) => Ok(files),
+        Err((_error, true)) => {
+            list_dir_bounded_once(&handle, &opener, path, max_entries, max_response_bytes)
+                .await
+                .map_err(|(error, _)| error)
+        }
+        Err((error, false)) => Err(error),
+    }
+}
+
+async fn list_dir_bounded_once(
+    handle: &SessionHandle,
+    opener: &SftpOpener,
+    path: &str,
+    max_entries: usize,
+    max_response_bytes: usize,
+) -> Result<Vec<RemoteFile>, (String, bool)> {
+    let current = read_cell(handle);
+    let channel = open_sftp_channel(&current, opener)
+        .await
+        .map_err(|error| (error, false))?;
+    let raw = RawSftpSession::new_with_config(
+        channel.into_stream(),
+        SftpConfig {
+            max_packet_len: max_response_bytes.max(1024).min(u32::MAX as usize) as u32,
+            ..SftpConfig::default()
+        },
+    );
+    raw.init()
+        .await
+        .map_err(|e| (format!("SFTP session error: {e}"), is_transport_dead(&e)))?;
+    read_dir_bounded(&raw, path, max_entries, max_response_bytes)
+        .await
+        .map_err(|e| (format!("read_dir failed: {e}"), is_transport_dead(&e)))
+}
+
+async fn read_dir_bounded(
+    sftp: &RawSftpSession,
+    path: &str,
+    max_entries: usize,
+    max_response_bytes: usize,
+) -> Result<Vec<RemoteFile>, SftpError> {
+    let handle = sftp.opendir(path).await?.handle;
+    let listing = async {
+        let base = path.trim_end_matches('/');
+        let mut response_bytes = 2usize;
+        let mut files = Vec::with_capacity(max_entries.min(32));
+        let mut stop = max_entries == 0;
+
+        while !stop {
+            match sftp.readdir(handle.as_str()).await {
+                Ok(name) => {
+                    for file in name.files {
+                        let name_bytes = file.filename.as_bytes().len();
+                        let item_bytes = name_bytes.saturating_add(24);
+                        if response_bytes.saturating_add(item_bytes) > max_response_bytes {
+                            stop = true;
+                            break;
+                        }
+                        response_bytes += item_bytes;
+
+                        if file.filename.is_empty()
+                            || file.filename == "."
+                            || file.filename == ".."
+                            || name_bytes > 256
+                            || file
+                                .filename
+                                .bytes()
+                                .any(|b| b < 0x20 || b == 0x7f || b == b'/')
+                        {
+                            continue;
+                        }
+
+                        let meta = file.attrs;
+                        let name = file.filename;
+                        files.push(RemoteFile {
+                            path: format!("{}/{}", base, name),
+                            name,
+                            size: meta.size.unwrap_or(0),
+                            is_dir: meta.is_dir(),
+                            is_symlink: meta.is_symlink(),
+                            modified: meta.mtime.map(|t| t as u64),
+                            permissions: meta.permissions,
+                        });
+                        if files.len() >= max_entries {
+                            stop = true;
+                            break;
+                        }
+                    }
+                }
+                Err(SftpError::Status(status))
+                    if status.status_code == russh_sftp::protocol::StatusCode::Eof =>
+                {
+                    break
+                }
+                Err(error) => return Err(error),
+            }
+        }
+
+        files.sort_by(|a, b| {
+            b.is_dir
+                .cmp(&a.is_dir)
+                .then(a.name.to_lowercase().cmp(&b.name.to_lowercase()))
+        });
+        Ok(files)
+    }
+    .await;
+
+    let close = sftp.close(handle).await;
+    match listing {
+        Err(error) => Err(error),
+        Ok(files) => {
+            close?;
+            Ok(files)
+        }
     }
 }
 

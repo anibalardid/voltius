@@ -22,6 +22,7 @@
  * id. Calling one is how a test delivers a key to the terminal that owns it.
  */
 export const keyHandlers = new Map<string, (e: KeyboardEvent) => boolean>();
+export const terminals: FakeTerminal[] = [];
 
 let seq = 0;
 
@@ -41,7 +42,16 @@ export class FakeTerminal {
     this.element = document.createElement("div");
     container.appendChild(this.element);
   }
-  parser = { registerOscHandler: () => ({ dispose() {} }) };
+  parser = {
+    handlers: new Map<number, (data: string) => boolean>(),
+    registerOscHandler: (id: number, handler: (data: string) => boolean) => {
+      this.parser.handlers.set(id, handler);
+      return { dispose: () => this.parser.handlers.delete(id) };
+    },
+  };
+  dataHandler: ((data: string) => void) | null = null;
+  scrollToLineCalls: number[] = [];
+  constructor() { terminals.push(this); }
   loadAddon() {}
   write() {}
   focus() {}
@@ -49,15 +59,20 @@ export class FakeTerminal {
   dispose() {}
   attachCustomKeyEventHandler(fn: (e: KeyboardEvent) => boolean) { keyHandlers.set(this.id, fn); }
   attachCustomWheelEventHandler() {}
-  onData() { return { dispose() {} }; }
+  onData(fn: (data: string) => void) { this.dataHandler = fn; return { dispose: () => { this.dataHandler = null; } }; }
   onBinary() { return { dispose() {} }; }
   onResize() { return { dispose() {} }; }
   onScroll() { return { dispose() {} }; }
   onLineFeed() { return { dispose() {} }; }
+  onBell() { return { dispose() {} }; }
   onRender() { return { dispose() {} }; }
   onWriteParsed() { return { dispose() {} }; }
   registerLinkProvider() { return { dispose() {} }; }
   registerDecoration() { return null; }
+  registerMarker() { return { line: 0, isDisposed: false, dispose() {}, onDispose: () => ({ dispose() {} }) }; }
+  scrollToLine(line: number) { this.scrollToLineCalls.push(line); }
+  emitOsc(id: number, data: string) { return this.parser.handlers.get(id)?.(data); }
+  emitData(data: string) { this.dataHandler?.(data); }
 }
 
 export class FakeFitAddon {
@@ -104,5 +119,6 @@ export function lastKeyHandler(): (e: KeyboardEvent) => boolean {
 export function resetFakeXterm(): void {
   seq = 0;
   keyHandlers.clear();
+  terminals.length = 0;
   FakeSearchAddon.instances = [];
 }

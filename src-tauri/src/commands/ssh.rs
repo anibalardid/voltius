@@ -1,11 +1,105 @@
 use crate::known_hosts::{KnownHostsStore, PendingConflicts};
 use crate::port_forward::PortForwardManager;
+use crate::sftp::real::{list_dir_bounded, SftpOpener};
 use crate::ssh::{
     client::{self, JumpHostConnect},
     session::SessionManager,
 };
 use std::sync::Arc;
 use tauri::AppHandle;
+use tokio::time::{timeout, Duration};
+
+const REMOTE_COMPLETION_MAX_ENTRIES: usize = 200;
+const REMOTE_COMPLETION_MAX_NAME_BYTES: usize = 256;
+const REMOTE_COMPLETION_MAX_RESPONSE_BYTES: usize = 64 * 1024;
+const REMOTE_COMPLETION_MAX_PATH_BYTES: usize = 4096;
+const REMOTE_COMPLETION_TIMEOUT: Duration = Duration::from_millis(1500);
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteDirectoryEntry {
+    pub name: String,
+    pub is_dir: bool,
+}
+
+fn valid_completion_path(path: &str) -> bool {
+    !path.is_empty()
+        && path.len() <= REMOTE_COMPLETION_MAX_PATH_BYTES
+        && path.starts_with('/')
+        && !path
+            .bytes()
+            .any(|b| b < 0x20 || b == 0x7f || b == b'\\' || b == b'\0')
+        && !path.split('/').any(|part| part == "..")
+}
+
+/// Bound a pre-materialized SFTP response before returning it to the frontend.
+/// The wire-level READDIR budget is enforced separately by `list_dir_bounded`.
+pub(crate) fn bounded_directory_entries(
+    files: Vec<crate::commands::sftp::RemoteFile>,
+    max_entries: usize,
+    max_response_bytes: usize,
+) -> Vec<RemoteDirectoryEntry> {
+    let mut response_bytes = 2usize;
+    files
+        .into_iter()
+        .filter_map(|file| {
+            let name_bytes = file.name.as_bytes().len();
+            if name_bytes == 0
+                || name_bytes > REMOTE_COMPLETION_MAX_NAME_BYTES
+                || file
+                    .name
+                    .bytes()
+                    .any(|b| b < 0x20 || b == 0x7f || b == b'/')
+            {
+                return None;
+            }
+            let item_bytes = name_bytes + 24;
+            if response_bytes.saturating_add(item_bytes) > max_response_bytes {
+                return None;
+            }
+            response_bytes = response_bytes.saturating_add(item_bytes);
+            Some(RemoteDirectoryEntry {
+                name: file.name,
+                is_dir: file.is_dir,
+            })
+        })
+        .take(max_entries)
+        .collect()
+}
+
+#[tauri::command]
+pub async fn ssh_list_remote_dir(
+    state: tauri::State<'_, SessionManager>,
+    session_id: String,
+    path: String,
+) -> Result<Vec<RemoteDirectoryEntry>, String> {
+    if !valid_completion_path(&path) {
+        return Err("Unsafe remote completion path".into());
+    }
+    let handle = state.get_session_handle(&session_id).await?;
+    let result = timeout(REMOTE_COMPLETION_TIMEOUT, async move {
+        // The retained live handle may be from before a disconnect. Opening the
+        // SFTP channel is the authoritative liveness check: a dead handle fails
+        // here, before any listing work, without creating a second SSH session
+        // or using a PTY/shell fallback.
+        let files = list_dir_bounded(
+            handle,
+            SftpOpener::Subsystem,
+            &path,
+            REMOTE_COMPLETION_MAX_ENTRIES,
+            REMOTE_COMPLETION_MAX_RESPONSE_BYTES,
+        )
+        .await?;
+        Ok::<_, String>(bounded_directory_entries(
+            files,
+            REMOTE_COMPLETION_MAX_ENTRIES,
+            REMOTE_COMPLETION_MAX_RESPONSE_BYTES,
+        ))
+    })
+    .await
+    .map_err(|_| "Remote completion timed out".to_string())?;
+    result
+}
 
 #[tauri::command]
 pub async fn ssh_connect(
@@ -315,4 +409,110 @@ pub async fn ssh_kill_persistent(
         .await;
 
     Ok(String::from_utf8_lossy(&output).contains("VOLTIUS_KILLED"))
+}
+
+#[cfg(test)]
+mod remote_completion_tests {
+    use super::{
+        bounded_directory_entries, valid_completion_path, RemoteDirectoryEntry,
+        REMOTE_COMPLETION_MAX_ENTRIES, REMOTE_COMPLETION_MAX_RESPONSE_BYTES,
+    };
+    use crate::commands::sftp::RemoteFile;
+
+    fn file(name: &str) -> RemoteFile {
+        RemoteFile {
+            name: name.to_string(),
+            path: format!("/{name}"),
+            size: 0,
+            is_dir: true,
+            is_symlink: false,
+            modified: None,
+            permissions: None,
+        }
+    }
+
+    #[test]
+    fn rejects_traversal_and_control_paths() {
+        assert!(valid_completion_path("/safe/path"));
+        assert!(!valid_completion_path("relative"));
+        assert!(!valid_completion_path("/safe/../etc"));
+        assert!(!valid_completion_path("/safe\npath"));
+    }
+
+    #[test]
+    fn rejects_exactly_unsafe_names_and_preserves_shell_quoteable_names() {
+        for name in ["", "bad/name", "bad\nname", "bad\u{0}name", "bad\u{7f}name"] {
+            let bounded = bounded_directory_entries(
+                vec![file(name)],
+                REMOTE_COMPLETION_MAX_ENTRIES,
+                REMOTE_COMPLETION_MAX_RESPONSE_BYTES,
+            );
+            assert!(bounded.is_empty(), "name should be rejected: {name:?}");
+        }
+
+        let too_long = "x".repeat(257);
+        assert!(bounded_directory_entries(
+            vec![file(&too_long)],
+            REMOTE_COMPLETION_MAX_ENTRIES,
+            REMOTE_COMPLETION_MAX_RESPONSE_BYTES,
+        )
+        .is_empty());
+
+        let accepted = bounded_directory_entries(
+            vec![
+                file("space name"),
+                file("quote'name"),
+                file("price$"),
+                file("semi;colon"),
+                file("back\\slash"),
+            ],
+            REMOTE_COMPLETION_MAX_ENTRIES,
+            REMOTE_COMPLETION_MAX_RESPONSE_BYTES,
+        );
+        assert_eq!(
+            accepted
+                .iter()
+                .map(|entry| entry.name.as_str())
+                .collect::<Vec<_>>(),
+            vec![
+                "space name",
+                "quote'name",
+                "price$",
+                "semi;colon",
+                "back\\slash"
+            ]
+        );
+    }
+
+    #[test]
+    fn bounds_pre_materialized_command_response_by_entry_count() {
+        let mut files = vec![file("ok")];
+        files.push(file("bad/name"));
+        files.push(file("bad\nname"));
+        files.extend([
+            file("space name"),
+            file("quote'name"),
+            file("price$"),
+            file("semi;colon"),
+            file("back\\slash"),
+        ]);
+        files.extend((0..250).map(|i| file(&format!("entry-{i}"))));
+        let bounded = bounded_directory_entries(files, 200, REMOTE_COMPLETION_MAX_RESPONSE_BYTES);
+        assert_eq!(bounded.len(), 200);
+        assert!(bounded
+            .iter()
+            .all(|RemoteDirectoryEntry { name, .. }| !name.contains('/')));
+        assert!(bounded.iter().any(|entry| entry.name == "back\\slash"));
+    }
+
+    #[test]
+    fn bounds_pre_materialized_command_response_by_estimated_bytes() {
+        let files = vec![file("first"), file("second")];
+        let first_item_budget = 2 + "first".len() + 24;
+
+        let bounded = bounded_directory_entries(files, 200, first_item_budget);
+
+        assert_eq!(bounded.len(), 1);
+        assert_eq!(bounded[0].name, "first");
+    }
 }

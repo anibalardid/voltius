@@ -35,6 +35,11 @@ describe("snippetInject", () => {
     expect(h.send).not.toHaveBeenCalled();
   });
 
+  it("reports a dropped insert when the target terminal is not mounted", async () => {
+    h.paste.mockResolvedValueOnce(false);
+    await expect(snippetInject("s1", "ssh", "echo one", false)).resolves.toBe(false);
+  });
+
   it("insert works on serial sessions", async () => {
     await snippetInject("tty", "serial", "AT\r\nATI", false);
     expect(h.paste).toHaveBeenCalledWith("tty", "AT\r\nATI");
@@ -77,6 +82,12 @@ describe("broadcastSnippetInject", () => {
     expect(h.paste).toHaveBeenCalledTimes(1);
     expect(h.paste).toHaveBeenCalledWith("a", "uptime");
     expect(h.send).not.toHaveBeenCalled();
+  });
+
+  it("does not count an insert whose target terminal is not mounted", async () => {
+    h.paste.mockResolvedValueOnce(false);
+    const result = await broadcastSnippetInject([{ id: "a", type: "ssh" }], "uptime", false);
+    expect(result.targetCount).toBe(0);
   });
 
   it("without broadcast only the origin is written", async () => {

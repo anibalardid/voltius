@@ -27,6 +27,7 @@ pub mod port_forwarding_rules;
 pub mod port_forwarding_tunnels;
 pub mod processes;
 pub mod proxmox;
+pub mod session_logging;
 pub mod sftp;
 pub mod snippets;
 pub mod ssh;
@@ -37,6 +38,7 @@ pub mod vault;
 pub mod vault_object;
 pub mod win_proc;
 pub mod wsl;
+pub mod zmodem;
 
 #[tauri::command]
 pub fn greet(name: &str) -> String {

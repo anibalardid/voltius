@@ -36,6 +36,48 @@
       "ignoreBracketedPaste": {
         "title": "Düz metin yapıştırma (köşeli ayraçlı yapıştırma yok)",
         "desc": "Metni \\x1b[200~ / \\x1b[201~ işaretleri olmadan düz metin olarak yapıştırır. Köşeli ayraçlı yapıştırmayı desteklemeyen sudo istemlerine veya CLI uygulamalarına yapıştırırken oluşan bozuk girdileri (örn. \"200~\") düzeltir."
+      },
+      "zmodem": {
+        "title": "Experimental Zmodem transfers",
+        "desc": "Enable explicit Send and Receive actions for non-persistent SSH sessions on desktop. Remote offers are never accepted automatically.",
+        "privacyWarning": "Experimental and privacy-sensitive: transferred data is written to a local destination you choose. Zmodem protocol bytes are kept out of terminal output and session logs."
+      },
+      "remotePathCompletion": {
+        "title": "Uzak yol tamamlama",
+        "desc": "Açık terminal öneri seçicisine etkin SSH oturumundan uzak yol adları ekler. Varsayılan olarak kapalıdır; Tab, kullanılabilir olduğunda güvenilir uzak SSH yollarını tamamlar."
+      },
+      "sessionLogging": {
+        "title": "Oturum çıktısı günlüğü",
+        "desc": "Terminal çıktısını daha sonra incelemek üzere yerel olarak kaydeder. Girdi, tuş vuruşları, komut geçmişi ve giriş baytları asla kaydedilmez.",
+        "privacyWarning": "Uyarı: Terminal çıktısı parolalar, belirteçler ve diğer gizli bilgiler içerebilir. Kayıtları düzenli olarak inceleyip temizleyin.",
+        "location": "Kayıt dizini",
+        "chooseDirectory": "Dizin seç",
+        "useDefault": "Uygulama verilerinin varsayılan dizinini kullan",
+        "retention": "Saklama ve döndürme",
+        "maxFileSize": "Maksimum dosya boyutu",
+        "maxTotalSize": "Maksimum toplam boyut",
+        "maxAge": "Maksimum saklama süresi",
+        "days": "gün",
+        "recordings": "Kayıtlar",
+        "refresh": "Yenile",
+        "noRecordings": "Henüz kayıt yok.",
+        "clearOne": "Kaydı temizle",
+        "clearAll": "Tüm kayıtları temizle",
+        "confirmClearOne": "{{fileName}} kaydı temizlensin mi? Bu işlem geri alınamaz.",
+        "confirmClearAll": "Tüm oturum kayıtları temizlensin mi? Bu işlem geri alınamaz.",
+        "loadError": "Oturum günlüğü ayarları yüklenemedi.",
+        "changeDirectoryError": "Kayıt dizini değiştirilemedi.",
+        "retentionError": "Saklama ayarları kaydedilemedi.",
+        "clearError": "Kayıt temizlenemedi.",
+        "toggleError": "Oturum günlüğü değiştirilemedi."
+      },
+      "notifications": {
+        "title": "Terminal yaşam döngüsü bildirimleri",
+        "desc": "Güvenilir terminal sinyallerinin nerede görüntüleneceğini seçin. Tüm hedefler varsayılan olarak kapalıdır.",
+        "terminal": { "title": "Terminal geri bildirimi", "desc": "Etkilenen terminalde kısa bir durum satırı gösterin." },
+        "inApp": { "title": "Uygulama içi bildirim merkezi ve açılır bildirim", "desc": "Sinyali Voltius bildirimlerine ekleyin ve bir açılır bildirim gösterin." },
+        "system": { "title": "Sistem bildirimi", "desc": "Kullanılabilir olduğunda işletim sisteminin bildirim hizmetini kullanın." },
+        "commandFinishNote": "Komut tamamlandı bildirimleri, bir komut açık bir yaşam döngüsü işareti ve çıkış durumu sağlayana kadar etkinleştirilmez. Bağlantı kesilmesi hiçbir zaman başarılı tamamlama olarak değerlendirilmez."
       }
     },
     "appearance": {
@@ -924,6 +966,10 @@
         "terminalSearch": {
           "label": "Terminalde Bul",
           "desc": "Terminal geri kaydırma geçmişinde ara"
+        },
+        "terminalSuggestions": {
+          "label": "Terminal önerileri",
+          "desc": "Yerel geçmiş ve isteğe bağlı uzak yol önerileri için yalnızca ekleme yapan seçiciyi açar. Tab, kullanılabilir olduğunda güvenilir uzak SSH yollarını tamamlar."
         },
         "history": {
           "label": "Geçmiş Paneli",

@@ -5,6 +5,7 @@ import {
   CATCH_UP_DELAYS_MS,
   type BackoffStore,
   handleSessionClosed,
+  type SessionCloseIntent,
   runBackoff,
   sleepingBackoffs,
   strandedByNetwork,
@@ -75,7 +76,7 @@ if (typeof window !== "undefined") {
 
 /** `handleSessionClosed` bound to the live stores — every terminal view routes
  * its channel-closed event through this. */
-export function sessionClosed(sessionType: string, sessionId: string, remoteExit: boolean): void {
+export function sessionClosed(sessionType: string, sessionId: string, remoteExit: boolean, closeIntent?: SessionCloseIntent): void {
   handleSessionClosed(
     sessionType,
     sessionId,
@@ -94,5 +95,6 @@ export function sessionClosed(sessionType: string, sessionId: string, remoteExit
       },
     },
     remoteExit,
+    closeIntent,
   );
 }

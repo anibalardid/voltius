@@ -23,6 +23,7 @@
     },
     "clipboard-manager:allow-write-text",
     "clipboard-manager:allow-read-text",
+    "notification:default",
     "dialog:allow-open",
     "dialog:allow-save",
     "dialog:allow-ask"

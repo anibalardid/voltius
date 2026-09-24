@@ -5,6 +5,7 @@ import {
   resolveTemplate,
   type ParsedVariable,
 } from "@/services/snippetParser";
+import { buildDisplaySafePreview, isSecretLikeVariable } from "@/services/snippetPreview";
 
 // ─── Typed variable input ─────────────────────────────────────────────────────
 
@@ -89,7 +90,7 @@ function VarInput({ variable, value, onChange }: VarInputProps) {
     default:
       return (
         <input
-          type="text"
+          type={isSecretLikeVariable(variable) ? "password" : "text"}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={variable.default ?? variable.name}
@@ -107,11 +108,15 @@ interface Props {
   contextLabel?: string;
   /** Template with dynamic vars already resolved. User vars still as {{…}}. */
   partialTemplate: string;
+  /** Optional display-only template with sensitive dynamic values already masked. */
+  displayPartialTemplate?: string;
   /** Only user-facing vars (not dynamic). */
   userVars: ParsedVariable[];
   /** Default values pre-filled from variable definitions. */
   initialValues: Record<string, string>;
   onInject: (resolvedText: string, execute: boolean) => void;
+  /** Number of targets the execute action will validate at action time. */
+  executeTargetCount?: number;
   /** When provided, replaces insert/execute with a single Run action returning the raw values map. */
   onSubmitValues?: (values: Record<string, string>) => void;
   onClose: () => void;
@@ -121,9 +126,11 @@ export function SnippetVariableModal({
   snippetName,
   contextLabel,
   partialTemplate,
+  displayPartialTemplate,
   userVars,
   initialValues,
   onInject,
+  executeTargetCount,
   onSubmitValues,
   onClose,
 }: Props) {
@@ -140,7 +147,12 @@ export function SnippetVariableModal({
     setValues((prev) => ({ ...prev, [name]: val }));
   }
 
-  const preview = resolveTemplate(partialTemplate, values);
+  const resolvedText = resolveTemplate(partialTemplate, values);
+  const displayPreview = buildDisplaySafePreview(
+    displayPartialTemplate ?? partialTemplate,
+    userVars,
+    values,
+  );
 
   const allFilled = userVars.every((v) => {
     const val = values[v.name];
@@ -224,7 +236,7 @@ export function SnippetVariableModal({
           <span className="text-[10px] font-sans block mb-1" style={{ color: "var(--t-text-muted)" }}>
             {t("terminal.snippetVariableModal.preview")}
           </span>
-          {preview}
+          {displayPreview}
         </div>
 
         {/* Footer */}
@@ -251,7 +263,7 @@ export function SnippetVariableModal({
             <>
               <button
                 disabled={!allFilled}
-                onClick={() => onInject(preview, false)}
+               onClick={() => onInject(resolvedText, false)}
                 className="btn btn-secondary flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg"
               >
                 <Icon icon="lucide:arrow-down-to-line" width={12} />
@@ -259,11 +271,13 @@ export function SnippetVariableModal({
               </button>
               <button
                 disabled={!allFilled}
-                onClick={() => onInject(preview, true)}
+                 onClick={() => onInject(resolvedText, true)}
                 className="btn btn-primary flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg"
               >
                 <Icon icon="lucide:play" width={12} />
-                {t("terminal.snippetVariableModal.execute")}
+                 {executeTargetCount && executeTargetCount > 1
+                   ? `${t("terminal.snippetVariableModal.execute")} (${executeTargetCount})`
+                   : t("terminal.snippetVariableModal.execute")}
               </button>
             </>
           )}

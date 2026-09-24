@@ -26,7 +26,7 @@ export function PaneTerminal({ session, active }: { session: TerminalSession; ac
         session={session}
         active={active && session.status === "connected"}
         statusBar={false}
-        onClosed={(remoteExit) => sessionClosed(session.type, session.id, remoteExit)}
+        onClosed={(remoteExit, closeIntent) => sessionClosed(session.type, session.id, remoteExit, closeIntent)}
       />
     </div>
   );

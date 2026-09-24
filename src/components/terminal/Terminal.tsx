@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import type React from "react";
 import { useTerminal } from "@/hooks/useTerminal";
+import type { SessionCloseIntent } from "@/stores/reconnectBackoffCore";
 import { TerminalMinimap } from "@/components/terminal/TerminalMinimap";
 import { useToggle } from "@/stores/toggleSettingsStore";
 import { terminalViewportClass } from "@/components/terminal/terminalLayout";
@@ -9,7 +10,7 @@ import "@xterm/xterm/css/xterm.css";
 interface Props {
   sessionId: string;
   sessionType: "ssh" | "local" | "serial";
-  onClosed?: (remoteExit: boolean) => void;
+  onClosed?: (remoteExit: boolean, closeIntent?: SessionCloseIntent) => void;
   active?: boolean;
   inputGate?: React.RefObject<() => boolean>;
   encoding?: string;

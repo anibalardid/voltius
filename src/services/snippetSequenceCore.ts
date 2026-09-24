@@ -3,6 +3,7 @@ import type { DynamicContext, ParsedVariable } from "./snippetParser";
 import {
   parseVariables, buildDynamicValues, buildDefaultValues, needsUserInput, resolveTemplate,
 } from "./snippetParser";
+import { buildDisplaySafeTemplate } from "./snippetPreview";
 
 export function leafTemplateText(steps: LeafStep[]): string {
   const parts: string[] = [];
@@ -24,6 +25,7 @@ export function resolveLeafSteps(steps: LeafStep[], values: Record<string, strin
 export interface SequenceVars {
   userVars: ParsedVariable[];
   partialTemplate: string;
+  displayPartialTemplate: string;
   initialValues: Record<string, string>;
   missing: ParsedVariable[];
   dynValues: Record<string, string>;
@@ -34,8 +36,9 @@ export function collectSequenceVars(steps: LeafStep[], ctx: DynamicContext): Seq
   const vars = parseVariables(text);
   const dynValues = buildDynamicValues(vars, ctx);
   const partialTemplate = resolveTemplate(text, dynValues);
+  const displayPartialTemplate = buildDisplaySafeTemplate(text, vars, dynValues);
   const userVars = vars.filter((v) => !v.dynamic);
   const initialValues = buildDefaultValues(userVars);
   const missing = userVars.filter((v) => needsUserInput(v));
-  return { userVars, partialTemplate, initialValues, missing, dynValues };
+  return { userVars, partialTemplate, displayPartialTemplate, initialValues, missing, dynValues };
 }

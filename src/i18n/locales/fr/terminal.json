@@ -18,10 +18,24 @@
       "searchPlaceholder": "Rechercher dans l'historique…",
       "showCurrentOnly": "Affichage de la connexion actuelle uniquement",
       "showAllConnections": "Afficher toutes les connexions",
+      "localHistoryLabel": "Historique local Voltius",
+      "keyboardHint": "Les flèches permettent de naviguer · Entrée insère · Maj+Entrée exécute",
+      "insertedOnTargets": "Inséré sur {{count}} cible(s)",
+      "executedOnTargets": "Exécuté sur {{count}} cible(s)",
       "clearAllTitle": "Effacer tout l'historique",
       "noCommandsMatch": "Aucune commande ne correspond",
       "noHistoryForConnection": "Aucun historique pour cette connexion pour l'instant",
       "noHistoryYet": "Aucun historique de commandes pour l'instant.\nLes commandes que vous tapez apparaîtront ici."
+    },
+    "suggestions": {
+      "title": "Suggestions du terminal Voltius",
+      "listLabel": "Suggestions du terminal Voltius",
+      "keyboardHint": "Entrée pour insérer · Échap pour fermer",
+      "empty": "Aucune suggestion locale ou distante disponible",
+      "scopeNote": "Affiche l'historique local et, si activées, les suggestions de chemins distants. La touche Tab complète uniquement les chemins SSH distants fiables ; le sélecteur explicite reste disponible. Les suggestions insèrent du texte sans exécuter de commande.",
+      "localSource": "Historique local",
+      "remoteSource": "Chemin distant",
+      "optionLabel": "{{command}} — {{source}} — {{session}}"
     },
     "multiplayerBar": {
       "ended": "Terminée",
@@ -287,6 +301,28 @@
         "unlock": "Déverrouiller le coffre",
         "retry": "Réessayer",
         "dismiss": "Fermer l'onglet"
+      }
+    },
+    "zmodem": {
+      "receive": "Receive",
+      "send": "Send",
+      "armed": "Waiting for a remote Zmodem offer…",
+      "receiving": "Receiving",
+      "sending": "Sending",
+      "offer": "Remote offer: {{name}} · {{size}} · file {{count}}",
+      "chooseDestination": "Choose destination",
+      "reject": "Reject",
+      "cancel": "Cancel transfer",
+      "completed": "Transfer completed",
+      "cancelled": "Transfer cancelled",
+      "rejected": "Remote offer rejected",
+      "failed": "Transfer failed",
+      "unsupported": {
+        "sshOnly": "Zmodem is available only for interactive SSH sessions.",
+        "persistent": "Zmodem is unavailable for persistent tmux/screen sessions.",
+        "broadcast": "Zmodem is unavailable while broadcast is active.",
+        "platform": "Zmodem destinations are supported on desktop only.",
+        "supported": ""
       }
     },
     "statusBar": {

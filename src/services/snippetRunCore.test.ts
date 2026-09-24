@@ -18,6 +18,15 @@ const ctx = { connectionHost: "h", connectionUsername: "u", connectionName: "n",
   assertEqual(r.payload, "echo hi", "payload is bare resolved text, no newline");
 }
 
+// Dynamic clipboard content is part of the payload but is masked in the display
+// template, keeping the two representations separate.
+{
+  const sn = { id: "3", name: "clipboard", steps: [{ kind: "script", content: "echo {{clipboard}}" }] } as any;
+  const r = resolveSnippetPayload(sn, { ...ctx, clipboard: "secret-from-clipboard" });
+  assertEqual(r.payload, "echo secret-from-clipboard", "clipboard remains in the payload");
+  assertEqual(r.displayPartialTemplate, "echo ••••••••", "clipboard is masked in the preview");
+}
+
 // A user variable present and unfilled → reported as missing; pending carries a partialTemplate string.
 {
   const sn = { id: "2", name: "v", steps: [{ kind: "script", content: "deploy {{env}}" }] } as any;

@@ -16,9 +16,9 @@ pub struct LocalIntegration {
     pub tempfiles: Vec<PathBuf>,
 }
 
-/// Inspect a shell path and prepare a local PTY spawn that injects OSC 7
-/// emission on every prompt. Returns `Ok(None)` for shells that need no
-/// injection (fish already emits OSC 7) or can't be hooked (cmd, wsl).
+/// Inspect a shell path and prepare a local PTY spawn that injects OSC 7 and
+/// best-effort OSC 133 emission. Returns `Ok(None)` for shells that cannot be
+/// hooked safely (cmd, wsl, and unknown shells).
 pub fn prepare_local(shell: &str, session_id: &str) -> std::io::Result<Option<LocalIntegration>> {
     let shell_name = Path::new(shell)
         .file_stem()
@@ -103,8 +103,22 @@ pub fn prepare_local(shell: &str, session_id: &str) -> std::io::Result<Option<Lo
                 tempfiles: vec![],
             }))
         }
-        // fish already emits OSC 7 on every prompt. Unknown shells fall
-        // through with no integration.
+        "fish" => {
+            // fish already emits OSC 7 on every prompt. --init-command adds
+            // event hooks without replacing the user's config or prompt.
+            Ok(Some(LocalIntegration {
+                program: shell.to_string(),
+                args: vec![
+                    "-l".into(),
+                    "-i".into(),
+                    "-C".into(),
+                    FISH_INIT_COMMAND.into(),
+                ],
+                env: vec![],
+                tempfiles: vec![],
+            }))
+        }
+        // Unknown shells fall through with no integration.
         _ => Ok(None),
     }
 }
@@ -129,6 +143,13 @@ else\n\
   [ -r \"$HOME/.bashrc\" ] && . \"$HOME/.bashrc\"\n\
 fi\n\
 __voltius_pwd() { printf '\\e]7;file://%s%s\\a' \"$HOSTNAME\" \"$PWD\"; }\n\
+__voltius_osc133_prompt() { local __voltius_status=$?; printf '\\e]133;D;%s\\a' \"$__voltius_status\"; }\n\
+PS0=\"${PS0-}$(printf '\\e]133;C\\a')\"\n\
+PS1=\"$(printf '\\e]133;A\\a\\e]133;B\\a')${PS1:-$ }\"\n\
+case \";${PROMPT_COMMAND-};\" in\n\
+  *\";__voltius_osc133_prompt;\"*) ;;\n\
+  *) PROMPT_COMMAND=\"__voltius_osc133_prompt${PROMPT_COMMAND:+;${PROMPT_COMMAND}}\" ;;\n\
+esac\n\
 case \";${PROMPT_COMMAND-};\" in\n\
   *\";__voltius_pwd;\"*) ;;\n\
   *) PROMPT_COMMAND=\"__voltius_pwd${PROMPT_COMMAND:+;${PROMPT_COMMAND}}\" ;;\n\
@@ -146,9 +167,18 @@ const ZSH_ZSHENV: &str =
 unset ZDOTDIR_ORIG\n\
 [ -f \"${ZDOTDIR:-$HOME}/.zshenv\" ] && source \"${ZDOTDIR:-$HOME}/.zshenv\"\n\
 __voltius_pwd() { printf '\\e]7;file://%s%s\\a' \"${HOST}\" \"$PWD\"; }\n\
+__voltius_osc133_precmd() { local __voltius_status=$?; print -n \"\\e]133;D;${__voltius_status}\\a\\e]133;A\\a\\e]133;B\\a\"; }\n\
+__voltius_osc133_preexec() { print -n \"\\e]133;C\\a\"; }\n\
 typeset -ag precmd_functions\n\
 (($precmd_functions[(I)__voltius_pwd])) || precmd_functions+=(__voltius_pwd)\n\
+(($precmd_functions[(I)__voltius_osc133_precmd])) || precmd_functions+=(__voltius_osc133_precmd)\n\
+typeset -ag preexec_functions\n\
+(($preexec_functions[(I)__voltius_osc133_preexec])) || preexec_functions+=(__voltius_osc133_preexec)\n\
 __voltius_pwd 2>/dev/null\n";
+
+/// fish's event hooks append to the existing prompt/preexec/postexec events.
+/// They do not replace the user's prompt function or install a key handler.
+const FISH_INIT_COMMAND: &str = "function __voltius_osc133_prompt --on-event fish_prompt; printf '\\e]133;A\\a\\e]133;B\\a'; end; function __voltius_osc133_preexec --on-event fish_preexec; printf '\\e]133;C\\a'; end; function __voltius_osc133_postexec --on-event fish_postexec; printf '\\e]133;D;%s\\a' $status; end";
 
 // $E = ESC, $P = path with backslashes, $G = >, $S = space. The $E\\ sequence
 // is ESC + backslash = ST (string terminator), closing the OSC 7. The path
@@ -158,6 +188,8 @@ const CMD_BAT: &str = "@echo off\r\nprompt $E]7;file://localhost/$P$E\\$P$G$S\r\
 const PWSH_SCRIPT: &str = "if (Test-Path $PROFILE) { . $PROFILE }\n\
 $global:__voltiusOldPrompt = if (Test-Path Function:\\prompt) { $function:prompt } else { $null }\n\
 function global:prompt {\n\
+  $exitCode = if ($?) { 0 } else { 1 }\n\
+  [Console]::Write([char]27 + ']133;D;' + $exitCode + [char]7 + [char]27 + ']133;A' + [char]7 + [char]27 + ']133;B' + [char]7)\n\
   $cwd = (Get-Location).Path -replace '\\\\', '/'\n\
   $hostName = if ($env:COMPUTERNAME) { $env:COMPUTERNAME } else { 'localhost' }\n\
   [Console]::Write([char]27 + ']7;file://' + $hostName + '/' + $cwd + [char]7)\n\
@@ -196,13 +228,19 @@ if [ -n "${ZDOTDIR_ORIG-}" ]; then ZDOTDIR="$ZDOTDIR_ORIG"; else unset ZDOTDIR; 
 unset ZDOTDIR_ORIG
 [ -f "${ZDOTDIR:-$HOME}/.zshenv" ] && source "${ZDOTDIR:-$HOME}/.zshenv"
 __voltius_pwd() { printf '\e]7;file://%s%s\a' "${HOST}" "$PWD"; }
+__v133p() { local s=$?; print -n "\e]133;D;${s}\a\e]133;A\a\e]133;B\a"; }
+__v133x() { print -n "\e]133;C\a"; }
 typeset -ag precmd_functions
 (($precmd_functions[(I)__voltius_pwd])) || precmd_functions+=(__voltius_pwd)
+ (($precmd_functions[(I)__v133p])) || precmd_functions+=(__v133p)
+typeset -ag preexec_functions
+(($preexec_functions[(I)__v133x])) || preexec_functions+=(__v133x)
 __voltius_pwd 2>/dev/null
 EOF
   ZDOTDIR="$ZDOTDIR_TMP" exec zsh -l -i <&2
   ;;
 fish)
+  exec fish -l -i -C 'function __v133p --on-event fish_prompt; printf "\e]133;A\a\e]133;B\a"; end; function __v133x --on-event fish_preexec; printf "\e]133;C\a"; end; function __v133d --on-event fish_postexec; printf "\e]133;D;%s\a" $status; end' <&2
   exec fish -l -i <&2
   ;;
 *)
@@ -221,6 +259,10 @@ else
   [ -r "$HOME/.bashrc" ] && . "$HOME/.bashrc"
 fi
 __voltius_pwd() { printf '\e]7;file://%s%s\a' "$HOSTNAME" "$PWD"; }
+v() { local s=$?; printf '\e]133;D;%s\a' "$s"; }
+PROMPT_COMMAND="v${PROMPT_COMMAND:+;${PROMPT_COMMAND}}"
+PS0="${PS0-}"$'\e]133;C\a'
+PS1=$'\e]133;A\a\e]133;B\a'"${PS1:-$ }"
 case ";${PROMPT_COMMAND-};" in
   *";__voltius_pwd;"*) ;;
   *) PROMPT_COMMAND="__voltius_pwd${PROMPT_COMMAND:+;${PROMPT_COMMAND}}" ;;
@@ -260,6 +302,30 @@ pub const MOTD_PREAMBLE: &str = "[ ! -e $HOME/.hushlogin ] && { [ -r /run/motd.d
 /// in front of the login shell, which may be csh or fish; inside, it is /bin/sh.
 pub fn ssh_exec_command(prefix: &str) -> String {
     encode_wrapper(&format!("{prefix}\n{MOTD_PREAMBLE}\n{SSH_WRAPPER}"))
+}
+
+/// Persistent tmux/screen sessions deliberately use the OSC 7-only wrapper.
+/// Multiplexers can replay or filter prompt markers, so claiming OSC 133 there
+/// would create duplicate or stale blocks after reattachment. Keeping one
+/// source wrapper and removing only the optional hooks also avoids a second
+/// large shell script that could drift from the normal SSH path.
+pub fn ssh_exec_command_without_blocks(prefix: &str) -> String {
+    let mut wrapper = SSH_WRAPPER.to_string();
+    for marker in [
+        "__v133p() { local s=$?; print -n \"\\e]133;D;${s}\\a\\e]133;A\\a\\e]133;B\\a\"; }\n",
+        "__v133x() { print -n \"\\e]133;C\\a\"; }\n",
+        "  (($precmd_functions[(I)__v133p])) || precmd_functions+=(__v133p)\n",
+        "typeset -ag preexec_functions\n",
+        "(($preexec_functions[(I)__v133x])) || preexec_functions+=(__v133x)\n",
+        "  exec fish -l -i -C 'function __v133p --on-event fish_prompt; printf \"\\e]133;A\\a\\e]133;B\\a\"; end; function __v133x --on-event fish_preexec; printf \"\\e]133;C\\a\"; end; function __v133d --on-event fish_postexec; printf \"\\e]133;D;%s\\a\" $status; end' <&2\n",
+        "v() { local s=$?; printf '\\e]133;D;%s\\a' \"$s\"; }\n",
+        "PROMPT_COMMAND=\"v${PROMPT_COMMAND:+;${PROMPT_COMMAND}}\"\n",
+        "PS0=\"${PS0-}\"$'\\e]133;C\\a'\n",
+        "PS1=$'\\e]133;A\\a\\e]133;B\\a'\"${PS1:-$ }\"\n",
+    ] {
+        wrapper = wrapper.replace(marker, "");
+    }
+    encode_wrapper(&format!("{prefix}\n{MOTD_PREAMBLE}\n{wrapper}"))
 }
 
 /// Longest `exec` payload we will put on the wire. dropbear's `MAX_STRING_LEN`
@@ -1128,6 +1194,32 @@ mod tests {
     }
 
     #[test]
+    fn supported_shell_wrappers_keep_user_hooks_and_add_bounded_markers() {
+        assert!(BASH_RC.contains("PROMPT_COMMAND") && BASH_RC.contains("PS0"));
+        assert!(
+            ZSH_ZSHENV.contains("precmd_functions") && ZSH_ZSHENV.contains("preexec_functions")
+        );
+        assert!(
+            FISH_INIT_COMMAND.contains("fish_preexec")
+                && FISH_INIT_COMMAND.contains("fish_postexec")
+        );
+        assert!(PWSH_SCRIPT.contains("__voltiusOldPrompt") && PWSH_SCRIPT.contains("133;D;"));
+
+        let fish = prepare_local(
+            "/usr/bin/fish",
+            &format!("test-fish-{}", std::process::id()),
+        )
+        .expect("prepare_local failed")
+        .expect("fish should have a safe init-command wrapper");
+        assert_eq!(fish.args[0], "-l");
+        assert!(fish
+            .args
+            .windows(2)
+            .any(|args| args == ["-C", FISH_INIT_COMMAND]));
+        cleanup(&fish.tempfiles);
+    }
+
+    #[test]
     fn wrappers_reattach_pty_via_stderr_not_dev_tty() {
         // Reopening the tty by path (`</dev/tty`) yields a *different* file
         // description that sudo's `use_pty` relay fails to recognize, silently
@@ -1152,7 +1244,7 @@ mod tests {
         // each branch put this at ~21.7 KB against OpenWrt/ImmortalWrt routers.
         let key = tmux_session_key("0f8b1c22-4d7e-4a19-9f3b-2c6d5e8a7b41");
         for inner in [
-            ssh_exec_command(""),
+            ssh_exec_command_without_blocks(""),
             format!("{MOTD_PREAMBLE}; exec ${{SHELL:-/bin/sh}} -l"),
         ] {
             let cmd = persistent_exec_command(&key, &inner);
@@ -1162,6 +1254,14 @@ mod tests {
                 cmd.len()
             );
         }
+    }
+
+    #[test]
+    fn persistent_wrapper_degrades_osc133_but_keeps_osc7() {
+        let decoded = decode_bootstrap(&ssh_exec_command_without_blocks(""));
+        assert!(decoded.contains("file://"));
+        assert!(!decoded.contains("133;"));
+        assert!(decoded.contains("exec fish -l -i <&2"));
     }
 
     #[test]
