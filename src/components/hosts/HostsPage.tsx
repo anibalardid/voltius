@@ -42,6 +42,7 @@ import { FolderCard } from "@/components/folders/FolderCard";
 const HOST_GRID_COLS = "repeat(auto-fill, minmax(18rem, 1fr))";
 import { FolderEditPanel } from "@/components/folders/FolderEditPanel";
 import HostCard from "./HostCard";
+import { HOST_LIST_ROW_CLASS, HOST_LIST_TRUNCATE_CLASS } from "./hostListLayout";
 import ConnectionForm, { type ConnectionFormHandle } from "@/components/connections/ConnectionForm";
 import SerialConnectionForm from "@/components/connections/SerialConnectionForm";
 import { HomeToolbar } from "./HostsToolbar";
@@ -1355,11 +1356,18 @@ function DraftHostCard({ layout, serial = false }: { layout: "grid" | "list"; se
   if (layout === "list") {
     return (
       <div
-        className="flex items-center gap-3 px-4 py-2 rounded-xl"
+        className={`${HOST_LIST_ROW_CLASS} px-3 py-2.5 rounded-xl`}
         style={{ border: "2px dashed var(--t-accent)", opacity: 0.5 }}
       >
-        <AvatarTile icon={icon} iconSize={14} className="rounded-lg w-[1.867rem] h-[1.867rem]" iconClassName="text-(--t-text-dim)" />
-        <p className="text-sm font-medium-bold text-(--t-text-dim)">{label}</p>
+        <div data-host-list-slot="avatar" className="min-w-0">
+          <AvatarTile icon={icon} iconSize={14} className="rounded-lg w-[1.867rem] h-[1.867rem]" iconClassName="text-(--t-text-dim)" />
+        </div>
+        <p data-host-list-slot="name" className={`${HOST_LIST_TRUNCATE_CLASS} text-sm font-medium-bold text-(--t-text-dim)`}>{label}</p>
+        <span data-host-list-slot="endpoint" className="min-w-0" />
+        <span data-host-list-slot="type" className="host-list-meta hidden lg:block" />
+        <span data-host-list-slot="source" className="host-list-meta hidden lg:block" />
+        <span data-host-list-slot="tag" className="host-list-meta hidden lg:block" />
+        <span data-host-list-slot="actions" />
       </div>
     );
   }
