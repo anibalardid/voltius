@@ -53,7 +53,9 @@ export class FakeTerminal {
   scrollToLineCalls: number[] = [];
   constructor() { terminals.push(this); }
   loadAddon() {}
-  write() {}
+  // Mirrors xterm's write(data, callback): the callback fires once the chunk
+  // has been consumed, which is where useTerminal re-checks screen mode.
+  write(_data?: unknown, callback?: () => void) { callback?.(); }
   focus() {}
   getSelection() { return ""; }
   dispose() {}

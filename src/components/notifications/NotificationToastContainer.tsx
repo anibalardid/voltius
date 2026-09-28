@@ -5,7 +5,7 @@ import { useNotificationStore } from "@/stores/notificationStore";
 import { ProgressToast } from "./ProgressToast";
 import type { ToastEntry } from "@/stores/notificationStore";
 
-type TimerInfo = { id: ReturnType<typeof setTimeout>; remaining: number; startedAt: number; original: number };
+type TimerInfo = { id: ReturnType<typeof setTimeout> | null; remaining: number; startedAt: number; original: number };
 
 const SEVERITY_ICONS: Record<string, string> = {
   info: "lucide:info",
@@ -34,14 +34,14 @@ function RegularToast({
   pluginUnloaded,
   fading,
   hovered,
-  timerBarKey,
+  closeLabel,
 }: {
   toast: ToastEntry;
   onDismiss: () => void;
   pluginUnloaded: boolean;
   fading: boolean;
   hovered: boolean;
-  timerBarKey: number;
+  closeLabel: string;
 }) {
   const color = SEVERITY_COLORS[toast.severity] ?? SEVERITY_COLORS.info;
   const bg = SEVERITY_BG[toast.severity] ?? SEVERITY_BG.info;
@@ -60,7 +60,6 @@ function RegularToast({
           maxWidth: "24rem",
           background: `color-mix(in srgb, var(--t-bg-card) 92%, transparent)`,
           border: `1px solid var(--t-border)`,
-          borderLeft: `2px solid ${color}`,
           backdropFilter: "blur(4px)",
         }}
       >
@@ -100,7 +99,8 @@ function RegularToast({
         )}
         <button
           onClick={onDismiss}
-          className="w-4 h-4 flex items-center justify-center rounded-sm shrink-0 transition-colors"
+          aria-label={closeLabel}
+          className="w-7 h-7 flex items-center justify-center rounded-sm shrink-0 transition-colors"
           style={{ color: "var(--t-text-dim)" }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--t-text-muted)"; }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--t-text-dim)"; }}
@@ -108,10 +108,9 @@ function RegularToast({
           <Icon icon="lucide:x" width={11} />
         </button>
 
-        {/* Timer drain bar — full while hovered, drains on mouse-leave */}
+        {/* Keep the CSS animation and JS timeout paused at the same elapsed point. */}
         {hasDuration && !fading && (
           <div
-            key={timerBarKey}
             style={{
               position: "absolute",
               bottom: 0,
@@ -121,8 +120,8 @@ function RegularToast({
               transformOrigin: "left",
               background: color,
               opacity: 0.45,
-              animation: hovered ? "none" : `toast-timer-drain ${toast.duration}ms linear forwards`,
-              transform: hovered ? "scaleX(1)" : undefined,
+              animation: `toast-timer-drain ${toast.duration}ms linear forwards`,
+              animationPlayState: hovered ? "paused" : "running",
             }}
           />
         )}
@@ -137,29 +136,33 @@ export function NotificationToastContainer() {
   const dismissToast = useNotificationStore((s) => s.dismissToast);
   const updateToast = useNotificationStore((s) => s.updateToast);
   const timers = useRef<Map<string, TimerInfo>>(new Map());
+  const fadeTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const [hovered, setHovered] = useState(false);
   const [fadingIds, setFadingIds] = useState<Set<string>>(new Set());
   const fadingIdsRef = useRef<Set<string>>(new Set());
-  const [timerResetCounter, setTimerResetCounter] = useState(0);
-
   const FADE_DURATION = 260;
 
   const dismissWithFade = (id: string) => {
+    if (fadingIdsRef.current.has(id)) return;
+    const active = timers.current.get(id);
+    if (active?.id) clearTimeout(active.id);
+    timers.current.delete(id);
     fadingIdsRef.current.add(id);
     setFadingIds(new Set(fadingIdsRef.current));
-    setTimeout(() => {
+    fadeTimers.current.set(id, setTimeout(() => {
       dismissToast(id);
       fadingIdsRef.current.delete(id);
       setFadingIds(new Set(fadingIdsRef.current));
-    }, FADE_DURATION);
+      fadeTimers.current.delete(id);
+    }, FADE_DURATION));
   };
 
-  const scheduleTimer = (id: string, remaining: number, original?: number) => {
-    const timer = setTimeout(() => {
+  const scheduleTimer = (id: string, remaining: number, original = remaining, paused = false) => {
+    const timer = paused ? null : setTimeout(() => {
       dismissWithFade(id);
       timers.current.delete(id);
     }, remaining);
-    timers.current.set(id, { id: timer, remaining, startedAt: Date.now(), original: original ?? remaining });
+    timers.current.set(id, { id: timer, remaining, startedAt: Date.now(), original });
   };
 
   // Sync timers with toast list
@@ -168,14 +171,14 @@ export function NotificationToastContainer() {
 
     for (const [id, info] of timers.current.entries()) {
       if (!activeIds.has(id)) {
-        clearTimeout(info.id);
+        if (info.id) clearTimeout(info.id);
         timers.current.delete(id);
       }
     }
 
     for (const toast of toasts) {
-      if (!timers.current.has(toast.id) && toast.duration > 0 && !hovered) {
-        scheduleTimer(toast.id, toast.duration);
+      if (!timers.current.has(toast.id) && !fadingIdsRef.current.has(toast.id) && toast.duration > 0) {
+        scheduleTimer(toast.id, toast.duration, toast.duration, hovered);
       }
     }
   }, [toasts]);
@@ -184,15 +187,13 @@ export function NotificationToastContainer() {
   useEffect(() => {
     if (hovered) {
       for (const [id, info] of timers.current.entries()) {
+        if (!info.id) continue;
         clearTimeout(info.id);
-        timers.current.set(id, { ...info });
+        timers.current.set(id, { ...info, id: null, remaining: Math.max(0, info.remaining - (Date.now() - info.startedAt)) });
       }
     } else {
-      // Reset all timers to their original full duration
-      setTimerResetCounter((c) => c + 1);
       for (const [id, info] of timers.current.entries()) {
-        clearTimeout(info.id);
-        scheduleTimer(id, info.original, info.original);
+        if (!info.id) scheduleTimer(id, info.remaining, info.original);
       }
     }
   }, [hovered]);
@@ -212,7 +213,8 @@ export function NotificationToastContainer() {
 
   useEffect(() => {
     return () => {
-      for (const info of timers.current.values()) clearTimeout(info.id);
+      for (const info of timers.current.values()) if (info.id) clearTimeout(info.id);
+      for (const id of fadeTimers.current.values()) clearTimeout(id);
     };
   }, []);
 
@@ -220,8 +222,8 @@ export function NotificationToastContainer() {
   useEffect(() => {
     for (const toast of toasts) {
       if (toast.type === "progress" && toast.finished && toast.finishedSeverity !== "error") {
-        if (!timers.current.has(toast.id)) {
-          scheduleTimer(toast.id, 2000);
+        if (!timers.current.has(toast.id) && !fadingIdsRef.current.has(toast.id)) {
+          scheduleTimer(toast.id, 2000, 2000, hovered);
         }
       }
     }
@@ -259,7 +261,7 @@ export function NotificationToastContainer() {
             pluginUnloaded={false}
             fading={fading}
             hovered={hovered}
-            timerBarKey={timerResetCounter}
+            closeLabel={t("common.action.close")}
           />
         );
       })}

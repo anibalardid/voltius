@@ -17,7 +17,7 @@ import { useTerminalSettingsStore } from "@/stores/terminalSettingsStore";
 import { getToggle, useToggleSettingsStore } from "@/stores/toggleSettingsStore";
 import { matchShortcut } from "@/stores/shortcutStore";
 import { matchPanelShortcut } from "@/hooks/panelShortcuts";
-import { useSessionStore } from "@/stores/sessionStore";
+import { connectionForSession, useSessionStore } from "@/stores/sessionStore";
 import type { SessionCloseIntent } from "@/stores/reconnectBackoffCore";
 import { useTerminalCwdStore } from "@/stores/terminalCwdStore";
 import { broadcastActiveForSession, findLeaf, getPaneSessionIds, useLayoutStore } from "@/stores/layoutStore";
@@ -50,6 +50,7 @@ import {
 import {
   getLocalSuggestions,
   suggestionInsertInput,
+  type NativeShellSuggestion,
   type TerminalSuggestion,
 } from "@/services/terminalSuggestions";
 import {
@@ -59,6 +60,13 @@ import {
   requestRemotePathSuggestions,
   type RemoteCompletionContext,
 } from "@/services/remotePathCompletion";
+import {
+  applyNativeShellCompletionEvent,
+  createNativeShellCompletionState,
+  parseNativeShellCompletionEvent,
+  replaceNativeCompletionSpan,
+  type NativeShellCompletionState,
+} from "@/services/nativeShellCompletion";
 import { disposeZmodemSession, getZmodemSession, type ZmodemSession } from "@/services/zmodem";
 
 interface UseTerminalOptions {
@@ -232,6 +240,11 @@ type CacheEntry = {
   intentionalShellExit: boolean;
   zmodem: ZmodemSession | null;
   suggestions: SuggestionState;
+  nativeCompletion: {
+    state: NativeShellCompletionState;
+    draft: string;
+    requestId: number;
+  };
   suppressOsc133Writes: number;
   dispose: () => void; // full teardown, called only when the session is deleted
 };
@@ -296,6 +309,14 @@ function invalidateDraft(entry: CacheEntry): void {
   notifySuggestions(entry);
 }
 
+function resetDraftAtPrompt(entry: CacheEntry): void {
+  entry.draft.text = "";
+  entry.draft.trusted = true;
+  entry.draft.cursorAtEnd = true;
+  entry.suggestions.snapshot = { ...EMPTY_SUGGESTION_SNAPSHOT };
+  notifySuggestions(entry);
+}
+
 function updateDraft(entry: CacheEntry, data: string): void {
   entry.suggestions.generation += 1;
   if (data.startsWith("\x1b")) {
@@ -306,9 +327,7 @@ function updateDraft(entry: CacheEntry, data: string): void {
   for (const char of data) {
     const code = char.charCodeAt(0);
     if (char === "\r" || char === "\n" || code === 0x03 || code === 0x15) {
-      entry.draft.text = "";
-      entry.draft.trusted = true;
-      entry.draft.cursorAtEnd = true;
+      resetDraftAtPrompt(entry);
       continue;
     }
     if (char === "\x7f" || char === "\b") {
@@ -316,7 +335,7 @@ function updateDraft(entry: CacheEntry, data: string): void {
       continue;
     }
     if (code >= 0x20 && code !== 0x7f) {
-      if (entry.draft.trusted && entry.draft.cursorAtEnd) {
+      if ((entry.draft.trusted && entry.draft.cursorAtEnd) || entry.draft.text.length === 0) {
         entry.draft.text += char;
         entry.draft.trusted = true;
         entry.draft.cursorAtEnd = true;
@@ -354,7 +373,7 @@ function suggestionContext(entry: CacheEntry) {
   } as const;
 }
 
-function refreshSuggestions(entry: CacheEntry): void {
+function refreshSuggestions(entry: CacheEntry, remotePathCompletionEnabled?: boolean): void {
   const generation = ++entry.suggestions.generation;
   const current = entry.suggestions.snapshot;
   const context = suggestionContext(entry);
@@ -366,7 +385,7 @@ function refreshSuggestions(entry: CacheEntry): void {
 
   // The explicit picker and safe Tab requests share the same bounded remote
   // listing path. Unsafe contexts return before this request is made.
-  const remoteContext = remoteSuggestionContext(entry);
+  const remoteContext = remoteSuggestionContext(entry, remotePathCompletionEnabled);
   if (!remoteContext || !canRequestRemoteCompletion(remoteContext)) return;
   const requestContextFingerprint = remoteCompletionContextFingerprint(remoteContext);
   void requestRemotePathSuggestions(remoteContext, sshListRemoteDir, context.connectionName || "SSH")
@@ -398,16 +417,125 @@ function refreshSuggestions(entry: CacheEntry): void {
     });
 }
 
-function remoteSuggestionContext(entry: CacheEntry): RemoteCompletionContext | null {
+function nativeCompletionDebug(entry: CacheEntry, event: string, extra: Record<string, unknown> = {}): void {
+  log.warn(`[NATIVE-DBG] ${event}`, {
+    sessionId: entry.sessionId,
+    sessionType: entry.sessionType,
+    connected: entry.connectedRef.current,
+    shellIntegration: isShellIntegrationEnabled(entry.sessionId),
+    persistent: isPersistentSession(entry.sessionId),
+    drivable: isDrivableShellContext(entry),
+    pathCompletionEnabled: isRemotePathCompletionEnabled(),
+    draft: entry.draft.text,
+    draftTrusted: entry.draft.trusted,
+    cursorAtEnd: entry.draft.cursorAtEnd,
+    buffer: entry.terminal.buffer.active.type,
+    mouse: entry.terminal.modes.mouseTrackingMode,
+    ...extra,
+  });
+}
+
+function insertSuggestion(entry: CacheEntry, command: string): void {
+  if (!entry.draft.trusted || command === entry.draft.text) return;
+  entry.suggestions.generation += 1;
+  writeToSession(entry.sessionId, suggestionInsertInput(entry.draft.text, command));
+  entry.draft.text = command;
+  entry.draft.cursorAtEnd = true;
+  entry.suggestions.snapshot = { ...EMPTY_SUGGESTION_SNAPSHOT, draft: command };
+  notifySuggestions(entry);
+  entry.terminal.focus();
+}
+
+function finishNativeShellCompletion(entry: CacheEntry): void {
+  const { state, draft } = entry.nativeCompletion;
+  if (!state.candidates.length || draft !== entry.draft.text || !entry.draft.trusted) {
+    nativeCompletionDebug(entry, "finish-bailed", {
+      candidates: state.candidates.length,
+      draftAtStart: draft,
+      received: state.receiving,
+    });
+    return;
+  }
+  const session = useSessionStore.getState().sessions.find((candidate) => candidate.id === entry.sessionId);
+  const sessionName = session?.connectionName || "SSH";
+  const suggestions: NativeShellSuggestion[] = state.candidates
+    .filter((candidate) => candidate.text.length > 0)
+    .map((candidate, index) => ({
+      command: replaceNativeCompletionSpan(
+        draft,
+        candidate.text,
+        state.replacementStartBytes,
+        state.replacementLengthBytes,
+      ),
+      entryId: `native:${entry.sessionId}:${entry.nativeCompletion.requestId}:${index}`,
+      sessionName,
+      timestamp: Date.now(),
+      label: "Remote shell suggestion" as const,
+      description: candidate.description,
+    }));
+  if (!suggestions.length) return;
+  if (!getToggle("terminal-suggestions-overlay")) {
+    const commands = [...new Set(suggestions.map(({ command }) => command))];
+    const commonPrefix = commands.reduce((prefix, command) => {
+      let i = 0;
+      while (i < prefix.length && prefix[i] === command[i]) i++;
+      return prefix.slice(0, i);
+    });
+    // With the list hidden, accept a unique match or extend an unambiguous
+    // shared prefix. Never choose an arbitrary candidate for the user.
+    if (commands.length === 1 || commonPrefix.startsWith(draft)) insertSuggestion(entry, commonPrefix);
+    return;
+  }
+  entry.suggestions.generation += 1;
+  entry.suggestions.snapshot = {
+    open: true,
+    suggestions,
+    selectedIndex: 0,
+    draft,
+  };
+  notifySuggestions(entry);
+}
+
+function handleNativeShellCompletionOsc(entry: CacheEntry, data: string): void {
+  const event = parseNativeShellCompletionEvent(data);
+  if (event.kind === "armed") {
+    log.info(`[NATIVE-DBG] armed session=${entry.sessionId}`);
+    return;
+  }
+  if (event.kind === "start") {
+    entry.nativeCompletion.requestId += 1;
+    if (event.line !== undefined) {
+      entry.draft.text = event.line;
+      entry.draft.trusted = event.cursorAtEnd === true;
+      entry.draft.cursorAtEnd = event.cursorAtEnd === true;
+      if (entry.suggestions.snapshot.open) {
+        entry.suggestions.snapshot = { ...EMPTY_SUGGESTION_SNAPSHOT, draft: event.line };
+        notifySuggestions(entry);
+      }
+    }
+    entry.nativeCompletion.draft = entry.draft.text;
+  }
+  if (event.kind === "candidate" || event.kind === "end") {
+    nativeCompletionDebug(entry, `osc-${event.kind}`, { text: "text" in event ? event.text : undefined });
+  }
+  entry.nativeCompletion.state = applyNativeShellCompletionEvent(entry.nativeCompletion.state, event);
+  if (event.kind === "end") finishNativeShellCompletion(entry);
+}
+
+function remoteSuggestionContext(entry: CacheEntry, enabledOverride?: boolean): RemoteCompletionContext | null {
   const context = suggestionContext(entry);
+  const remotePathCompletionEnabled = enabledOverride ?? isRemotePathCompletionEnabled();
   return {
-    enabled: useTerminalSettingsStore.getState().remotePathCompletionEnabled,
+    enabled: remotePathCompletionEnabled,
     draft: context.draft,
     cwd: context.cwd,
     sessionId: context.sessionId,
     connectionId: context.connectionId,
     sessionType: context.sessionType,
-    sshSessionKnown: context.sshSessionKnown,
+    // The terminal's mounted session type is authoritative here. The store can
+    // briefly lag during restore/reconnect, and that gap must not send Tab to
+    // readline and produce a BEL.
+    sshSessionKnown: context.sshSessionKnown || entry.sessionType === "ssh",
     connected: context.connected,
     cursorKnown: context.cursorKnown,
     alternateScreen: context.alternateScreen,
@@ -415,6 +543,68 @@ function remoteSuggestionContext(entry: CacheEntry): RemoteCompletionContext | n
     persistent: context.persistent,
     broadcast: context.broadcast,
   };
+}
+
+function canHandleRemoteCompletionTab(entry: CacheEntry): boolean {
+  const context = remoteSuggestionContext(entry);
+  if (!context) return false;
+  if (canRequestRemoteCompletion(context)) return true;
+  return context.enabled && context.connected && context.sessionType === "ssh" && context.sshSessionKnown &&
+    !context.alternateScreen && !context.mouseTracking && !context.broadcast && context.draft.length === 0;
+}
+
+/**
+ * True when the pane is a plain shell line editor we may safely drive.
+ *
+ * The obvious test — "normal buffer, no mouse tracking" — exists to keep Tab
+ * and Ctrl+D away from a full-screen app the user launched (vim, less, htop).
+ * But a PERSISTENT session is one where Voltius started tmux/screen itself, and
+ * that multiplexer legitimately puts the terminal in the alternate screen with
+ * mouse tracking on. Judging our own multiplexer to be "somebody else's TUI"
+ * silently disabled both native completion and intentional-exit detection for
+ * every persistent session: Tab did nothing and Ctrl+D fell through to the
+ * reconnect path, which is exactly the two symptoms this was found through.
+ */
+function isDrivableShellContext(entry: CacheEntry): boolean {
+  if (isPersistentSession(entry.sessionId)) return true;
+  return entry.terminal.buffer.active.type === "normal" &&
+    entry.terminal.modes.mouseTrackingMode === "none";
+}
+
+function isPersistentSession(sessionId: string): boolean {
+  return useSessionStore.getState().sessions.find((candidate) => candidate.id === sessionId)?.persist === true;
+}
+
+function canRequestNativeShellCompletion(entry: CacheEntry): boolean {
+  return isRemotePathCompletionEnabled() &&
+    isShellIntegrationEnabled(entry.sessionId) &&
+    entry.sessionType === "ssh" &&
+    entry.connectedRef.current &&
+    entry.draft.trusted &&
+    entry.draft.cursorAtEnd &&
+    isDrivableShellContext(entry) &&
+    !broadcastActiveForSession(entry.sessionId);
+}
+
+function isShellIntegrationEnabled(sessionId: string): boolean {
+  const session = useSessionStore.getState().sessions.find((candidate) => candidate.id === sessionId);
+  if (!session) return true;
+  const connection = connectionForSession(session);
+  return connection ? (connection.shell_integration ?? getToggle("shell-integration")) : true;
+}
+
+function isEmptySshPrompt(entry: CacheEntry): boolean {
+  return entry.sessionType === "ssh" &&
+    isDrivableShellContext(entry) &&
+    entry.draft.text.length === 0 &&
+    !broadcastActiveForSession(entry.sessionId);
+}
+
+function isRemotePathCompletionEnabled(): boolean {
+  const state = useTerminalSettingsStore.getState();
+  // A pre-migration persisted false must not disable the default path until the
+  // user has explicitly configured this setting.
+  return state.remotePathCompletionConfigured ? state.remotePathCompletionEnabled : true;
 }
 
 function blockLine(entry: CacheEntry, block: CommandBlock): number | null {
@@ -917,6 +1107,7 @@ export function getTerminalSuggestionController(sessionId: string): TerminalSugg
     subscribe: (fn) => { entry.suggestions.subscribers.add(fn); return () => entry.suggestions.subscribers.delete(fn); },
     getSnapshot: () => entry.suggestions.snapshot,
     open: () => {
+      if (!getToggle("terminal-suggestions-overlay")) return;
       refreshSuggestions(entry);
       const remotePending = remoteSuggestionContext(entry);
       if (entry.suggestions.snapshot.suggestions.length === 0 && (!remotePending || !canRequestRemoteCompletion(remotePending))) return;
@@ -948,22 +1139,10 @@ export function getTerminalSuggestionController(sessionId: string): TerminalSugg
     accept: () => {
       const current = entry.suggestions.snapshot;
       const selected = current.suggestions[current.selectedIndex];
-      if (!current.open || !selected || !entry.draft.trusted || selected.command === entry.draft.text) return;
-      entry.suggestions.generation += 1;
-        writeToSession(sessionId, suggestionInsertInput(entry.draft.text, selected.command));
-        entry.draft.text = selected.command;
-        entry.draft.trusted = true;
-        entry.draft.cursorAtEnd = true;
-      entry.suggestions.snapshot = { ...EMPTY_SUGGESTION_SNAPSHOT, draft: entry.draft.text };
-      notifySuggestions(entry);
-      entry.terminal.focus();
+      if (!current.open || !selected) return;
+      insertSuggestion(entry, selected.command);
     },
   };
-}
-
-function canHandleRemoteCompletionTab(entry: CacheEntry): boolean {
-  const context = remoteSuggestionContext(entry);
-  return context !== null && canRequestRemoteCompletion(context);
 }
 
 export function isTerminalBlockNavKey(e: KeyboardEvent): boolean {
@@ -1057,12 +1236,9 @@ useSessionStore.subscribe((state, previous) => {
       entry.blocks.markers.forEach((marker) => marker.dispose());
       entry.blocks.markers.clear();
       entry.suppressOsc133Writes = 0;
-       entry.draft.text = "";
-       entry.draft.trusted = true;
-       entry.draft.cursorAtEnd = true;
-      entry.suggestions.snapshot = { ...EMPTY_SUGGESTION_SNAPSHOT };
+      entry.suggestions.generation += 1;
+      resetDraftAtPrompt(entry);
       notifyBlocks(entry);
-      notifySuggestions(entry);
       resetTerminalLifecycleNotifications(id);
       if (entry.sessionType === "serial") continue;
       entry.fitAddon.fit();
@@ -1099,7 +1275,18 @@ useTerminalSettingsStore.subscribe((state, previous) => {
   if (state.remotePathCompletionEnabled === previous.remotePathCompletionEnabled) return;
   for (const [, entry] of terminalCache) {
     entry.suggestions.generation += 1;
-    if (entry.suggestions.snapshot.open) refreshSuggestions(entry);
+    if (entry.suggestions.snapshot.open) refreshSuggestions(entry, state.remotePathCompletionEnabled);
+  }
+});
+
+useToggleSettingsStore.subscribe((state, previous) => {
+  if (state.values["terminal-suggestions-overlay"] === previous.values["terminal-suggestions-overlay"] ||
+      getToggle("terminal-suggestions-overlay")) return;
+  for (const entry of terminalCache.values()) {
+    if (!entry.suggestions.snapshot.open) continue;
+    entry.suggestions.generation += 1;
+    entry.suggestions.snapshot = { ...EMPTY_SUGGESTION_SNAPSHOT, draft: entry.draft.text };
+    notifySuggestions(entry);
   }
 });
 
@@ -1273,10 +1460,10 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
         term.write(decoder ? decoder.decode(data) : data, () => {
           if (suppressOsc133) entry.suppressOsc133Writes = Math.max(0, entry.suppressOsc133Writes - 1);
           scheduleMinimapNotify(entry);
-          if (term.buffer.active.type === "alternate" || term.modes.mouseTrackingMode !== "none") invalidateDraft(entry);
+          if (!isDrivableShellContext(entry)) invalidateDraft(entry);
           afterWrite?.();
         });
-        if (term.buffer.active.type === "alternate" || term.modes.mouseTrackingMode !== "none") invalidateDraft(entry);
+        if (!isDrivableShellContext(entry)) invalidateDraft(entry);
       };
       const writeOutput = (data: Uint8Array, afterWrite?: () => void) => {
         renderOutput(data, afterWrite);
@@ -1308,10 +1495,11 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
         lifecycleEventSequence: 0,
         blocks: { state: createOsc133State(), markers: new Map(), subscribers: new Set() },
         draft: { text: "", trusted: true, cursorAtEnd: true },
-        intentionalShellExit: false,
-        zmodem: null,
-         suggestions: { snapshot: { ...EMPTY_SUGGESTION_SNAPSHOT }, subscribers: new Set(), generation: 0 },
-        suppressOsc133Writes: 0,
+       intentionalShellExit: false,
+       zmodem: null,
+       suggestions: { snapshot: { ...EMPTY_SUGGESTION_SNAPSHOT }, subscribers: new Set(), generation: 0 },
+       nativeCompletion: { state: createNativeShellCompletionState(), draft: "", requestId: 0 },
+       suppressOsc133Writes: 0,
         dispose: () => {}, // filled in below
       };
       terminalCache.set(sessionId, entry);
@@ -1394,6 +1582,11 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
         }
         const suggestionController = getTerminalSuggestionController(sessionId);
         const suggestionOpen = suggestionController?.getSnapshot().open ?? false;
+        const isCtrlD = e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey && (e.key === "d" || e.key === "D");
+        if (isCtrlD && !entry.connectedRef.current && isEmptySshPrompt(entry)) {
+          if (e.type === "keydown") entry.onClosedRef.current?.(false, "intentional-shell-exit");
+          return claimChord(e);
+        }
         if (suggestionOpen && ["ArrowUp", "ArrowDown", "Enter", "Escape"].includes(e.key)) {
           if (e.type === "keydown") {
             if (e.key === "ArrowUp") suggestionController?.previous();
@@ -1404,7 +1597,20 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
           return claimChord(e);
         }
         const isUnmodifiedTab = e.key === "Tab" && !e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey;
-        if (isUnmodifiedTab && canHandleRemoteCompletionTab(entry)) {
+        if (isUnmodifiedTab) {
+          if (suggestionOpen) {
+            if (e.type === "keydown") suggestionController?.accept();
+            return claimChord(e);
+          }
+          const native = canRequestNativeShellCompletion(entry);
+          const remote = canHandleRemoteCompletionTab(entry);
+          if (e.type === "keydown") {
+            nativeCompletionDebug(entry, "tab", { nativePath: native, remotePath: remote });
+          }
+          if (native) return true;
+          if (!remote) {
+            return true;
+          }
           if (e.type === "keydown") {
             const current = suggestionController?.getSnapshot();
             const selected = current?.open && current.suggestions[current.selectedIndex];
@@ -1555,14 +1761,30 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
         return true;
       });
 
+      // Shell-native completions use a private OSC channel so the remote line
+      // editor can run its own completion functions without changing the draft.
+      const nativeCompletionDispose = term.parser.registerOscHandler(9280, (data) => {
+        handleNativeShellCompletionOsc(entry, data);
+        return true;
+      });
+
       // OSC 133 is deliberately additive: malformed markers, unsupported
       // shells, multiplexers, replay output, alternate-screen TUIs, and serial
       // sessions remain ordinary terminal output with no input side effects.
       const osc133Dispose = term.parser.registerOscHandler(133, (data) => {
         if (entry.sessionType === "serial") return false;
-        if (entry.suppressOsc133Writes > 0 || term.buffer.active.type === "alternate" || term.modes.mouseTrackingMode !== "none") return true;
+        // `prompt-start` is the only thing that re-establishes draft trust on
+        // every prompt. Skipping it for a Voltius-owned multiplexer left the
+        // draft permanently untrusted, which silently disabled Tab completion
+        // for the rest of the session.
+        if (entry.suppressOsc133Writes > 0 || !isDrivableShellContext(entry)) return true;
         const parsed = parseOsc133(data);
         if (parsed.malformed || !parsed.marker) return true;
+
+        if (parsed.marker.kind === "prompt-start") {
+          entry.suggestions.generation += 1;
+          resetDraftAtPrompt(entry);
+        }
 
         let marker: IMarker | undefined;
         if (parsed.marker.kind === "command-start" || parsed.marker.kind === "command-finished") {
@@ -1588,24 +1810,19 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
         if (latched !== null) data = latched;
 
         entry.intentionalShellExit = false;
-          if (term.buffer.active.type === "alternate" || term.modes.mouseTrackingMode !== "none") {
-            invalidateDraft(entry);
-          } else {
-            const intentionalShellExit = data === "\x04" &&
-              entry.sessionType === "ssh" &&
-              entry.connectedRef.current &&
-              term.buffer.active.type === "normal" &&
-              entry.suppressOsc133Writes === 0 &&
-              entry.draft.trusted &&
-            entry.draft.cursorAtEnd &&
-            entry.draft.text.length === 0 &&
-            !broadcastActiveForSession(sessionId);
+        if (!isDrivableShellContext(entry)) {
+          invalidateDraft(entry);
+        } else {
+          const intentionalShellExit = data === "\x04" && entry.connectedRef.current && isEmptySshPrompt(entry);
+          if (data === "\x04") {
+            nativeCompletionDebug(entry, "ctrl-d", { intentionalShellExit });
+          }
           entry.intentionalShellExit = intentionalShellExit;
-          updateDraft(entry, data);
+          if (!(data === "\t" && canRequestNativeShellCompletion(entry))) updateDraft(entry, data);
         }
 
         const sess = useSessionStore.getState().sessions.find((s) => s.id === sessionId);
-        if (sess) {
+        if (sess && data !== "\t") {
           useCommandHistoryStore
             .getState()
             .addInput(sessionId, sess.connectionName, sess.connectionId, data);
@@ -1682,6 +1899,7 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
         unlistenPromises.push(
           onSshClosed(sessionId, (remoteExit) => {
             const closeIntent = entry.intentionalShellExit ? "intentional-shell-exit" : undefined;
+            nativeCompletionDebug(entry, "ssh-closed", { remoteExit, closeIntent });
             entry.intentionalShellExit = false;
             invalidateDraft(entry);
             if (entry.zmodem?.isActive()) void entry.zmodem.cancel();
@@ -1724,6 +1942,7 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
         onDataDispose.dispose();
         onResizeDispose.dispose();
         oscCwdDispose.dispose();
+        nativeCompletionDispose.dispose();
         osc133Dispose.dispose();
          searchResultsDispose.dispose();
          scrollDispose.dispose();

@@ -30,7 +30,7 @@ pub fn prepare_local(shell: &str, session_id: &str) -> std::io::Result<Option<Lo
     match shell_name.as_str() {
         "bash" | "sh" => {
             let rc_path = temp_dir.join(format!("voltius-bashrc-{session_id}"));
-            std::fs::write(&rc_path, BASH_RC)?;
+            std::fs::write(&rc_path, format!("{BASH_RC}{BASH_NATIVE_COMPLETION}"))?;
             Ok(Some(LocalIntegration {
                 program: shell.to_string(),
                 // GNU bash requires long options before short options;
@@ -47,7 +47,10 @@ pub fn prepare_local(shell: &str, session_id: &str) -> std::io::Result<Option<Lo
         "zsh" => {
             let zdotdir = temp_dir.join(format!("voltius-zdotdir-{session_id}"));
             std::fs::create_dir_all(&zdotdir)?;
-            std::fs::write(zdotdir.join(".zshenv"), ZSH_ZSHENV)?;
+            std::fs::write(
+                zdotdir.join(".zshenv"),
+                format!("{ZSH_ZSHENV}{ZSH_NATIVE_COMPLETION}"),
+            )?;
             let orig = std::env::var("ZDOTDIR")
                 .or_else(|_| std::env::var("HOME"))
                 .unwrap_or_default();
@@ -63,7 +66,10 @@ pub fn prepare_local(shell: &str, session_id: &str) -> std::io::Result<Option<Lo
         }
         "pwsh" | "powershell" => {
             let script_path = temp_dir.join(format!("voltius-pwsh-{session_id}.ps1"));
-            std::fs::write(&script_path, PWSH_SCRIPT)?;
+            std::fs::write(
+                &script_path,
+                format!("{PWSH_SCRIPT}{PWSH_NATIVE_COMPLETION}"),
+            )?;
             Ok(Some(LocalIntegration {
                 program: shell.to_string(),
                 args: vec![
@@ -112,7 +118,7 @@ pub fn prepare_local(shell: &str, session_id: &str) -> std::io::Result<Option<Lo
                     "-l".into(),
                     "-i".into(),
                     "-C".into(),
-                    FISH_INIT_COMMAND.into(),
+                    format!("{FISH_INIT_COMMAND}; {FISH_NATIVE_COMPLETION}"),
                 ],
                 env: vec![],
                 tempfiles: vec![],
@@ -156,6 +162,119 @@ case \";${PROMPT_COMMAND-};\" in\n\
 esac\n\
 __voltius_pwd 2>/dev/null\n";
 
+/// Bash's contribution to native completion. The script is uploaded separately
+/// so its size does not inflate the nested persistent exec payload.
+/// What each part is for:
+///
+/// * `__voltius_native_complete` runs on Tab via `bind -x` and streams the
+///   shell's own candidates over OSC 9280 as hex, so the frontend can offer
+///   them without the remote ever writing to the command line.
+/// * tmux filters unknown OSC codes. `__voltius_native_osc` wraps OSC 9280 in
+///   a tmux DCS passthrough sequence when Voltius created the multiplexer.
+/// * `__voltius_native_ci_scan` is the case-insensitive retry. `compgen -f VAR`
+///   matches nothing when the directory holds `var`, which is how a wrong-case
+///   path gets typed: zero matches, and the shell rings the bell. `nocasematch`
+///   is what makes the scan match, and it only applies to `[[ ]]`/`case` - NOT
+///   to pathname expansion, which is why this enumerates the directory instead
+///   of globbing `VAR*`.
+/// * `__voltius_native_bind` re-asserts the Tab keymap at every prompt. A host
+///   PROMPT_COMMAND that calls `bind` runs left to right, so this one is
+///   APPENDED: prepended, the host clobbers Tab again on the same prompt and
+///   readline takes it back, ringing the bell with nothing to show Voltius.
+/// * `__voltius_native_report` announces arming from the first PROMPT rather
+///   than at load time. The frontend registers its OSC handlers when the
+///   terminal mounts, which is after the startup banner, so a load-time marker
+///   is dropped by the same no-listener race that once left a live shell
+///   showing a blank terminal. Its absence is then real evidence.
+const BASH_NATIVE_COMPLETION: &str = r#"
+__voltius_native_hex() { LC_ALL=C printf '%s' "$1" | od -An -v -tx1 | tr -d ' \n'; }
+__voltius_native_osc() {
+  if [[ "${VOLTIUS_MUX:-}" == tmux ]]; then
+    printf '\ePtmux;\e\e]9280;%s\a\e\\' "$1"
+  else
+    printf '\e]9280;%s\a' "$1"
+  fi
+}
+__voltius_native_ci_scan() {
+  local word="$1" dir="" base="$word" scan_dir hit name
+  [[ "$word" == */* ]] && { dir="${word%/*}/"; base="${word##*/}"; }
+  if [[ -z "$dir" ]]; then scan_dir="."; else scan_dir="${dir%/}"; [[ -z "$scan_dir" ]] && scan_dir="/"; fi
+  local restore_nocasematch=0
+  shopt -q nocasematch || restore_nocasematch=1
+  shopt -s nocasematch
+  for hit in "$scan_dir"/*; do
+    [[ -e "$hit" || -L "$hit" ]] || continue
+    name="${hit##*/}"
+    [[ $name == $base* ]] || continue
+    [[ -d "$hit" ]] && name="$name/"
+    printf '%s%s\n' "$dir" "$name"
+  done
+  ((restore_nocasematch)) && shopt -u nocasematch
+}
+__voltius_native_complete() {
+  local line="$READLINE_LINE" compspec func reply
+  local -a words replies out
+  if ((${#line} <= 1024)); then
+    __voltius_native_osc "A;$(__voltius_native_hex "$line");${READLINE_POINT:-${#line}}"
+  else
+    __voltius_native_osc A
+  fi
+  local IFS=$' \t\n'
+  read -ra words <<< "$line"
+  [[ "$line" == *[[:space:]] ]] && words+=("")
+  if ((${#words[@]} == 0)); then __voltius_native_osc B; return; fi
+  local cword=$((${#words[@]} - 1)) cmd="${words[0]}"
+  compspec="$(complete -p "$cmd" 2>/dev/null)"
+  func=""
+  local i
+  read -ra replies <<< "$compspec"
+  for ((i = 0; i < ${#replies[@]}; i++)); do
+    if [[ "${replies[$i]}" == "-F" ]]; then func="${replies[$((i + 1))]}"; break; fi
+  done
+  out=()
+  if [[ -n "$func" ]] && declare -F "$func" >/dev/null 2>&1; then
+    local COMPREPLY=() COMP_WORDS=("${words[@]}") COMP_CWORD=$cword COMP_LINE="$line"
+    local COMP_POINT=${#line}
+    "$func" "$cmd" "${words[$cword]}" "${words[$((cword > 0 ? cword - 1 : 0))]}" 2>/dev/null
+    out=("${COMPREPLY[@]}")
+  elif ((cword == 0)); then
+    out=( $(compgen -c -- "${words[0]}") )
+  else
+    out=( $(compgen -f -- "${words[$cword]}") )
+  fi
+  if ((${#out[@]} == 0)) && ((cword > 0)); then
+    out=( $(__voltius_native_ci_scan "${words[$cword]}") )
+  fi
+  local count=0 hex
+  for reply in "${out[@]}"; do
+    [[ -n "$reply" ]] || continue
+    hex="$(__voltius_native_hex "$reply")"
+    __voltius_native_osc "C;$hex"
+    ((++count >= 200)) && break
+  done
+  __voltius_native_osc B
+}
+__voltius_native_bind() {
+  bind -x '"\C-I":__voltius_native_complete' 2>/dev/null ||
+    bind -m emacs-standard -x '"\C-I":__voltius_native_complete' 2>/dev/null ||
+    bind -m viins -x '"\C-I":__voltius_native_complete' 2>/dev/null || :
+}
+__voltius_native_bind
+case ";${PROMPT_COMMAND-};" in
+  *";__voltius_native_bind;"*) ;;
+  *) PROMPT_COMMAND="${PROMPT_COMMAND:+${PROMPT_COMMAND};}__voltius_native_bind" ;;
+esac
+__voltius_native_report() {
+  [ -n "${__voltius_native_reported-}" ] && return 0
+  __voltius_native_reported=1
+  __voltius_native_osc R
+}
+case ";${PROMPT_COMMAND-};" in
+  *";__voltius_native_report;"*) ;;
+  *) PROMPT_COMMAND="${PROMPT_COMMAND:+${PROMPT_COMMAND};}__voltius_native_report" ;;
+esac
+"#;
+
 // .zshenv trampoline (kitty/ghostty technique): restores ZDOTDIR from
 // ZDOTDIR_ORIG then sources the real .zshenv so zsh continues startup with
 // the user's files. Fixes configs like zsh4humans that define functions in
@@ -176,9 +295,209 @@ typeset -ag preexec_functions\n\
 (($preexec_functions[(I)__voltius_osc133_preexec])) || preexec_functions+=(__voltius_osc133_preexec)\n\
 __voltius_pwd 2>/dev/null\n";
 
+const ZSH_NATIVE_COMPLETION: &str = r#"
+function __voltius_native_hex() { printf '%s' "$1" | od -An -v -tx1 | tr -d ' \n'; }
+function __voltius_native_osc() {
+  if [[ "${VOLTIUS_MUX:-}" == tmux ]]; then
+    printf '\ePtmux;\e\e]9280;%s\a\e\\' "$1"
+  else
+    printf '\e]9280;%s\a' "$1"
+  fi
+}
+function compadd() {
+  if [[ "${__voltius_native_capture:-0}" != 1 || "$*" == *" -A "* || "$*" == *" -D "* || "$*" == *" -O "* ]]; then
+    builtin compadd "$@"; return $?
+  fi
+  local -a hits
+  builtin compadd -A hits "$@"
+  [[ -n "$hits" ]] || return 0
+  local LC_ALL=C prefix="${PREFIX:-}" start=$(( ${#BUFFER} - ${#PREFIX} )) hit hex
+  ((start < 0)) && start=0
+  __voltius_native_osc "S;$start,${#prefix}"
+  for hit in $hits; do
+    hex="$(__voltius_native_hex "$hit")"
+    __voltius_native_osc "C;$hex"
+  done
+}
+function __voltius_native_completer() { compstate[list_max]=-1; _main_complete; }
+function __voltius_native_widget() {
+  __voltius_native_osc A
+  __voltius_native_capture=1
+  if (( ! $+functions[_main_complete] )); then autoload -Uz compinit; compinit -u >/dev/null 2>&1; fi
+  (( $+functions[_main_complete] )) && zle __voltius_native_complete_internal
+  __voltius_native_capture=0
+  __voltius_native_osc B
+}
+zle -C __voltius_native_complete_internal list-choices __voltius_native_completer 2>/dev/null
+zle -N __voltius_native_widget 2>/dev/null
+bindkey '^I' __voltius_native_widget 2>/dev/null
+bindkey -M viins '^I' __voltius_native_widget 2>/dev/null
+function __voltius_native_rebind() {
+  bindkey '^I' __voltius_native_widget 2>/dev/null
+  bindkey -M viins '^I' __voltius_native_widget 2>/dev/null
+  # Report from the first prompt, not from load time: the frontend only
+  # registers its OSC handlers once the terminal mounts, after the banner.
+  if [[ -z "${__voltius_native_reported-}" ]]; then
+    __voltius_native_reported=1
+    __voltius_native_osc R
+  fi
+}
+typeset -ag precmd_functions
+(($precmd_functions[(I)__voltius_native_rebind])) || precmd_functions+=(__voltius_native_rebind)
+"#;
+
 /// fish's event hooks append to the existing prompt/preexec/postexec events.
 /// They do not replace the user's prompt function or install a key handler.
 const FISH_INIT_COMMAND: &str = "function __voltius_osc133_prompt --on-event fish_prompt; printf '\\e]133;A\\a\\e]133;B\\a'; end; function __voltius_osc133_preexec --on-event fish_preexec; printf '\\e]133;C\\a'; end; function __voltius_osc133_postexec --on-event fish_postexec; printf '\\e]133;D;%s\\a' $status; end";
+
+const FISH_NATIVE_COMPLETION: &str = r#"function __voltius_native_hex
+  printf '%s' "$argv[1]" | od -An -v -tx1 | string replace -a ' ' '' | string join ''
+end
+function __voltius_native_osc
+  if test "$VOLTIUS_MUX" = tmux
+    printf '\ePtmux;\e\e]9280;%s\a\e\\' "$argv[1]"
+  else
+    printf '\e]9280;%s\a' "$argv[1]"
+  end
+end
+function __voltius_native_complete
+  set -l line (commandline)
+  __voltius_native_osc A
+  for row in (complete -C -- "$line")
+    set -l parts (string split -m 1 \t -- $row)
+    set -l hex (__voltius_native_hex "$parts[1]")
+    __voltius_native_osc "C;$hex"
+    if test (count $parts) -gt 1
+      set -l desc (__voltius_native_hex "$parts[2]")
+      __voltius_native_osc "D?description;$desc"
+    end
+  end
+  __voltius_native_osc B
+end
+bind \t __voltius_native_complete
+function __voltius_rebind_native_completion --on-event fish_prompt
+  bind \t __voltius_native_complete
+  if not set -q __voltius_native_reported
+    set -g __voltius_native_reported 1
+    __voltius_native_osc R
+  end
+end"#;
+
+const PWSH_NATIVE_COMPLETION: &str = r#"
+function __voltius_native_hex([string]$value) { [Convert]::ToHexString([Text.Encoding]::UTF8.GetBytes($value)).ToLowerInvariant() }
+function global:__voltius_native_complete {
+  $line = ''; $cursor = 0
+  [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$line, [ref]$cursor)
+  [Console]::Write("`e]9280;A`a")
+  try {
+    if ($line.Length -gt 0) {
+      $completion = [System.Management.Automation.CommandCompletion]::CompleteInput($line, $cursor, $null)
+      if ($completion.ReplacementIndex -ge 0) {
+        $utf8 = [Text.Encoding]::UTF8
+        $start = $utf8.GetByteCount($line.Substring(0, $completion.ReplacementIndex))
+        $endIndex = [Math]::Min($completion.ReplacementIndex + $completion.ReplacementLength, $line.Length)
+        $length = $utf8.GetByteCount($line.Substring(0, $endIndex)) - $start
+        [Console]::Write("`e]9280;S;$start,$length`a")
+      }
+      foreach ($match in $completion.CompletionMatches) {
+        $text = __voltius_native_hex $match.CompletionText
+        [Console]::Write("`e]9280;C;$text`a")
+        if ($match.ToolTip -and $match.ToolTip -ne $match.CompletionText) {
+          $description = (($match.ToolTip -split '\r?\n' | Where-Object { $_.Trim() }) -join ' ')
+          $desc = __voltius_native_hex $description
+          [Console]::Write("`e]9280;D?description;$desc`a")
+        }
+      }
+    }
+  } finally { [Console]::Write("`e]9280;B`a") }
+}
+if (Get-Command Set-PSReadLineKeyHandler -ErrorAction SilentlyContinue) { Set-PSReadLineKeyHandler -Chord Tab -ScriptBlock { __voltius_native_complete } }
+"#;
+
+/// The native script directory is baked in as a literal, never read from the
+/// environment. A PERSISTENT session runs the pane through tmux, and a tmux
+/// server that is already running builds new panes from its OWN environment,
+/// not the client's: `update-environment` only applies to attached sessions. So
+/// an exported `VOLTIUS_NATIVE_COMPLETION_DIR` reaches the first connect of a
+/// fresh server and silently vanishes on every later one - the script sits
+/// readable on disk while the shell sources nothing, which is indistinguishable
+/// from the shell ignoring us. A literal in the payload cannot be lost that way.
+const BASH_NATIVE_SOURCE: &str = r#"if [ -r "$D/bash" ]; then . "$D/bash"; fi"#;
+const ZSH_NATIVE_SOURCE: &str = r#"if [ -r "$D/zsh" ]; then source "$D/zsh"; fi"#;
+
+/// Per-session directory for the uploaded completion scripts.
+///
+/// The name is deliberately short. The persistent payload base64-encodes the
+/// shell wrapper a second time, so every character of this path costs 16/9
+/// times. At the full 62-char `/tmp/.voltius-native-voltius_<uuid>_v2` form the
+/// persistent command came to 8578 bytes, past [`MAX_EXEC_COMMAND_LEN`], and the
+/// client silently drops over-long exec commands: the session then falls back to
+/// a plain login shell with no integration at all, and nothing in the log says
+/// why. The version marker deliberately stays on the tmux session key, not here:
+/// this directory is rewritten on every connect, so it does not need to
+/// distinguish builds.
+pub fn native_completion_dir(session_id: &str) -> String {
+    let sanitized: String = session_id
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '_' || c == '-' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    let short: String = sanitized.chars().take(16).collect();
+    format!("/tmp/.vn-{short}")
+}
+
+/// Same primitives the shell wrapper depends on, probed on the host itself.
+///
+/// The wrapper's own diagnostic could not ship: the persistent payload encodes
+/// this script a second time (16/9) and the wire budget had no room. The upload
+/// channel has no such limit, and it already runs on the same connection before
+/// the shell starts, so it is the cheap place to answer the only question that
+/// matters when the native hook never arms: does this host actually have the
+/// tools the wrapper assumes?
+pub fn native_completion_diagnostic_command(session_id: &str) -> String {
+    let dir = native_completion_dir(session_id);
+    format!(
+        r#"{{
+  printf 'sh=%s bash=%s mktemp=%s base64=%s od=%s\n' \
+    "$(basename "$(readlink -f /bin/sh 2>/dev/null || echo "$0")" 2>/dev/null)" \
+    "$(command -v bash 2>/dev/null || echo MISSING)" \
+    "$(command -v mktemp 2>/dev/null || echo MISSING)" \
+    "$(command -v base64 2>/dev/null || echo MISSING)" \
+    "$(command -v od 2>/dev/null || echo MISSING)"
+  tmux -V 2>/dev/null || true
+  T=$(mktemp 2>/dev/null) && printf 'mktemp=ok\n' || printf 'mktemp=FAILED\n'
+  if [ -n "$T" ]; then
+    printf 'a\nb\n' > "$T" 2>/dev/null && printf 'write=ok bytes=%s\n' "$(wc -c <"$T" 2>/dev/null || echo 0)" || printf 'write=FAILED\n'
+    rm -f "$T" 2>/dev/null
+  fi
+  [ -d "{dir}" ] && printf 'dir=ok\n' || printf 'dir=MISSING\n'
+  [ -r "{dir}/bash" ] && printf 'script=ok\n' || printf 'script=MISSING\n'
+}} > "{dir}/diag" 2>&1; cat "{dir}/diag" 2>/dev/null | base64 -w0 2>/dev/null || true"#
+    )
+}
+
+pub fn native_completion_upload_commands(session_id: &str) -> Vec<String> {
+    use base64::engine::general_purpose;
+    use base64::Engine;
+
+    let dir = native_completion_dir(session_id);
+    vec![
+        ("bash", BASH_NATIVE_COMPLETION.to_string()),
+        ("zsh", ZSH_NATIVE_COMPLETION.to_string()),
+        ("fish", FISH_NATIVE_COMPLETION.to_string()),
+    ]
+    .into_iter()
+    .map(|(shell, script)| {
+        let encoded = general_purpose::STANDARD.encode(script.as_bytes());
+        format!("mkdir -p {dir} && echo {encoded} | base64 -d > {dir}/{shell}")
+    })
+    .collect()
+}
 
 // $E = ESC, $P = path with backslashes, $G = >, $S = space. The $E\\ sequence
 // is ESC + backslash = ST (string terminator), closing the OSC 7. The path
@@ -219,7 +538,22 @@ function global:prompt {\n\
 ///
 /// The temp file leaks intentionally — /tmp is cleared on reboot, and trying
 /// to rm it from inside the rcfile races with bash/zsh reading it.
-const SSH_WRAPPER: &str = r#"case "$(basename "${SHELL:-/bin/sh}")" in
+/// Comments are deliberately kept OUT of this string. It is base64'd onto the
+/// wire and every byte counts against [`MAX_EXEC_COMMAND_LEN`], so a paragraph
+/// of rationale here costs ~1.3 bytes on a router's exec limit. The notes that
+/// used to live inside the payload:
+///
+/// * The generated bash rcfile replicates bash's own startup, because
+///   `--rcfile` otherwise skips `/etc/profile`, `/etc/bash.bashrc` and the
+///   profile chain — which is where PS1 and welcome text live.
+/// * An empty `--rcfile` is worse than none: bash would start interactive while
+///   skipping the user's own bashrc, losing their prompt, history and aliases.
+///   Hence the `[ -s ]` guard that falls back to a plain login shell.
+/// * The final branch exists for busybox/dash-only hosts with no bash: hooking
+///   OSC 7 through `$ENV` keeps integration working, and without it `exec bash`
+///   would fail 127, the sh would exit, and the session would reconnect-loop.
+const SSH_WRAPPER: &str = r#"export D=__VOLTIUS_NATIVE_DIR__
+case "$(basename "${SHELL:-/bin/sh}")" in
 zsh)
   ZDOTDIR_TMP=$(mktemp -d 2>/dev/null) || exec zsh -l -i <&2
   export ZDOTDIR_ORIG="${ZDOTDIR:-$HOME}"
@@ -235,21 +569,19 @@ typeset -ag precmd_functions
  (($precmd_functions[(I)__v133p])) || precmd_functions+=(__v133p)
 typeset -ag preexec_functions
 (($preexec_functions[(I)__v133x])) || preexec_functions+=(__v133x)
+__VOLTIUS_NATIVE_ZSH__
 __voltius_pwd 2>/dev/null
 EOF
   ZDOTDIR="$ZDOTDIR_TMP" exec zsh -l -i <&2
   ;;
-fish)
-  exec fish -l -i -C 'function __v133p --on-event fish_prompt; printf "\e]133;A\a\e]133;B\a"; end; function __v133x --on-event fish_preexec; printf "\e]133;C\a"; end; function __v133d --on-event fish_postexec; printf "\e]133;D;%s\a" $status; end' <&2
-  exec fish -l -i <&2
-  ;;
-*)
+  fish)
+   exec fish -l -i -C "test -r \"$D/fish\"; and source \"$D/fish\"; function __v133p --on-event fish_prompt; printf '\e]133;A\a\e]133;B\a'; end; function __v133x --on-event fish_preexec; printf '\e]133;C\a'; end; function __v133d --on-event fish_postexec; printf '\e]133;D;%s\a' \$status; end" <&2
+   exec fish -l -i <&2
+   ;;
+ *)
   if command -v bash >/dev/null 2>&1; then
   RCFILE_TMP=$(mktemp 2>/dev/null) || exec bash -l -i <&2
   cat > "$RCFILE_TMP" <<'EOF'
-# Replicate bash's own startup so the session matches a normal interactive
-# login: --rcfile otherwise skips /etc/profile, /etc/bash.bashrc and the
-# profile chain, which is where PS1 and profile-driven welcome text live.
 if [ -r /etc/profile ]; then . /etc/profile; fi
 if [ -r "$HOME/.bash_profile" ]; then . "$HOME/.bash_profile"
 elif [ -r "$HOME/.bash_login" ]; then . "$HOME/.bash_login"
@@ -263,18 +595,16 @@ v() { local s=$?; printf '\e]133;D;%s\a' "$s"; }
 PROMPT_COMMAND="v${PROMPT_COMMAND:+;${PROMPT_COMMAND}}"
 PS0="${PS0-}"$'\e]133;C\a'
 PS1=$'\e]133;A\a\e]133;B\a'"${PS1:-$ }"
-case ";${PROMPT_COMMAND-};" in
+ case ";${PROMPT_COMMAND-};" in
   *";__voltius_pwd;"*) ;;
   *) PROMPT_COMMAND="__voltius_pwd${PROMPT_COMMAND:+;${PROMPT_COMMAND}}" ;;
-esac
-__voltius_pwd 2>/dev/null
+ esac
+__VOLTIUS_NATIVE_BASH__
+ __voltius_pwd 2>/dev/null
 EOF
-  exec bash --rcfile "$RCFILE_TMP" -i <&2
+  if [ -s "$RCFILE_TMP" ]; then exec bash --rcfile "$RCFILE_TMP" -i <&2; fi
+  exec bash -l -i <&2
   else
-  # No bash on the remote (busybox/dash-only host). Hooking OSC 7 into a POSIX
-  # sh via an $ENV file keeps integration working; without this branch the
-  # `exec bash` above would fail with 127, the sh would exit, and the session
-  # would loop disconnect/reconnect.
   ENVF=$(mktemp 2>/dev/null) || exec sh -i <&2
   cat > "$ENVF" <<'EOF'
 __voltius_pwd() { printf '\033]7;file://%s%s\007' "${HOSTNAME:-}" "$PWD"; }
@@ -300,32 +630,65 @@ pub const MOTD_PREAMBLE: &str = "[ ! -e $HOME/.hushlogin ] && { [ -r /run/motd.d
 /// `prefix` (a `cd` into the session's starting directory, or empty) runs
 /// inside the decoded wrapper. Prefixing the outer payload instead would put it
 /// in front of the login shell, which may be csh or fish; inside, it is /bin/sh.
-pub fn ssh_exec_command(prefix: &str) -> String {
-    encode_wrapper(&format!("{prefix}\n{MOTD_PREAMBLE}\n{SSH_WRAPPER}"))
+/// Shell startup references the scripts uploaded on a separate channel. Both
+/// flat and persistent payloads use the same source, so the persistent wrapper
+/// stays within the exec-command limit.
+fn ssh_wrapper_with_native_completion(native_dir: &str) -> String {
+    SSH_WRAPPER
+        .replace("__VOLTIUS_NATIVE_ZSH__", ZSH_NATIVE_SOURCE)
+        .replace("__VOLTIUS_NATIVE_BASH__", BASH_NATIVE_SOURCE)
+        // Last: the dir placeholder also lives inside the two source snippets
+        // inserted above, so replacing it earlier would leave them literal.
+        .replace("__VOLTIUS_NATIVE_DIR__", native_dir)
 }
 
-/// Persistent tmux/screen sessions deliberately use the OSC 7-only wrapper.
-/// Multiplexers can replay or filter prompt markers, so claiming OSC 133 there
-/// would create duplicate or stale blocks after reattachment. Keeping one
-/// source wrapper and removing only the optional hooks also avoids a second
-/// large shell script that could drift from the normal SSH path.
+pub fn ssh_exec_command(prefix: &str) -> String {
+    let wrapper = ssh_wrapper_with_native_completion("");
+    encode_wrapper(&format!("{prefix}\n{MOTD_PREAMBLE}\n{wrapper}"))
+}
+
+pub fn ssh_exec_command_for_session(prefix: &str, session_id: &str) -> String {
+    let wrapper = ssh_wrapper_with_native_completion(&native_completion_dir(session_id));
+    encode_wrapper(&format!("{prefix}\n{MOTD_PREAMBLE}\n{wrapper}"))
+}
+
+/// Persistent tmux/screen sessions keep only the OSC 133 prompt boundary.
+/// Multiplexers can replay or filter command lifecycle markers, so B/C/D would
+/// create duplicate or stale blocks after reattachment. The A marker is safe:
+/// it re-establishes the frontend's trusted empty command line for each prompt.
 pub fn ssh_exec_command_without_blocks(prefix: &str) -> String {
-    let mut wrapper = SSH_WRAPPER.to_string();
-    for marker in [
+    ssh_exec_command_without_blocks_for_dir(prefix, "")
+}
+
+pub fn ssh_exec_command_without_blocks_for_dir(prefix: &str, native_dir: &str) -> String {
+    let mut wrapper = ssh_wrapper_with_native_completion(native_dir);
+    wrapper = wrapper.replace(
         "__v133p() { local s=$?; print -n \"\\e]133;D;${s}\\a\\e]133;A\\a\\e]133;B\\a\"; }\n",
+        "__v133p() { print -n \"\\e]133;A\\a\"; }\n",
+    );
+    wrapper = wrapper.replace(
+        "function __v133p --on-event fish_prompt; printf '\\e]133;A\\a\\e]133;B\\a'; end; function __v133x --on-event fish_preexec; printf '\\e]133;C\\a'; end; function __v133d --on-event fish_postexec; printf '\\e]133;D;%s\\a' \\$status; end",
+        "function __v133p --on-event fish_prompt; printf '\\e]133;A\\a'; end",
+    );
+    wrapper = wrapper.replace(
+        "PS1=$'\\e]133;A\\a\\e]133;B\\a'\"${PS1:-$ }\"\n",
+        "PS1=$'\\e]133;A\\a'\"${PS1:-$ }\"\n",
+    );
+    for marker in [
         "__v133x() { print -n \"\\e]133;C\\a\"; }\n",
-        "  (($precmd_functions[(I)__v133p])) || precmd_functions+=(__v133p)\n",
         "typeset -ag preexec_functions\n",
         "(($preexec_functions[(I)__v133x])) || preexec_functions+=(__v133x)\n",
-        "  exec fish -l -i -C 'function __v133p --on-event fish_prompt; printf \"\\e]133;A\\a\\e]133;B\\a\"; end; function __v133x --on-event fish_preexec; printf \"\\e]133;C\\a\"; end; function __v133d --on-event fish_postexec; printf \"\\e]133;D;%s\\a\" $status; end' <&2\n",
         "v() { local s=$?; printf '\\e]133;D;%s\\a' \"$s\"; }\n",
         "PROMPT_COMMAND=\"v${PROMPT_COMMAND:+;${PROMPT_COMMAND}}\"\n",
         "PS0=\"${PS0-}\"$'\\e]133;C\\a'\n",
-        "PS1=$'\\e]133;A\\a\\e]133;B\\a'\"${PS1:-$ }\"\n",
     ] {
         wrapper = wrapper.replace(marker, "");
     }
     encode_wrapper(&format!("{prefix}\n{MOTD_PREAMBLE}\n{wrapper}"))
+}
+
+pub fn ssh_exec_command_without_blocks_for_session(prefix: &str, session_id: &str) -> String {
+    ssh_exec_command_without_blocks_for_dir(prefix, &native_completion_dir(session_id))
 }
 
 /// Longest `exec` payload we will put on the wire. dropbear's `MAX_STRING_LEN`
@@ -335,6 +698,7 @@ pub fn ssh_exec_command_without_blocks(prefix: &str) -> String {
 pub const MAX_EXEC_COMMAND_LEN: usize = 8192;
 
 const TMUX_SOCKET: &str = "voltius";
+const TMUX_PASSTHROUGH_CONFIG: &str = "set -g allow-passthrough on";
 
 /// Prepended to the pane command so the session shell no longer looks like it
 /// is inside a multiplexer (#159). The persistence wrapper is an implementation
@@ -364,8 +728,40 @@ fn notice_printf(message: &str) -> String {
     format!("printf '\\r\\n{message}\\r\\n'")
 }
 
+/// Short fingerprint of the shell integration, folded into the session name.
+///
+/// A persistent session reuses whatever shell is already running inside
+/// tmux/screen, so a pane created by an older build keeps that build's shell
+/// integration forever: the wrapper never re-runs, the completion hook never
+/// arms, and reconnecting just re-attaches to a shell that will never work. The
+/// symptom is indistinguishable from "the remote ignores us" - no OSC 133, no
+/// arming marker, no completion.
+///
+/// Include the scripts and tmux passthrough configuration too: changing a shell
+/// hook without changing the outer wrapper must also replace the running pane.
+fn wrapper_fingerprint() -> String {
+    // FNV-1a: cheap, stable across runs, and collisions here would only mean a
+    // pane is reused when it could have been rebuilt.
+    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+    for script in [
+        SSH_WRAPPER,
+        BASH_NATIVE_COMPLETION,
+        ZSH_NATIVE_COMPLETION,
+        FISH_NATIVE_COMPLETION,
+        TMUX_PASSTHROUGH_CONFIG,
+    ] {
+        for byte in script.bytes() {
+            hash ^= u64::from(byte);
+            hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+        }
+    }
+    let hex = format!("{hash:016x}");
+    hex[..8].to_string()
+}
+
 /// tmux/screen session name for a session id, sanitized to `[A-Za-z0-9_-]`.
-/// Stable across reconnect so the multiplexer re-attaches the live session.
+/// Stable across reconnect so the multiplexer re-attaches the live session —
+/// and keyed to the wrapper so a pane from a different build is never reused.
 pub fn tmux_session_key(session_id: &str) -> String {
     let sanitized: String = session_id
         .chars()
@@ -377,7 +773,7 @@ pub fn tmux_session_key(session_id: &str) -> String {
             }
         })
         .collect();
-    format!("voltius_{sanitized}")
+    format!("voltius_{sanitized}_{}", wrapper_fingerprint())
 }
 
 /// Wrap `inner` (the existing exec bootstrap) in tmux, else screen, else a
@@ -445,7 +841,13 @@ pub fn persistent_exec_command(session_key: &str, inner: &str) -> String {
     let script = format!(
         r#"V="{inner}"
 if command -v tmux >/dev/null 2>&1; then
-  V="{tmux_strip}$V"
+  V="{tmux_strip}export VOLTIUS_MUX=tmux; $V"
+  TMUX_PASSTHROUGH=
+  case "$(tmux -V 2>/dev/null)" in
+    *"tmux "3.[3-9]*|*"tmux "3.[1-9][0-9]*|*"tmux "[4-9]*)
+      tmux -L {socket} {tmux_passthrough} >/dev/null 2>&1
+      TMUX_PASSTHROUGH=1 ;;
+  esac
   TMUX_PREFIX_NONE=
   case "$(tmux -V 2>/dev/null)" in
     *"tmux "[3-9]*|*"tmux "[1-9][0-9]*|*"tmux "2.[1-9]*)
@@ -463,6 +865,7 @@ set -sg escape-time 0
 set -g destroy-unattached off
 set -ga terminal-overrides ',*:cnorm=\E[?25h'
 EOF
+    [ -n "$TMUX_PASSTHROUGH" ] && echo '{tmux_passthrough}' >> "$TMUX_CONF"
     [ -n "$TMUX_PREFIX_NONE" ] && echo "set -g prefix None" >> "$TMUX_CONF"
     exec tmux -L {socket} -f "$TMUX_CONF" new-session -A -s {key} "$V" <&2
   fi
@@ -502,6 +905,7 @@ fi
         key = session_key,
         inner = inner,
         tmux_strip = TMUX_ENV_STRIP,
+        tmux_passthrough = TMUX_PASSTHROUGH_CONFIG,
         screen_strip = SCREEN_ENV_STRIP,
         screen_notice = notice_printf(SCREEN_DEGRADED_NOTICE),
         no_mux_notice =
@@ -796,8 +1200,32 @@ mod tests {
 
     #[test]
     fn session_key_sanitizes_unsafe_chars() {
-        assert_eq!(tmux_session_key("abc-123"), "voltius_abc-123");
-        assert_eq!(tmux_session_key("a.b:c d"), "voltius_a_b_c_d");
+        let fingerprint = wrapper_fingerprint();
+        assert_eq!(
+            tmux_session_key("abc-123"),
+            format!("voltius_abc-123_{fingerprint}")
+        );
+        assert_eq!(
+            tmux_session_key("a.b:c d"),
+            format!("voltius_a_b_c_d_{fingerprint}")
+        );
+    }
+
+    #[test]
+    fn the_session_key_is_keyed_to_the_wrapper_so_a_stale_pane_is_never_reused() {
+        // A persistent session reuses the shell already running in tmux, so a
+        // pane started by an older build keeps that build's integration forever
+        // and never converges. The fingerprint of the wrapper is part of the
+        // session name, so any edit to the wrapper is automatically a different
+        // session - there is no hand-maintained version string to forget.
+        let key = tmux_session_key("s1");
+        assert!(key.ends_with(&wrapper_fingerprint()));
+        assert_eq!(wrapper_fingerprint().len(), 8);
+        // The script directory is per session and short, and deliberately does
+        // NOT carry the fingerprint: it is rewritten on every connect, so it
+        // never needs to distinguish builds.
+        assert!(native_completion_dir("s1").starts_with("/tmp/.vn-"));
+        assert!(!native_completion_dir("s1").contains(&wrapper_fingerprint()));
     }
 
     #[test]
@@ -826,7 +1254,9 @@ mod tests {
         assert!(script.contains("without TrueColor"));
         // #159: the pane shell must not inherit multiplexer env, or the user's
         // own tmux talks to our socket and refuses to attach.
-        assert!(script.contains(&format!(r#"V="{TMUX_ENV_STRIP}$V""#)));
+        assert!(script.contains(&format!(
+            r#"V="{TMUX_ENV_STRIP}export VOLTIUS_MUX=tmux; $V""#
+        )));
         assert!(script.contains(&format!(r#"V="{SCREEN_ENV_STRIP}$V""#)));
         // #159: C-b belongs to whatever the user runs inside, not to us. Set on
         // both a cold server (via -f) and one left running by a past session.
@@ -868,7 +1298,7 @@ mod tests {
             .find("cd '/srv/app'")
             .expect("prefix is in the wrapper");
         // Inside the decoded /bin/sh wrapper, and before it execs the login shell.
-        assert!(cd < decoded.find(SSH_WRAPPER).unwrap());
+        assert!(cd < decoded.find("case \"$(basename").unwrap());
         assert!(!decode_bootstrap(&ssh_exec_command("")).contains("cd '"));
     }
 
@@ -904,9 +1334,10 @@ mod tests {
         // Kill only when no client beyond the closer's own is attached.
         assert!(attached.contains("-le 1"));
         assert!(detached.contains("-le 0"));
-        assert!(attached.contains("list-clients -t voltius_s1"));
-        assert!(attached.contains("tmux -L voltius kill-session -t voltius_s1"));
-        assert!(attached.contains("screen -S voltius_s1 -X quit"));
+        let key = tmux_session_key("s1");
+        assert!(attached.contains(&format!("list-clients -t {key}")));
+        assert!(attached.contains(&format!("tmux -L voltius kill-session -t {key}")));
+        assert!(attached.contains(&format!("screen -S {key} -X quit")));
         // Confirmed kill (or already gone) prints the sentinel for the tombstone.
         assert!(attached.contains("VOLTIUS_KILLED"));
         assert!(attached.trim_end().ends_with("true"));
@@ -917,8 +1348,9 @@ mod tests {
         let decoded = decode_bootstrap(&force_kill_command("s1"));
         // Unconditional: the client-count guard uses the force threshold.
         assert!(decoded.contains("-le 1000000"));
-        assert!(decoded.contains("tmux -L voltius kill-session -t voltius_s1"));
-        assert!(decoded.contains("screen -S voltius_s1 -X quit"));
+        let key = tmux_session_key("s1");
+        assert!(decoded.contains(&format!("tmux -L voltius kill-session -t {key}")));
+        assert!(decoded.contains(&format!("screen -S {key} -X quit")));
         assert!(decoded.contains("VOLTIUS_KILLED"));
     }
 
@@ -960,6 +1392,180 @@ mod tests {
             decoded.contains("file://%s%s") && decoded.contains("${HOST}"),
             "SSH wrapper must use HOST-based OSC 7 printf, got:\n{decoded}"
         );
+    }
+
+    #[test]
+    fn ssh_wrapper_embeds_native_completion_for_supported_shells() {
+        let decoded = decode_bootstrap(&ssh_exec_command_for_session("", "session/1"));
+        let dir = native_completion_dir("session/1");
+        // The path is a literal in the payload, never read from the
+        // environment: a running tmux server builds new panes from its own
+        // environment, so an exported variable silently vanishes on every
+        // connect after the first.
+        // Bound once as $D: the literal path is paid 16/9 times over in the
+        // persistent payload, so repeating it per shell branch is what pushed
+        // that command past the wire limit.
+        assert_eq!(
+            decoded.matches(&dir).count(),
+            1,
+            "the dir must be written once"
+        );
+        assert!(decoded.contains("if [ -r \"$D/bash\" ]"));
+        assert!(decoded.contains("if [ -r \"$D/zsh\" ]"));
+        // The fish snippet is passed as a double-quoted -C argument, so its
+        // quotes are escaped in the payload; assert on the reference, not a path.
+        assert!(decoded.contains("$D/fish"));
+        assert!(
+            !decoded.contains("VOLTIUS_NATIVE_COMPLETION_DIR"),
+            "the native dir must not depend on an exported variable"
+        );
+    }
+
+    #[test]
+    fn native_completion_upload_commands_cover_posix_shells() {
+        let commands = native_completion_upload_commands("session/1");
+        let dir = native_completion_dir("session/1");
+        assert_eq!(commands.len(), 3);
+        assert!(commands.iter().all(|command| command.contains(&dir)));
+        assert!(commands.iter().any(|command| command.ends_with("/bash")));
+        assert!(commands.iter().any(|command| command.ends_with("/zsh")));
+        assert!(commands.iter().any(|command| command.ends_with("/fish")));
+    }
+
+    #[test]
+    fn bash_native_completion_rebinds_tab_after_the_host_prompt_command() {
+        // A host PROMPT_COMMAND that calls `bind` runs left to right, so our
+        // re-assert has to be APPENDED. Prepending it lets the host clobber Tab
+        // again on the very same prompt: Tab falls through to readline, which
+        // rings the bell on an ambiguous match and reports nothing to Voltius.
+        assert!(BASH_NATIVE_COMPLETION.contains(
+            "PROMPT_COMMAND=\"${PROMPT_COMMAND:+${PROMPT_COMMAND};}__voltius_native_bind\""
+        ));
+        assert!(!BASH_NATIVE_COMPLETION.contains("__voltius_native_bind${PROMPT_COMMAND"));
+        // zsh equivalent, via precmd, already rebinds every prompt.
+        assert!(ZSH_NATIVE_COMPLETION.contains("precmd_functions+=(__voltius_native_rebind)"));
+    }
+
+    #[test]
+    fn every_supported_shell_announces_that_it_armed() {
+        // The arming marker is the only signal that distinguishes "the remote
+        // rcfile never ran" from "the remote shell ignores us" - the two look
+        // identical from the app otherwise, and each costs a diagnostic round
+        // trip with the user.
+        for (name, script) in [
+            ("bash", BASH_NATIVE_COMPLETION),
+            ("zsh", ZSH_NATIVE_COMPLETION),
+            ("fish", FISH_NATIVE_COMPLETION),
+        ] {
+            assert!(
+                script.contains("__voltius_native_osc R"),
+                "{name} must report arming through its OSC 9280 transport"
+            );
+        }
+    }
+
+    #[test]
+    fn persistent_shell_passes_native_completion_through_tmux() {
+        let id = "9ee3ce38-8a0d-4bef-aa89-917ce8fbf476";
+        let inner = ssh_exec_command_without_blocks_for_session("", id);
+        let outer = decode_bootstrap(&persistent_exec_command(&tmux_session_key(id), &inner));
+        assert!(outer.contains(TMUX_PASSTHROUGH_CONFIG));
+        assert!(outer.contains("tmux -L voltius set -g allow-passthrough on"));
+        assert!(outer.contains("export VOLTIUS_MUX=tmux; $V"));
+        // Ardid reports tmux 3.0a, which already understands DCS passthrough
+        // but rejects the newer allow-passthrough option in its config file.
+        assert!(outer.contains("*\"tmux \"3.[3-9]*"));
+        assert!(
+            outer.contains("[ -n \"$TMUX_PASSTHROUGH\" ] && echo 'set -g allow-passthrough on'")
+        );
+        assert!(!outer.contains("set -g destroy-unattached off\nset -g allow-passthrough on"));
+        for (name, script) in [
+            ("bash", BASH_NATIVE_COMPLETION),
+            ("zsh", ZSH_NATIVE_COMPLETION),
+            ("fish", FISH_NATIVE_COMPLETION),
+        ] {
+            assert!(script.contains("VOLTIUS_MUX"), "{name} must detect tmux");
+            assert!(
+                script.contains("\\ePtmux;\\e\\e]9280;%s\\a\\e\\\\"),
+                "{name} must wrap OSC 9280 in tmux passthrough"
+            );
+        }
+    }
+
+    #[test]
+    fn bash_native_completion_scans_case_insensitively() {
+        // `compgen -f VAR` matches nothing when the directory holds `var`, so a
+        // wrong-case path (how a Warp user types it) used to produce zero
+        // matches and a bell. nocasematch is what makes the scan match, and it
+        // only applies to `[[ ]]`/`case` - NOT to pathname expansion, which is
+        // why this walks the directory instead of globbing `VAR*`.
+        assert!(BASH_NATIVE_COMPLETION.contains("__voltius_native_ci_scan"));
+        assert!(BASH_NATIVE_COMPLETION.contains("shopt -s nocasematch"));
+        assert!(BASH_NATIVE_COMPLETION.contains("[[ $name == $base* ]]"));
+        assert!(BASH_NATIVE_COMPLETION
+            .contains("out=( $(__voltius_native_ci_scan \"${words[$cword]}\") )"));
+    }
+
+    #[test]
+    fn the_bash_branch_never_starts_with_an_empty_rcfile() {
+        let decoded = decode_bootstrap(&ssh_exec_command(""));
+        // bash --rcfile "" starts interactive while skipping the user's own
+        // bashrc: no prompt, no history, no aliases, and nothing to debug.
+        assert!(decoded.contains("if [ -s \"$RCFILE_TMP\" ]; then exec bash --rcfile"));
+    }
+
+    #[test]
+    fn the_generated_bash_rcfile_is_syntactically_whole() {
+        // A malformed rcfile is invisible at runtime: bash discards the whole
+        // file, the completion function never exists, and Tab falls back to a
+        // bare readline that rings the bell. The regression that motivated this
+        // was an `else <compound commands>; fi` - the `;` after a trailing
+        // `esac` is a parse error, so the entire integration silently vanished.
+        let decoded = decode_bootstrap(&ssh_exec_command(""));
+        let rcfile = decoded
+            .split("cat > \"$RCFILE_TMP\" <<'EOF'\n")
+            .nth(1)
+            .and_then(|rest| rest.split("\nEOF\n").next())
+            .expect("wrapper writes a bash rcfile heredoc");
+        // `; . /etc/profile; fi` is fine; the broken shape is a line that is
+        // only `; fi`, i.e. a stray `;` right after the fallback's `esac`.
+        assert!(
+            !rcfile.lines().any(|line| line.trim() == "; fi"),
+            "generated rcfile has a stray `; fi` line:\n{rcfile}"
+        );
+        // Sources the uploaded script, and nothing else: a bare `if` here with
+        // no `else` cannot be broken by a stray `;` after a compound command.
+        assert!(rcfile.contains("if [ -r \""));
+        assert!(!rcfile.contains("else __voltius_native_hex()"));
+    }
+
+    #[test]
+    fn both_exec_payload_shapes_fit_the_wire_limit() {
+        // A realistic session id, not "s1": an overlong exec is silently
+        // dropped by client.rs in favor of a plain, unintegrated login shell.
+        // Include both the native directory and tmux passthrough setup.
+        const REAL_ID: &str = "9ee3ce38-8a0d-4bef-aa89-917ce8fbf476";
+        let flat = ssh_exec_command_for_session("", REAL_ID);
+        assert!(
+            flat.len() <= MAX_EXEC_COMMAND_LEN,
+            "flat payload {} exceeds {MAX_EXEC_COMMAND_LEN}",
+            flat.len()
+        );
+        assert!(decode_bootstrap(&flat).contains(&native_completion_dir(REAL_ID)));
+
+        let key = tmux_session_key(REAL_ID);
+        let persistent_inner = ssh_exec_command_without_blocks_for_session("", REAL_ID);
+        let persistent = persistent_exec_command(&key, &persistent_inner);
+        assert!(
+            persistent.len() <= MAX_EXEC_COMMAND_LEN,
+            "persistent payload {} exceeds {MAX_EXEC_COMMAND_LEN}",
+            persistent.len()
+        );
+        assert!(decode_bootstrap(&persistent_inner).contains(&native_completion_dir(REAL_ID)));
+        // The wrapper itself stays free of diagnostics: the persistent payload
+        // base64-encodes this inner a second time (16/9), so every byte here is
+        // charged twice and the budget has no room. Host diagnostics travel on
+        // the upload channel instead, which has no such limit.
     }
 
     #[test]
@@ -1215,7 +1821,7 @@ mod tests {
         assert!(fish
             .args
             .windows(2)
-            .any(|args| args == ["-C", FISH_INIT_COMMAND]));
+            .any(|args| { args[0] == "-C" && args[1].starts_with(FISH_INIT_COMMAND) }));
         cleanup(&fish.tempfiles);
     }
 
@@ -1257,10 +1863,16 @@ mod tests {
     }
 
     #[test]
-    fn persistent_wrapper_degrades_osc133_but_keeps_osc7() {
+    fn persistent_wrapper_keeps_prompt_start_osc133_without_command_blocks() {
         let decoded = decode_bootstrap(&ssh_exec_command_without_blocks(""));
         assert!(decoded.contains("file://"));
-        assert!(!decoded.contains("133;"));
+        assert!(decoded.contains("__v133p() { print -n \"\\e]133;A\\a\"; }"));
+        assert!(decoded.contains("function __v133p --on-event fish_prompt"));
+        assert!(decoded.contains("PS1=$'\\e]133;A\\a'"));
+        assert!(decoded.contains("133;A"));
+        assert!(!decoded.contains("133;B"));
+        assert!(!decoded.contains("133;C"));
+        assert!(!decoded.contains("133;D"));
         assert!(decoded.contains("exec fish -l -i <&2"));
     }
 

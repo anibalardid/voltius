@@ -20,6 +20,7 @@ interface Harness {
   cleared: () => number;
   appEvents: string[];
   selection: { text: string };
+  setRendererAvailable(available: boolean): void;
 }
 
 function harness(mouseTracking: "none" | "drag" = "drag"): Harness {
@@ -30,6 +31,7 @@ function harness(mouseTracking: "none" | "drag" = "drag"): Harness {
 
   const appEvents: string[] = [];
   const selection = { text: "" };
+  let rendererAvailable = true;
   const _selectionService = {
     _enabled: false,
     cleared: 0,
@@ -63,7 +65,7 @@ function harness(mouseTracking: "none" | "drag" = "drag"): Harness {
     onSelectionChange: () => ({ dispose() {} }),
     paste: () => {},
     loadAddon: () => {},
-    _core: { coreMouseService, _selectionService },
+    _core: { coreMouseService, _selectionService, _renderService: { hasRenderer: () => rendererAvailable } },
   } as unknown as Terminal;
 
   attachTerminalClipboard(term, container);
@@ -71,6 +73,7 @@ function harness(mouseTracking: "none" | "drag" = "drag"): Harness {
     term, container, screen, appEvents, selection,
     protocol: () => coreMouseService.activeProtocol,
     cleared: () => _selectionService.cleared,
+    setRendererAvailable: (available) => { rendererAvailable = available; },
   };
 }
 
@@ -108,6 +111,15 @@ describe("drag-selects-text over an app holding the mouse", () => {
     press(h.screen);
     release();
     expect(h.appEvents).toEqual(["mousedown", "mouseup"]);
+    expect(h.protocol()).toBe("VT200");
+  });
+
+  it("does not replay a click into xterm while its renderer is unavailable", () => {
+    const h = harness();
+    h.setRendererAvailable(false);
+    press(h.screen);
+    release();
+    expect(h.appEvents).toEqual([]);
     expect(h.protocol()).toBe("VT200");
   });
 

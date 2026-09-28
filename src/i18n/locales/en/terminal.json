@@ -32,9 +32,10 @@
       "listLabel": "Terminal suggestions",
       "keyboardHint": "Enter inserts · Tab accepts enabled remote SSH paths · Escape dismisses",
       "empty": "No local or remote suggestions available",
-      "scopeNote": "Shows local history and, when enabled, remote path suggestions. Tab works only for trusted interactive SSH path drafts; the explicit picker remains available. Suggestions insert text only and never execute commands.",
+      "scopeNote": "Shows local history and shell-provided SSH suggestions. Suggestions insert text only and never execute commands.",
       "localSource": "Local history",
       "remoteSource": "Remote path",
+      "remoteShellSource": "Remote shell",
       "optionLabel": "{{command}} — {{source}} — {{session}}"
     },
     "multiplayerBar": {

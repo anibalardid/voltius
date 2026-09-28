@@ -493,6 +493,64 @@ fn is_windows_sshid(sshid: &[u8]) -> bool {
         .contains("windows")
 }
 
+/// Runs the upload commands, then one host probe. Both share a channel type
+/// that is not length-filtered, so the probe can afford to be thorough: it is
+/// the only place left to find out whether a host actually has the tools the
+/// shell wrapper assumes (`mktemp`, `base64`, a writable /tmp), which is
+/// otherwise invisible from the app when the native hook silently never arms.
+async fn install_native_completion_files(handle: &client::Handle<SshClient>, session_id: &str) {
+    let mut commands = crate::shell_integration::native_completion_upload_commands(session_id);
+    commands.push(crate::shell_integration::native_completion_diagnostic_command(session_id));
+    let (last, uploads) = commands.split_last().expect("non-empty");
+    let _ = last;
+    for command in uploads {
+        let Ok(channel) = handle.channel_open_session().await else {
+            continue;
+        };
+        if channel.exec(true, command.as_bytes()).await.is_err() {
+            continue;
+        }
+        let mut stream = channel.into_stream();
+        let _ = tokio::time::timeout(std::time::Duration::from_secs(5), async {
+            let mut buffer = [0u8; 256];
+            loop {
+                match stream.read(&mut buffer).await {
+                    Ok(0) | Err(_) => break,
+                    Ok(_) => {}
+                }
+            }
+        })
+        .await;
+    }
+    if let Ok(channel) = handle.channel_open_session().await {
+        if channel.exec(true, last.as_bytes()).await.is_ok() {
+            let mut stream = channel.into_stream();
+            let mut out: Vec<u8> = Vec::with_capacity(512);
+            let _ = tokio::time::timeout(std::time::Duration::from_secs(5), async {
+                let mut buffer = [0u8; 256];
+                loop {
+                    match stream.read(&mut buffer).await {
+                        Ok(0) | Err(_) => break,
+                        Ok(n) => {
+                            if out.len() < 480 {
+                                out.extend_from_slice(&buffer[..n]);
+                            }
+                        }
+                    }
+                }
+            })
+            .await;
+            if !out.is_empty() {
+                log::info!(
+                    "[NATIVE-DIAG] session={} {}",
+                    session_id,
+                    String::from_utf8_lossy(&out).replace('\n', " | ")
+                );
+            }
+        }
+    }
+}
+
 // Host-key rejections set `rejection_reason` instead, so they never reach here.
 fn is_transient_connect_error(e: &russh::Error) -> bool {
     use std::io::ErrorKind;
@@ -785,6 +843,10 @@ pub async fn connect(
         }
     }
 
+    if shell_integration {
+        install_native_completion_files(&final_handle, &session_id).await;
+    }
+
     // Open channel + shell
     emit_step(&app, &session_id, SshStep::OpeningShell, "Requesting PTY");
 
@@ -870,9 +932,12 @@ pub async fn connect(
     // the historical behavior available via the setting.
     let exec_cmd = if shell_integration {
         let inner = if persist {
-            crate::shell_integration::ssh_exec_command_without_blocks(&cd_prefix)
+            crate::shell_integration::ssh_exec_command_without_blocks_for_session(
+                &cd_prefix,
+                &session_id,
+            )
         } else {
-            crate::shell_integration::ssh_exec_command(&cd_prefix)
+            crate::shell_integration::ssh_exec_command_for_session(&cd_prefix, &session_id)
         };
         Some(if persist {
             let key = crate::shell_integration::tmux_session_key(&session_id);

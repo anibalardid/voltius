@@ -66,19 +66,29 @@ describe("getLoggerVerbose", () => {
 describe("installGlobalErrorLogging", () => {
   it("routes unhandled errors into log.error", () => {
     installGlobalErrorLogging();
-    window.dispatchEvent(new ErrorEvent("error", { message: "boom" }));
+    window.dispatchEvent(new ErrorEvent("error", { message: "boom-log" }));
     expect(pluginLog.error).toHaveBeenCalled();
-    expect(pluginLog.error.mock.calls[0][0]).toContain("boom");
+    expect(pluginLog.error.mock.calls[0][0]).toContain("boom-log");
   });
 
   it("raises a toast with a create-report action on uncaught errors", async () => {
     installGlobalErrorLogging();
-    window.dispatchEvent(new ErrorEvent("error", { message: "boom" }));
+    window.dispatchEvent(new ErrorEvent("error", { message: "boom-toast" }));
     // The toast's i18n and stores load on demand, so it lands a tick later.
     await vi.waitFor(() => expect(addToast).toHaveBeenCalled());
     const toast = addToast.mock.calls[0][0];
     expect(toast.action).toBeDefined();
     toast.action.onClick();
     expect(openSettings).toHaveBeenCalledWith("diagnostics");
+  });
+
+  it("shows only one error toast for a burst of identical xterm exceptions", async () => {
+    installGlobalErrorLogging();
+    for (let i = 0; i < 5; i++) {
+      window.dispatchEvent(new ErrorEvent("error", {
+        message: "renderer dimensions unavailable", filename: "xterm.js", lineno: 4874,
+      }));
+    }
+    await vi.waitFor(() => expect(addToast).toHaveBeenCalledTimes(1));
   });
 });

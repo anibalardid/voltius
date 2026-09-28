@@ -3,6 +3,7 @@ import { TOGGLE_DEFS, getToggle, useToggleSettingsStore, type ToggleId } from "@
 import {
   CURSOR_STYLES,
   DEFAULT_CURSOR_STYLE,
+  DEFAULT_REMOTE_PATH_COMPLETION_ENABLED,
   useTerminalSettingsStore,
   type TerminalCursorStyle,
 } from "@/stores/terminalSettingsStore";
@@ -180,7 +181,7 @@ function explicitDefs(): SettingDef[] {
     },
     {
       key: "terminal.remotePathCompletion",
-      type: "boolean", default: false,
+      type: "boolean", default: DEFAULT_REMOTE_PATH_COMPLETION_ENABLED,
       section: "terminal", labelKey: "settings.terminal.remotePathCompletion.title", writable: true,
       get: () => terminal().remotePathCompletionEnabled,
       set: (v) => terminal().setRemotePathCompletionEnabled(v as boolean),

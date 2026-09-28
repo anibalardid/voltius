@@ -92,6 +92,7 @@ export function attachTerminalClipboard(
     _core?: {
       coreMouseService?: { activeProtocol: string };
       _selectionService?: { disable(): void; _enabled: boolean };
+      _renderService?: { hasRenderer(): boolean };
     };
   })._core;
   const mouseService = core?.coreMouseService;
@@ -99,6 +100,7 @@ export function attachTerminalClipboard(
   let parkedProtocol: string | null = null;
   let pressed: MouseEvent | null = null;
   let replaying = false;
+  let disposed = false;
 
   const dragSelectsText = () =>
     !!mouseService &&
@@ -130,11 +132,17 @@ export function attachTerminalClipboard(
   // handed to it now, press and release together.
   const replayToApp = (src: MouseEvent) => {
     const target = src.target as HTMLElement | null;
-    if (!target) return;
+    // xterm can lose its renderer while a WebGL addon is switching or a pane
+    // detaches. Synthesizing a mouse press then throws in xterm's dimensions
+    // getter, and the global error handler used to produce a toast per event.
+    if (!target?.isConnected || disposed || core?._renderService?.hasRenderer() === false) return;
     replaying = true;
-    target.dispatchEvent(cloneMouse("mousedown", src));
-    document.dispatchEvent(cloneMouse("mouseup", src));
-    replaying = false;
+    try {
+      target.dispatchEvent(cloneMouse("mousedown", src));
+      document.dispatchEvent(cloneMouse("mouseup", src));
+    } finally {
+      replaying = false;
+    }
   };
 
   // A drag that starts in the terminal often ends outside it (window padding,
@@ -236,6 +244,7 @@ export function attachTerminalClipboard(
   return {
     handleKeyEvent,
     dispose() {
+      disposed = true;
       unpark();
       container.removeEventListener("mousedown", handleMouseDown, true);
       window.removeEventListener("mouseup", handleMouseUp);

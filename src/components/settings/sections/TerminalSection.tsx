@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { CURSOR_STYLES, DEFAULT_CURSOR_STYLE, useTerminalSettingsStore, type TerminalCursorStyle } from "@/stores/terminalSettingsStore";
+import { CURSOR_STYLES, DEFAULT_CURSOR_STYLE, DEFAULT_REMOTE_PATH_COMPLETION_ENABLED, useTerminalSettingsStore, type TerminalCursorStyle } from "@/stores/terminalSettingsStore";
 import { TOGGLE_DEFS, useToggle } from "@/stores/toggleSettingsStore";
 import { DEFAULT_SCROLLBACK_LINES, MAX_SCROLLBACK_LINES, MIN_SCROLLBACK_LINES } from "@/stores/terminalSettingsUtils";
 import { FormSelect } from "@/components/shared/FormSelect";
@@ -14,6 +14,7 @@ export default function TerminalSection() {
   const [scrollMinimapEnabled, setScrollMinimapEnabled] = useToggle("scroll-minimap");
   const [selectToCopy, setSelectToCopy] = useToggle("select-to-copy");
   const [dragSelectsText, setDragSelectsText] = useToggle("drag-selects-text");
+  const [suggestionsOverlay, setSuggestionsOverlay] = useToggle("terminal-suggestions-overlay");
   const [ignoreBracketedPaste, setIgnoreBracketedPaste] = useToggle("ignore-bracketed-paste");
   const scrollbackLines = useTerminalSettingsStore((s) => s.scrollbackLines);
   const setScrollbackLines = useTerminalSettingsStore((s) => s.setScrollbackLines);
@@ -133,10 +134,20 @@ export default function TerminalSection() {
           className="mt-4"
           title={t("settings.terminal.remotePathCompletion.title")}
           desc={t("settings.terminal.remotePathCompletion.desc")}
-          dirty={remotePathCompletionEnabled}
-          onReset={() => setRemotePathCompletionEnabled(false)}
+          dirty={remotePathCompletionEnabled !== DEFAULT_REMOTE_PATH_COMPLETION_ENABLED}
+          onReset={() => setRemotePathCompletionEnabled(DEFAULT_REMOTE_PATH_COMPLETION_ENABLED)}
         >
           <Toggle checked={remotePathCompletionEnabled} onChange={setRemotePathCompletionEnabled} />
+        </SettingRow>
+        <SettingRow
+          variant="card"
+          className="mt-4"
+          title={t("settings.terminal.suggestionsOverlay.title")}
+          desc={t("settings.terminal.suggestionsOverlay.desc")}
+          dirty={suggestionsOverlay !== TOGGLE_DEFS["terminal-suggestions-overlay"].default}
+          onReset={() => setSuggestionsOverlay(TOGGLE_DEFS["terminal-suggestions-overlay"].default)}
+        >
+          <Toggle checked={suggestionsOverlay} onChange={setSuggestionsOverlay} />
         </SettingRow>
         <SessionLoggingSettings />
         <TerminalNotificationSettings />

@@ -7,8 +7,9 @@ import { useSessionStore } from "@/stores/sessionStore";
 import { useLayoutStore } from "@/stores/layoutStore";
 import { useTerminalCwdStore } from "@/stores/terminalCwdStore";
 import { useTerminalSettingsStore } from "@/stores/terminalSettingsStore";
+import { useToggleSettingsStore } from "@/stores/toggleSettingsStore";
 import { localSendInput } from "@/services/local";
-import { onSshClosed, sshListRemoteDir, sshSendInput, type RemoteDirectoryEntry } from "@/services/ssh";
+import { onSshClosed, onSshOutput, sshListRemoteDir, sshSendInput, type RemoteDirectoryEntry } from "@/services/ssh";
 
 // vi.mock is hoisted above every top-level binding, so each factory has to
 // import the fixture itself rather than share a helper.
@@ -43,6 +44,7 @@ globalThis.ResizeObserver ??= class {
 } as unknown as typeof ResizeObserver;
 
 let sshClosedHandler: ((remoteExit: boolean) => void) | undefined;
+let sshOutputHandler: ((data: Uint8Array) => void) | undefined;
 
 function Harness({
   sessionId,
@@ -113,6 +115,8 @@ describe("terminal controllers", () => {
     useCommandHistoryStore.setState({ entries: [], buffers: {} });
     useTerminalCwdStore.setState({ cwds: {} });
     useTerminalSettingsStore.setState({ remotePathCompletionEnabled: false });
+    useToggleSettingsStore.setState({ values: {} });
+    localStorage.removeItem("voltius-terminal-settings");
     vi.mocked(sshListRemoteDir).mockReset();
     vi.mocked(sshListRemoteDir).mockResolvedValue([]);
     vi.mocked(onSshClosed).mockReset();
@@ -120,7 +124,12 @@ describe("terminal controllers", () => {
       sshClosedHandler = callback;
       return () => {};
     });
+    vi.mocked(onSshOutput).mockImplementation(async (_sessionId, callback) => {
+      sshOutputHandler = callback;
+      return () => {};
+    });
     sshClosedHandler = undefined;
+    sshOutputHandler = undefined;
     vi.mocked(localSendInput).mockClear();
     vi.mocked(sshSendInput).mockClear();
     useLayoutStore.setState({ broadcastActive: false, splitTabActive: false, root: null });
@@ -417,7 +426,7 @@ describe("terminal controllers", () => {
     expect(Array.from(sent)).not.toContain(13);
   });
 
-  it("opens remote suggestions from safe unmodified Tab without forwarding a tab", async () => {
+  it("passes safe SSH Tab to the remote shell native completion handler", () => {
     const sessionId = "suggestions-tab-opens-remote";
     setConnectedSession(sessionId, "ssh");
     useTerminalSettingsStore.setState({ remotePathCompletionEnabled: true });
@@ -426,23 +435,18 @@ describe("terminal controllers", () => {
     vi.mocked(sshListRemoteDir).mockReturnValueOnce(listing.promise);
     render(<Harness sessionId={sessionId} sessionType="ssh" />);
     const term = terminals[terminals.length - 1];
-    const picker = getTerminalSuggestionController(sessionId)!;
     term.emitData("cd src/ut");
     const tab = new KeyboardEvent("keydown", { key: "Tab" });
     const claim = watchClaim(tab);
 
-    expect(lastKeyHandler()(tab)).toBe(false);
-    expect(claim.prevented).toHaveBeenCalled();
-    expect(claim.stopped).toHaveBeenCalled();
-    expect(picker.getSnapshot().open).toBe(true);
-    expect(sshListRemoteDir).toHaveBeenCalledWith(sessionId, "/home/alice/project/src");
-    expect(vi.mocked(sshSendInput)).toHaveBeenCalledTimes(1);
-    expect(Array.from(vi.mocked(sshSendInput).mock.calls[0]?.[1] ?? [])).not.toContain(9);
-    listing.resolve([{ name: "utils", isDir: true }]);
-    await waitForSuggestionSnapshot(picker, (snapshot) => snapshot.suggestions.length === 1);
+    expect(lastKeyHandler()(tab)).toBe(true);
+    expect(claim.prevented).not.toHaveBeenCalled();
+    expect(claim.stopped).not.toHaveBeenCalled();
+    expect(sshListRemoteDir).not.toHaveBeenCalled();
+    listing.resolve([]);
   });
 
-  it("intercepts Tab for case-insensitive remote path completion without forwarding it", async () => {
+  it("passes path Tab to the remote shell instead of using SFTP", async () => {
     const sessionId = "suggestions-tab-case-insensitive-path";
     setConnectedSession(sessionId, "ssh");
     useTerminalSettingsStore.setState({ remotePathCompletionEnabled: true });
@@ -452,26 +456,181 @@ describe("terminal controllers", () => {
 
     render(<Harness sessionId={sessionId} sessionType="ssh" />);
     const term = terminals[terminals.length - 1];
-    const picker = getTerminalSuggestionController(sessionId)!;
     term.emitData("/Va");
     const tab = new KeyboardEvent("keydown", { key: "Tab" });
     const claim = watchClaim(tab);
 
-    expect(lastKeyHandler()(tab)).toBe(false);
-    expect(claim.prevented).toHaveBeenCalled();
-    expect(claim.stopped).toHaveBeenCalled();
-    expect(sshListRemoteDir).toHaveBeenCalledWith(sessionId, "/");
+    expect(lastKeyHandler()(tab)).toBe(true);
+    expect(claim.prevented).not.toHaveBeenCalled();
+    expect(claim.stopped).not.toHaveBeenCalled();
+    expect(sshListRemoteDir).not.toHaveBeenCalled();
 
     listing.resolve([{ name: "var", isDir: true }]);
-    await waitForSuggestionSnapshot(
-      picker,
-      (snapshot) => snapshot.suggestions.some((suggestion) => suggestion.command === "/var/"),
-    );
-    expect(picker.getSnapshot().suggestions.map((suggestion) => suggestion.command)).toEqual(["/var/"]);
-    expect(vi.mocked(sshSendInput).mock.calls.flatMap(([, bytes]) => Array.from(bytes))).not.toContain(9);
+    await Promise.resolve();
   });
 
-  it("intercepts absolute-path Tab completion before cwd is known", async () => {
+  // A persistent session runs inside a tmux/screen pane that Voltius started
+  // itself, so the terminal legitimately sits in the alternate screen with mouse
+  // tracking on. Treating that as "somebody else's full-screen app" silently
+  // switched off both native completion and intentional-exit detection for every
+  // persistent session - Tab did nothing and Ctrl+D fell into the reconnect path.
+  describe("inside a Voltius-owned multiplexer", () => {
+    function mountPersistentSession(sessionId: string) {
+      setConnectedSession(sessionId, "ssh", { persist: true });
+      useTerminalSettingsStore.setState({ remotePathCompletionEnabled: true });
+      render(<Harness sessionId={sessionId} sessionType="ssh" />);
+      const term = terminals[terminals.length - 1];
+      term.buffer.active.type = "alternate";
+      term.modes.mouseTrackingMode = "drag";
+      return { term, picker: getTerminalSuggestionController(sessionId)! };
+    }
+
+    it("still routes Tab to the remote shell's own completion", async () => {
+      const { term, picker } = mountPersistentSession("persist-native-tab");
+      term.emitData("cd /");
+      const tab = new KeyboardEvent("keydown", { key: "Tab" });
+      expect(lastKeyHandler()(tab)).toBe(true);
+
+      term.emitOsc(9280, "A");
+      // bash sends the full path ("/var/"); with no S span the frontend swaps
+      // the token after the last space, so the draft becomes "cd /var/".
+      term.emitOsc(9280, "C;2f7661722f");
+      term.emitOsc(9280, "B");
+      await waitForSuggestionSnapshot(picker, (snapshot) => snapshot.open);
+      expect(picker.getSnapshot().suggestions[0]).toMatchObject({ command: "cd /var/" });
+    });
+
+    it("keeps the draft trusted across output while inside the multiplexer", async () => {
+      // Three separate places used to invalidate the draft on alternate+mouse:
+      // every output write, the OSC 133 handler (which is the ONLY thing that
+      // restores draft trust at a prompt), and onData. Inside a Voltius-owned
+      // tmux that combination left the draft permanently untrusted, so Tab
+      // could never reach the native path again.
+      const { term, picker } = mountPersistentSession("persist-draft-trust");
+      // A real prompt boundary re-establishes trust; only then does typing start.
+      term.emitOsc(133, "A;prompt");
+      term.emitOsc(133, "B");
+      term.emitData("cd ");
+      // Ordinary shell output arriving afterwards must not untrust the draft.
+      sshOutputHandler?.(new TextEncoder().encode("\r\nroot@webserver1:~# "));
+
+      const tab = new KeyboardEvent("keydown", { key: "Tab" });
+      expect(lastKeyHandler()(tab)).toBe(true);
+      term.emitOsc(9280, "A");
+      term.emitOsc(9280, "C;2f7661722f");
+      term.emitOsc(9280, "B");
+      await waitForSuggestionSnapshot(picker, (snapshot) => snapshot.open);
+      expect(picker.getSnapshot().suggestions[0]).toMatchObject({ command: "cd /var/" });
+    });
+
+    it("still treats Ctrl+D at an empty prompt as an intentional exit", () => {
+      const closed = vi.fn();
+      const sessionId = "persist-ctrl-d";
+      setConnectedSession(sessionId, "ssh", { persist: true });
+      useTerminalSettingsStore.setState({ remotePathCompletionEnabled: true });
+      render(<Harness sessionId={sessionId} sessionType="ssh" onClosed={closed} />);
+      const term = terminals[terminals.length - 1];
+      // The multiplexer state, verbatim as it was observed in the app log.
+      term.buffer.active.type = "alternate";
+      term.modes.mouseTrackingMode = "drag";
+
+      term.emitData("\x04");
+      sshClosedHandler?.(false);
+
+      expect(closed).toHaveBeenCalledWith(false, "intentional-shell-exit");
+    });
+  });
+
+  it("renders candidates returned by the remote shell over OSC 9280", async () => {
+    const sessionId = "suggestions-native-shell-response";
+    setConnectedSession(sessionId, "ssh");
+    useTerminalSettingsStore.setState({ remotePathCompletionEnabled: true });
+    render(<Harness sessionId={sessionId} sessionType="ssh" />);
+    const term = terminals[terminals.length - 1];
+    const picker = getTerminalSuggestionController(sessionId)!;
+    term.emitData("git ch");
+
+    expect(lastKeyHandler()(new KeyboardEvent("keydown", { key: "Tab" }))).toBe(true);
+    term.emitOsc(9280, "A");
+    term.emitOsc(9280, "S;4,2");
+    term.emitOsc(9280, "C;636865636b6f7574");
+    term.emitOsc(9280, "D?description;737769746368206272616e6368");
+    term.emitOsc(9280, "B");
+
+    await waitForSuggestionSnapshot(picker, (snapshot) => snapshot.open);
+    expect(picker.getSnapshot().suggestions[0]).toMatchObject({
+      command: "git checkout",
+      label: "Remote shell suggestion",
+      description: "switch branch",
+    });
+  });
+
+  it("inserts a unique native match without opening the optional suggestions overlay", () => {
+    const sessionId = "suggestions-native-without-overlay";
+    setConnectedSession(sessionId, "ssh", { persist: true });
+    useTerminalSettingsStore.setState({ remotePathCompletionEnabled: true });
+    useToggleSettingsStore.getState().set("terminal-suggestions-overlay", false);
+    render(<Harness sessionId={sessionId} sessionType="ssh" />);
+    const term = terminals[terminals.length - 1];
+    const picker = getTerminalSuggestionController(sessionId)!;
+    term.emitData("cd /Va");
+    expect(lastKeyHandler()(new KeyboardEvent("keydown", { key: "Tab" }))).toBe(true);
+    term.emitOsc(9280, "A");
+    term.emitOsc(9280, "C;2f7661722f");
+    term.emitOsc(9280, "B");
+
+    expect(picker.getSnapshot().open).toBe(false);
+    const calls = vi.mocked(sshSendInput).mock.calls;
+    expect(calls[calls.length - 1]?.[1]).toEqual(
+      new TextEncoder().encode("\x7f".repeat("cd /Va".length) + "cd /var/"),
+    );
+    picker.open();
+    expect(picker.getSnapshot().open).toBe(false);
+  });
+
+  it("can request suggestions again after accepting and backspacing to the original draft", async () => {
+    const sessionId = "suggestions-native-backspace-and-retry";
+    setConnectedSession(sessionId, "ssh", { persist: true });
+    useTerminalSettingsStore.setState({ remotePathCompletionEnabled: true });
+    render(<Harness sessionId={sessionId} sessionType="ssh" />);
+    const term = terminals[terminals.length - 1];
+    const picker = getTerminalSuggestionController(sessionId)!;
+    term.emitData("cd /");
+    const tab = () => lastKeyHandler()(new KeyboardEvent("keydown", { key: "Tab" }));
+    expect(tab()).toBe(true);
+    term.emitOsc(9280, "A");
+    term.emitOsc(9280, "C;2f6d6e74"); // /mnt
+    term.emitOsc(9280, "C;2f766172"); // /var
+    term.emitOsc(9280, "B");
+    expect(picker.getSnapshot().open).toBe(true);
+    tab(); // accept /mnt
+    expect(picker.getSnapshot().open).toBe(false);
+    term.emitData("\x7f\x7f\x7f"); // back to cd /
+    expect(tab()).toBe(true);
+    term.emitOsc(9280, "A");
+    term.emitOsc(9280, "C;2f766172");
+    term.emitOsc(9280, "B");
+    await waitForSuggestionSnapshot(picker, (snapshot) => snapshot.open);
+    expect(picker.getSnapshot().suggestions[0].command).toBe("cd /var");
+  });
+
+  it("reconciles an untrusted draft with Bash's line before offering a completion", () => {
+    const sessionId = "suggestions-remote-authoritative-line";
+    setConnectedSession(sessionId, "ssh", { persist: true });
+    useTerminalSettingsStore.setState({ remotePathCompletionEnabled: true });
+    render(<Harness sessionId={sessionId} sessionType="ssh" />);
+    const term = terminals[terminals.length - 1];
+    const picker = getTerminalSuggestionController(sessionId)!;
+    term.emitData("cd /mnt");
+    term.emitData("\x1b[D"); // local mirror loses cursor trust
+    expect(lastKeyHandler()(new KeyboardEvent("keydown", { key: "Tab" }))).toBe(true);
+    term.emitOsc(9280, "A;6364202f;4"); // Bash reports the actual line: cd /
+    term.emitOsc(9280, "C;2f766172");
+    term.emitOsc(9280, "B");
+    expect(picker.getSnapshot().suggestions[0]?.command).toBe("cd /var");
+  });
+
+  it("passes absolute-path Tab before cwd is known", async () => {
     const sessionId = "suggestions-tab-absolute-path-without-cwd";
     setConnectedSession(sessionId, "ssh");
     useTerminalSettingsStore.setState({ remotePathCompletionEnabled: true });
@@ -480,23 +639,133 @@ describe("terminal controllers", () => {
 
     render(<Harness sessionId={sessionId} sessionType="ssh" />);
     const term = terminals[terminals.length - 1];
-    const picker = getTerminalSuggestionController(sessionId)!;
     term.emitData("cd /Va");
     const tab = new KeyboardEvent("keydown", { key: "Tab" });
     const claim = watchClaim(tab);
 
-    expect(lastKeyHandler()(tab)).toBe(false);
-    expect(claim.prevented).toHaveBeenCalled();
-    expect(claim.stopped).toHaveBeenCalled();
-    expect(sshListRemoteDir).toHaveBeenCalledWith(sessionId, "/");
+    expect(lastKeyHandler()(tab)).toBe(true);
+    expect(claim.prevented).not.toHaveBeenCalled();
+    expect(claim.stopped).not.toHaveBeenCalled();
+    expect(sshListRemoteDir).not.toHaveBeenCalled();
 
     listing.resolve([{ name: "var", isDir: true }]);
-    await waitForSuggestionSnapshot(
-      picker,
-      (snapshot) => snapshot.suggestions.some((suggestion) => suggestion.command === "cd /var/"),
+    await Promise.resolve();
+  });
+
+  it.each(["/", "/Va", "cd /Va"])("passes eligible SSH path Tab by default for %s", async (draft) => {
+    const sessionId = `suggestions-tab-default-${draft.replace(/[^A-Za-z]/g, "-")}`;
+    setConnectedSession(sessionId, "ssh");
+    const merge = useTerminalSettingsStore.persist.getOptions().merge!;
+    useTerminalSettingsStore.setState(merge(
+      { remotePathCompletionEnabled: false },
+      { ...useTerminalSettingsStore.getState(), remotePathCompletionEnabled: true },
+    ));
+    localStorage.setItem(
+      "voltius-terminal-settings",
+      JSON.stringify({ state: { remotePathCompletionEnabled: false } }),
     );
-    expect(picker.getSnapshot().suggestions.map((suggestion) => suggestion.command)).toEqual(["cd /var/"]);
-    expect(vi.mocked(sshSendInput).mock.calls.flatMap(([, bytes]) => Array.from(bytes))).not.toContain(9);
+    const listing = deferred<RemoteDirectoryEntry[]>();
+    vi.mocked(sshListRemoteDir).mockReturnValueOnce(listing.promise);
+
+    render(<Harness sessionId={sessionId} sessionType="ssh" />);
+    const term = terminals[terminals.length - 1];
+    term.emitData(draft);
+    const tab = new KeyboardEvent("keydown", { key: "Tab" });
+    const claim = watchClaim(tab);
+
+    expect(lastKeyHandler()(tab)).toBe(true);
+    expect(claim.prevented).not.toHaveBeenCalled();
+    expect(claim.stopped).not.toHaveBeenCalled();
+    expect(sshListRemoteDir).not.toHaveBeenCalled();
+
+    listing.resolve([]);
+    await Promise.resolve();
+  });
+
+  it("passes safe empty SSH Tab to the shell", () => {
+    const sessionId = "suggestions-tab-empty-ssh";
+    setConnectedSession(sessionId, "ssh");
+    useTerminalSettingsStore.setState({ remotePathCompletionEnabled: true });
+    render(<Harness sessionId={sessionId} sessionType="ssh" />);
+
+    const tab = new KeyboardEvent("keydown", { key: "Tab" });
+    const claim = watchClaim(tab);
+    expect(lastKeyHandler()(tab)).toBe(true);
+    expect(claim.prevented).not.toHaveBeenCalled();
+    expect(claim.stopped).not.toHaveBeenCalled();
+  });
+
+  it("passes Tab after recovering a stale SSH draft", async () => {
+    const sessionId = "suggestions-tab-stale-empty-ssh";
+    setConnectedSession(sessionId, "ssh");
+    useTerminalSettingsStore.setState({ remotePathCompletionEnabled: true });
+    useTerminalCwdStore.getState().setCwd(sessionId, "/root");
+    const listing = deferred<RemoteDirectoryEntry[]>();
+    vi.mocked(sshListRemoteDir).mockReturnValueOnce(listing.promise);
+
+    render(<Harness sessionId={sessionId} sessionType="ssh" />);
+    const term = terminals[terminals.length - 1];
+    term.emitData("\x1b[D");
+
+    const emptyTab = new KeyboardEvent("keydown", { key: "Tab" });
+    expect(lastKeyHandler()(emptyTab)).toBe(false);
+
+    term.emitData("/");
+    const pathTab = new KeyboardEvent("keydown", { key: "Tab" });
+    expect(lastKeyHandler()(pathTab)).toBe(true);
+    expect(sshListRemoteDir).not.toHaveBeenCalled();
+
+    listing.resolve([]);
+    await Promise.resolve();
+  });
+
+  it("keeps an explicit remote path completion opt-out", () => {
+    const sessionId = "suggestions-tab-explicit-opt-out";
+    setConnectedSession(sessionId, "ssh");
+    useTerminalSettingsStore.getState().setRemotePathCompletionEnabled(false);
+    render(<Harness sessionId={sessionId} sessionType="ssh" />);
+    terminals[terminals.length - 1].emitData("/Va");
+
+    expect(lastKeyHandler()(new KeyboardEvent("keydown", { key: "Tab" }))).toBe(true);
+    expect(sshListRemoteDir).not.toHaveBeenCalled();
+  });
+
+  it("re-trusts a persistent prompt after OSC 133 A for Tab and Ctrl+D", async () => {
+    const closed = vi.fn();
+    const sessionId = "persistent-prompt-start-boundary";
+    setConnectedSession(sessionId, "ssh", { persist: true });
+    useTerminalSettingsStore.setState({ remotePathCompletionEnabled: true });
+    useTerminalCwdStore.getState().setCwd(sessionId, "/root");
+    const listing = deferred<RemoteDirectoryEntry[]>();
+    vi.mocked(sshListRemoteDir).mockReturnValueOnce(listing.promise);
+
+    render(<Harness sessionId={sessionId} sessionType="ssh" onClosed={closed} />);
+    const term = terminals[terminals.length - 1];
+    const picker = getTerminalSuggestionController(sessionId)!;
+
+    // A reconnect or untrusted escape leaves the editor unable to claim input.
+    term.emitData("\x1b[D");
+    term.emitOsc(133, "A");
+    term.emitData("cd /Va");
+
+    const tab = new KeyboardEvent("keydown", { key: "Tab" });
+    const claim = watchClaim(tab);
+    expect(lastKeyHandler()(tab)).toBe(true);
+    expect(claim.prevented).not.toHaveBeenCalled();
+    expect(claim.stopped).not.toHaveBeenCalled();
+    expect(sshListRemoteDir).not.toHaveBeenCalled();
+
+    // The next authoritative prompt boundary dismisses the stale picker and
+    // leaves an empty, trusted line for intentional shell exit.
+    term.emitOsc(133, "A");
+    expect(picker.getSnapshot()).toMatchObject({ open: false, draft: "" });
+    term.emitData("\x04");
+    sshClosedHandler?.(false);
+
+    expect(closed).toHaveBeenCalledWith(false, "intentional-shell-exit");
+    listing.resolve([]);
+    await Promise.resolve();
+    expect(picker.getSnapshot().open).toBe(false);
   });
 
   it("leaves relative-path Tab with the shell before cwd is known", () => {
@@ -523,7 +792,7 @@ describe("terminal controllers", () => {
     const term = terminals[terminals.length - 1];
     const picker = getTerminalSuggestionController(sessionId)!;
     term.emitData("cd src/ut");
-    expect(lastKeyHandler()(new KeyboardEvent("keydown", { key: "Tab" }))).toBe(false);
+    picker.open();
     listing.resolve([{ name: "utils", isDir: true }]);
     await waitForSuggestionSnapshot(picker, (snapshot) => snapshot.suggestions.length === 1);
 
@@ -586,6 +855,32 @@ describe("terminal controllers", () => {
     expect(closed).toHaveBeenCalledWith(false, "intentional-shell-exit");
   });
 
+  it("claims Ctrl+D while an SSH session is already reconnecting", () => {
+    const closed = vi.fn();
+    const sessionId = "ctrl-d-while-reconnecting";
+    setConnectedSession(sessionId, "ssh", { persist: true });
+    render(<Harness sessionId={sessionId} sessionType="ssh" onClosed={closed} />);
+
+    useSessionStore.setState({
+      sessions: [{
+        id: sessionId,
+        type: "ssh",
+        status: "connecting",
+        connectionId: "c1",
+        connectionName: "Work",
+        title: "Work",
+        persist: true,
+      } as never],
+    });
+
+    const event = new KeyboardEvent("keydown", { key: "d", ctrlKey: true });
+    const claim = watchClaim(event);
+    expect(lastKeyHandler()(event)).toBe(false);
+    expect(claim.prevented).toHaveBeenCalled();
+    expect(claim.stopped).toHaveBeenCalled();
+    expect(closed).toHaveBeenCalledWith(false, "intentional-shell-exit");
+  });
+
   it("preserves intentional Ctrl+D when the store leaves connected before SSH close arrives", () => {
     const closed = vi.fn();
     const sessionId = "ctrl-d-intentional-before-close-event";
@@ -604,6 +899,22 @@ describe("terminal controllers", () => {
         persist: true,
       } as never],
     });
+    sshClosedHandler?.(false);
+
+    expect(closed).toHaveBeenCalledWith(false, "intentional-shell-exit");
+  });
+
+  it("closes an empty SSH prompt even when draft trust is stale", () => {
+    const closed = vi.fn();
+    const sessionId = "ctrl-d-stale-prompt-trust";
+    setConnectedSession(sessionId, "ssh", { persist: true });
+    render(<Harness sessionId={sessionId} sessionType="ssh" onClosed={closed} />);
+    const term = terminals[terminals.length - 1];
+
+    // A restore-era cursor sequence makes the mirrored draft untrusted even
+    // though the shell is back at an empty prompt.
+    term.emitData("\x1b[D");
+    term.emitData("\x04");
     sshClosedHandler?.(false);
 
     expect(closed).toHaveBeenCalledWith(false, "intentional-shell-exit");

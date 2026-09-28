@@ -44,7 +44,11 @@
       },
       "remotePathCompletion": {
         "title": "Uzak yol tamamlama",
-        "desc": "Açık terminal öneri seçicisine etkin SSH oturumundan uzak yol adları ekler. Varsayılan olarak kapalıdır; Tab, kullanılabilir olduğunda güvenilir uzak SSH yollarını tamamlar."
+        "desc": "Tab ile uzak SSH tamamlamasını etkinleştirir."
+      },
+      "suggestionsOverlay": {
+        "title": "Terminal önerilerini göster",
+        "desc": "Tamamlama seçeneklerini terminalde gösterir. Kapalıyken Tab, tek eşleşen tamamlamaları yine ekler."
       },
       "sessionLogging": {
         "title": "Oturum çıktısı günlüğü",
@@ -816,6 +820,9 @@
       },
       "dragSelectsText": {
         "label": "Sürükleyerek Metin Seç"
+      },
+      "terminalSuggestionsOverlay": {
+        "label": "Terminal önerilerini göster"
       },
       "groupTabsByHost": {
         "label": "Sekmeleri Ana Makineye Göre Grupla"

@@ -35,6 +35,7 @@
       "scopeNote": "Yerel geçmişi ve etkinleştirildiğinde uzak yol önerilerini gösterir. Tab yalnızca güvenilir uzak SSH yollarını tamamlar; açık seçici kullanılmaya devam eder. Öneriler yalnızca metin ekler ve komut çalıştırmaz.",
       "localSource": "Yerel geçmiş",
       "remoteSource": "Uzak yol",
+      "remoteShellSource": "Uzak shell",
       "optionLabel": "{{command}} — {{source}} — {{session}}"
     },
     "multiplayerBar": {

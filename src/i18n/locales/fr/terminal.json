@@ -35,6 +35,7 @@
       "scopeNote": "Affiche l'historique local et, si activées, les suggestions de chemins distants. La touche Tab complète uniquement les chemins SSH distants fiables ; le sélecteur explicite reste disponible. Les suggestions insèrent du texte sans exécuter de commande.",
       "localSource": "Historique local",
       "remoteSource": "Chemin distant",
+      "remoteShellSource": "Shell distant",
       "optionLabel": "{{command}} — {{source}} — {{session}}"
     },
     "multiplayerBar": {

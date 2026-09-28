@@ -45,11 +45,18 @@ export const log = {
 };
 
 let installed = false;
+const recentUnhandledErrors = new Map<string, number>();
+const ERROR_TOAST_COOLDOWN_MS = 30_000;
 
 export function installGlobalErrorLogging(): void {
   if (installed) return;
   installed = true;
   window.addEventListener("error", (e) => {
+    const key = `${e.message}:${e.filename}:${e.lineno}`;
+    const now = Date.now();
+    if (now - (recentUnhandledErrors.get(key) ?? -Infinity) < ERROR_TOAST_COOLDOWN_MS) return;
+    recentUnhandledErrors.set(key, now);
+    if (recentUnhandledErrors.size > 32) recentUnhandledErrors.delete(recentUnhandledErrors.keys().next().value!);
     log.error(`uncaught error: ${e.message}`, e.filename ? `at ${e.filename}:${e.lineno}` : "");
     // Loaded here rather than at module scope: `log` and `logFailure` are
     // imported by services and stores that have no business pulling i18n and

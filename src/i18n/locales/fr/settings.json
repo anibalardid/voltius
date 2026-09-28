@@ -44,7 +44,11 @@
       },
       "remotePathCompletion": {
         "title": "Complétion des chemins distants",
-        "desc": "Permet au sélecteur de suggestions du terminal d'ajouter les chemins distants via la session SSH active. Désactivée par défaut ; la touche Tab complète les chemins SSH fiables lorsqu'elle est disponible."
+        "desc": "Active la complétion SSH distante avec la touche Tab."
+      },
+      "suggestionsOverlay": {
+        "title": "Afficher les suggestions du terminal",
+        "desc": "Affiche les choix de complétion dans le terminal. Si cette option est désactivée, Tab insère toujours les correspondances sans ambiguïté."
       },
       "sessionLogging": {
         "title": "Journalisation de la sortie des sessions",
@@ -1170,6 +1174,9 @@
       },
       "dragSelectsText": {
         "label": "Le glisser sélectionne le texte"
+      },
+      "terminalSuggestionsOverlay": {
+        "label": "Afficher les suggestions du terminal"
       },
       "groupTabsByHost": {
         "label": "Regrouper les onglets par hôte"

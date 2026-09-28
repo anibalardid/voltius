@@ -44,7 +44,11 @@
       },
       "remotePathCompletion": {
         "title": "Remote path completion",
-        "desc": "Enable trusted remote SSH path completion with Tab. This is off by default; the explicit terminal suggestions picker remains available as a fallback."
+        "desc": "Enable remote SSH completion with Tab."
+      },
+      "suggestionsOverlay": {
+        "title": "Show terminal suggestions",
+        "desc": "Show completion choices in the terminal. When off, Tab still inserts unambiguous matches."
       },
       "sessionLogging": {
         "title": "Session output logging",
@@ -1179,6 +1183,9 @@
       },
       "dragSelectsText": {
         "label": "Drag Selects Text"
+      },
+      "terminalSuggestionsOverlay": {
+        "label": "Show Terminal Suggestions"
       },
       "groupTabsByHost": {
         "label": "Group Tabs by Host"

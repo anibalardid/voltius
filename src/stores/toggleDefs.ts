@@ -54,6 +54,13 @@ export const TOGGLE_DEFS = {
     keywords: ["select", "drag", "mouse", "tmux", "copy", "terminal", "reporting"],
     default: true,
   },
+  "terminal-suggestions-overlay": {
+    labelKey: "settings.toggleDefs.terminalSuggestionsOverlay.label",
+    icon: "lucide:list-filter",
+    descriptionKey: "settings.toggleDefs.category.appearance",
+    keywords: ["terminal", "suggestions", "completion", "popup", "tab"],
+    default: true,
+  },
   "group-tabs-by-host": {
     labelKey: "settings.toggleDefs.groupTabsByHost.label",
     icon: "lucide:layers",

@@ -119,7 +119,7 @@ describe("settingsManifest", () => {
     expect(definition).toMatchObject({
       key: "terminal.remotePathCompletion",
       type: "boolean",
-      default: false,
+      default: true,
       section: "terminal",
       labelKey: "settings.terminal.remotePathCompletion.title",
       writable: true,
