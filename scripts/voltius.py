@@ -368,6 +368,18 @@ def build_android(runner: Runner) -> None:
         runner.run(tauri(["android", "build"]), cwd=repo_root(), confirm=True)
 
 
+def run_ios_simulator(runner: Runner, device_name: str) -> None:
+    if detect_os() != "macos":
+        print(warn("  iOS simulator builds only run on macOS with Xcode."))
+        return
+    if not which("xcrun"):
+        print(warn("  Missing xcrun — install Xcode first."))
+        return
+    script = os.path.join(repo_root(), "scripts", "ios-emulator.sh")
+    print(dim("  Builds Voltius for the iOS simulator and boots the device."))
+    runner.run([script, device_name], cwd=repo_root(), confirm=True)
+
+
 def frontend_checks(runner: Runner) -> None:
     if not require_tools(runner, [("pnpm", "Prerequisites menu")]):
         return
@@ -461,6 +473,8 @@ MENU = [
     ("Build Linux (deb, rpm, AppImage)", lambda r: build_linux(r)),
     ("Build Windows (nsis, msi)", lambda r: build_windows(r)),
     ("Build / run Android", lambda r: build_android(r)),
+    ("Run iPhone simulator", lambda r: run_ios_simulator(r, "iPhone 17 Pro")),
+    ("Run iPad simulator", lambda r: run_ios_simulator(r, "iPad Pro 11-inch (M5)")),
     ("Frontend checks (tsc, tests, build)", lambda r: frontend_checks(r)),
 ]
 
