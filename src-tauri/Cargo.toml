@@ -7,7 +7,9 @@ edition = "2021"
 
 [lib]
 name = "voltius_lib"
-crate-type = ["cdylib", "rlib"]
+# `staticlib` is what iOS links into the app bundle — a dylib cannot be embedded
+# in an .ipa, so Tauri needs the .a here. Android still uses the cdylib (.so).
+crate-type = ["staticlib", "cdylib", "rlib"]
 
 # NOTE: profiles are defined at the workspace root (Cargo.toml). Cargo ignores
 # `[profile.*]` in non-root members, so they must not live here.
@@ -46,7 +48,6 @@ base64 = "0.22"
 hostname = "0.4"
 crypto_secretbox = "0.1"
 rusty-leveldb = "4"
-portable-pty = "0.9"
 ssh-key = { version = "0.6", features = ["ed25519", "p256", "p384", "p521", "rsa", "encryption"] }
 rsa = { version = "0.9", features = ["getrandom"] }
 sysinfo = "0.39"
@@ -57,7 +58,6 @@ fontdb = { version = "0.24", default-features = false, features = ["fs", "memmap
 bollard = "0.21"
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
 reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
-serialport = { version = "4", default-features = false }
 aes = "0.9"
 cfb8 = "0.9"
 # `ring` to match russh's existing TLS backend (avoid pulling in aws-lc-rs too).
@@ -66,8 +66,14 @@ tokio-rustls = { version = "0.26", default-features = false, features = ["ring",
 rustls-native-certs = "0.8"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+portable-pty = "0.9"
 tauri-plugin-updater = "2"
 tauri-plugin-single-instance = "2"
+
+# Android keeps real serial support; iOS has no raw serial devices and
+# serialport's IOKit backend needs a framework an .ipa cannot embed.
+[target.'cfg(not(target_os = "ios"))'.dependencies]
+serialport = { version = "4", default-features = false }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

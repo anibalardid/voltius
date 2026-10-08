@@ -1,3 +1,4 @@
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 use crate::local::session::LocalSessionManager;
 use serde::Serialize;
 use tauri::AppHandle;
@@ -177,6 +178,7 @@ pub async fn local_list_shells() -> Vec<ShellOption> {
 }
 
 #[tauri::command]
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub async fn local_connect(
     app: AppHandle,
     state: tauri::State<'_, LocalSessionManager>,
@@ -200,10 +202,22 @@ pub async fn local_connect(
         .await
 }
 
-/// The frontend's `local-output-<id>` / `local-closed-<id>` listeners are
-/// registered. Releases the startup gate so the shell's banner and first
-/// prompt are replayed instead of dropped.
 #[tauri::command]
+#[cfg(any(target_os = "android", target_os = "ios"))]
+pub async fn local_connect(
+    _app: AppHandle,
+    _session_id: String,
+    _cols: u16,
+    _rows: u16,
+    _shell: Option<String>,
+    _cwd: Option<String>,
+    _shell_integration: Option<bool>,
+) -> Result<(), String> {
+    Err("Local shell not supported on mobile".into())
+}
+
+#[tauri::command]
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub async fn local_ready(
     app: AppHandle,
     state: tauri::State<'_, LocalSessionManager>,
@@ -214,6 +228,16 @@ pub async fn local_ready(
 }
 
 #[tauri::command]
+#[cfg(any(target_os = "android", target_os = "ios"))]
+pub async fn local_ready(
+    _app: AppHandle,
+    _session_id: String,
+) -> Result<(), String> {
+    Err("Local shell not supported on mobile".into())
+}
+
+#[tauri::command]
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub async fn local_disconnect(
     state: tauri::State<'_, LocalSessionManager>,
     session_id: String,
@@ -222,6 +246,15 @@ pub async fn local_disconnect(
 }
 
 #[tauri::command]
+#[cfg(any(target_os = "android", target_os = "ios"))]
+pub async fn local_disconnect(
+    _session_id: String,
+) -> Result<(), String> {
+    Err("Local shell not supported on mobile".into())
+}
+
+#[tauri::command]
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub async fn local_send_input(
     state: tauri::State<'_, LocalSessionManager>,
     session_id: String,
@@ -231,6 +264,16 @@ pub async fn local_send_input(
 }
 
 #[tauri::command]
+#[cfg(any(target_os = "android", target_os = "ios"))]
+pub async fn local_send_input(
+    _session_id: String,
+    _data: Vec<u8>,
+) -> Result<(), String> {
+    Err("Local shell not supported on mobile".into())
+}
+
+#[tauri::command]
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub async fn local_resize(
     state: tauri::State<'_, LocalSessionManager>,
     session_id: String,
@@ -238,4 +281,14 @@ pub async fn local_resize(
     rows: u16,
 ) -> Result<(), String> {
     state.resize(&session_id, cols, rows).await
+}
+
+#[tauri::command]
+#[cfg(any(target_os = "android", target_os = "ios"))]
+pub async fn local_resize(
+    _session_id: String,
+    _cols: u16,
+    _rows: u16,
+) -> Result<(), String> {
+    Err("Local shell not supported on mobile".into())
 }

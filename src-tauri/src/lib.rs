@@ -17,6 +17,7 @@ mod keychain_android;
 mod known_hosts;
 #[cfg(target_os = "linux")]
 mod linux_gfx;
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 mod local;
 pub mod mcp;
 mod metrics;
@@ -24,6 +25,10 @@ mod network_watch;
 mod port_forward;
 mod processes;
 mod proxmox;
+// iOS exposes no raw serial devices to sandboxed apps (only MFi accessories via
+// ExternalAccessory), and serialport's IOKit backend fails to link there — it
+// needs IOKit.framework, which an .ipa may not embed.
+#[cfg(not(target_os = "ios"))]
 mod serial;
 mod sftp;
 mod shell_integration;
@@ -34,10 +39,12 @@ mod terminal_kbd;
 use commands::http::HttpSseStreamManager;
 use docker::stream::DockerLogStreamManager;
 use known_hosts::{KnownHostsStore, PendingConflicts};
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 use local::session::LocalSessionManager;
 use metrics::stream::MetricsStreamManager;
 use port_forward::PortForwardManager;
 use processes::stream::ProcessStreamManager;
+#[cfg(not(target_os = "ios"))]
 use serial::connect::SerialSessionManager;
 use sftp::SftpManager;
 use ssh::session::SessionManager;
@@ -461,6 +468,18 @@ pub fn run() {
         builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
     }
 
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        builder = builder.manage(LocalSessionManager::new());
+    }
+
+    // Not a cfg on the chain below: `manage` consumes the builder, so the
+    // platform-gated managers are applied to the mutable builder first.
+    #[cfg(not(target_os = "ios"))]
+    {
+        builder = builder.manage(SerialSessionManager::new());
+    }
+
     builder
         // `WebviewWindow::on_page_load` doesn't exist in this Tauri version (it's
         // builder-only, and our windows come from tauri.conf.json, not code); the
@@ -549,10 +568,8 @@ pub fn run() {
         .manage(MetricsStreamManager::new())
         .manage(ProcessStreamManager::new())
         .manage(SessionManager::new())
-        .manage(LocalSessionManager::new())
         .manage(SecretsStore::new())
         .manage(SftpManager::new())
-        .manage(SerialSessionManager::new())
         .invoke_handler(tauri::generate_handler![
             force_quit,
             updater_restart,
@@ -784,9 +801,13 @@ pub fn run() {
             commands::proxmox::proxmox_lxc_snapshot_delete,
             commands::proxmox::proxmox_lxc_open_shell,
             commands::proxmox::proxmox_lxc_sftp_open,
+            #[cfg(not(target_os = "ios"))]
             serial::connect::serial_list_ports,
+            #[cfg(not(target_os = "ios"))]
             serial::connect::serial_connect,
+            #[cfg(not(target_os = "ios"))]
             serial::connect::serial_write,
+            #[cfg(not(target_os = "ios"))]
             serial::connect::serial_disconnect,
             commands::mcp::mcp_bridge_reply,
             commands::mcp::mcp_consumer_ready,
