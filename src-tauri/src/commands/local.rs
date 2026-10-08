@@ -229,10 +229,7 @@ pub async fn local_ready(
 
 #[tauri::command]
 #[cfg(any(target_os = "android", target_os = "ios"))]
-pub async fn local_ready(
-    _app: AppHandle,
-    _session_id: String,
-) -> Result<(), String> {
+pub async fn local_ready(_app: AppHandle, _session_id: String) -> Result<(), String> {
     Err("Local shell not supported on mobile".into())
 }
 
@@ -247,9 +244,7 @@ pub async fn local_disconnect(
 
 #[tauri::command]
 #[cfg(any(target_os = "android", target_os = "ios"))]
-pub async fn local_disconnect(
-    _session_id: String,
-) -> Result<(), String> {
+pub async fn local_disconnect(_session_id: String) -> Result<(), String> {
     Err("Local shell not supported on mobile".into())
 }
 
@@ -265,10 +260,7 @@ pub async fn local_send_input(
 
 #[tauri::command]
 #[cfg(any(target_os = "android", target_os = "ios"))]
-pub async fn local_send_input(
-    _session_id: String,
-    _data: Vec<u8>,
-) -> Result<(), String> {
+pub async fn local_send_input(_session_id: String, _data: Vec<u8>) -> Result<(), String> {
     Err("Local shell not supported on mobile".into())
 }
 
@@ -285,10 +277,6 @@ pub async fn local_resize(
 
 #[tauri::command]
 #[cfg(any(target_os = "android", target_os = "ios"))]
-pub async fn local_resize(
-    _session_id: String,
-    _cols: u16,
-    _rows: u16,
-) -> Result<(), String> {
+pub async fn local_resize(_session_id: String, _cols: u16, _rows: u16) -> Result<(), String> {
     Err("Local shell not supported on mobile".into())
 }
