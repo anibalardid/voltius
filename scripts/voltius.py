@@ -305,6 +305,18 @@ def tauri(options: list[str], *, extra_env: dict[str, str] | None = None) -> lis
     return ["pnpm", "tauri", *options]
 
 
+# Local desktop builds must not sign updater artifacts: the signing key only
+# lives in CI (.github/workflows/release.yml). `createUpdaterArtifacts` stays
+# true in tauri.conf.json for releases; local builds override it so `tauri build`
+# does not require TAURI_SIGNING_PRIVATE_KEY.
+LOCAL_BUILD_CONFIG = '{"bundle":{"createUpdaterArtifacts":false}}'
+
+
+def build_args(*options: str) -> list[str]:
+    """`tauri build` options for a local desktop build (no updater signing)."""
+    return ["build", *options, "--config", LOCAL_BUILD_CONFIG]
+
+
 def run_dev(runner: Runner) -> None:
     if not require_tools(runner, [("pnpm", "Prerequisites menu")]):
         return
@@ -321,7 +333,7 @@ def build_current(runner: Runner) -> None:
     if not require_tools(runner, [("pnpm", "Prerequisites menu")]):
         return
     print(dim("  Building installers for the current operating system."))
-    runner.run(tauri(["build"]), cwd=repo_root(), confirm=True)
+    runner.run(tauri(build_args()), cwd=repo_root(), confirm=True)
 
 
 def build_macos(runner: Runner, universal: bool) -> None:
@@ -330,11 +342,11 @@ def build_macos(runner: Runner, universal: bool) -> None:
         return
     if not require_tools(runner, [("pnpm", "Prerequisites menu")]):
         return
-    options = ["build", "--bundles", "app,dmg"]
+    options = ["--bundles", "app,dmg"]
     if universal:
         options += ["--target", "universal-apple-darwin"]
         print(dim("  Universal build needs both apple-darwin targets installed (rustup target add)."))
-    runner.run(tauri(options), cwd=repo_root(), confirm=True)
+    runner.run(tauri(build_args(*options)), cwd=repo_root(), confirm=True)
 
 
 def build_linux(runner: Runner) -> None:
@@ -343,7 +355,7 @@ def build_linux(runner: Runner) -> None:
         return
     if not require_tools(runner, [("pnpm", "Prerequisites menu")]):
         return
-    runner.run(tauri(["build", "--bundles", "deb,rpm,appimage"]), cwd=repo_root(), confirm=True)
+    runner.run(tauri(build_args("--bundles", "deb,rpm,appimage")), cwd=repo_root(), confirm=True)
 
 
 def build_windows(runner: Runner) -> None:
@@ -352,7 +364,7 @@ def build_windows(runner: Runner) -> None:
         return
     if not require_tools(runner, [("pnpm", "Prerequisites menu")]):
         return
-    runner.run(tauri(["build", "--bundles", "nsis,msi"]), cwd=repo_root(), confirm=True)
+    runner.run(tauri(build_args("--bundles", "nsis,msi")), cwd=repo_root(), confirm=True)
 
 
 def build_android(runner: Runner) -> None:
