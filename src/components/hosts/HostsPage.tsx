@@ -503,12 +503,8 @@ export default function HostsPage() {
 
   const handleDeleteConnection = useCallback((id: string) => {
     const targetIds = getHostDeleteTargetIds(id, selectedIdSet, selectedConnections.map((c) => c.id));
-    if (targetIds.length > 1) {
-      setConfirmDeleteIds(targetIds);
-      return;
-    }
-    void deleteConnection(id);
-  }, [deleteConnection, selectedConnections, selectedIdSet]);
+    setConfirmDeleteIds(targetIds);
+  }, [selectedConnections, selectedIdSet]);
 
   const bulkContextMenuItems = useMemo<ContextMenuItem[] | undefined>(() => {
     if (selectedIdSet.size === 0) return undefined;
