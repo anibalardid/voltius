@@ -31,10 +31,10 @@ export default function MobileSettings() {
     <div
       className="fixed inset-0 z-50 flex flex-col surface-modal-solid animate-fadeIn"
       style={{
-        paddingTop: "env(safe-area-inset-top)",
-        paddingBottom: "env(safe-area-inset-bottom)",
-        paddingLeft: "env(safe-area-inset-left)",
-        paddingRight: "env(safe-area-inset-right)",
+        paddingTop: "var(--sa-t)",
+        paddingBottom: "var(--sa-b)",
+        paddingLeft: "var(--sa-l)",
+        paddingRight: "var(--sa-r)",
       }}
     >
       {/* Header */}

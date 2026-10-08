@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import DesktopShell from "@/components/layout/DesktopShell";
 import MobileShell from "@/components/mobile/MobileShell";
-import { usePlatform } from "@/utils/platform";
+import { isMobileOs, usePlatform } from "@/utils/platform";
 import SplashScreen from "@/components/layout/SplashScreen";
 import SettingsModal from "@/components/settings/SettingsModal";
 import { ImportExportModal } from "@/components/import-export/ImportExportModal";
@@ -61,7 +61,7 @@ function App() {
   }
 
   if (platform === null) return null;
-  const isMobileShell = platform === "android";
+  const isMobileShell = isMobileOs(platform);
 
   return (
     <div className="chrome-frame h-full w-full flex flex-col overflow-hidden animate-fadeIn">

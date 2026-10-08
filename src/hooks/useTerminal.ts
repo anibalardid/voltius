@@ -1000,6 +1000,7 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
           const seq = keyToBytes(rows < 0 ? "Up" : "Down", {
             ctrl: false,
             alt: false,
+            shift: false,
             appCursor: term.modes.applicationCursorKeysMode,
           }).repeat(Math.abs(rows));
           routeInputBytes(encoder.encode(seq));
@@ -1029,10 +1030,30 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
 
       // Android: stop xterm's hidden textarea from summoning the WebView's own (broken) IME —
       // a native overlay owns the soft keyboard instead (see services/androidKeyboard.ts, #34).
+      //
+      // iOS is the mirror image: there is no native overlay, so xterm's own textarea has to be
+      // the editor. xterm ships it as `width:0; height:0; left:-9999em`, and WebKit refuses to
+      // present the keyboard for a zero-size or off-screen input — so tapping the terminal
+      // focused nothing. Giving it real dimensions inside the viewport is what makes the soft
+      // keyboard appear; xterm still reads the input and routes it to the pty as usual.
       void getPlatform().then((os) => {
-        if (os !== "android") return;
+        if (os !== "android" && os !== "ios") return;
         const ta = term.element?.querySelector<HTMLTextAreaElement>(".xterm-helper-textarea");
         if (!ta) return;
+        if (os === "ios") {
+          Object.assign(ta.style, {
+            position: "absolute",
+            top: "0",
+            left: "0",
+            width: "1px",
+            height: "1px",
+            // Transparent, but still laid out and hit-testable — `display:none` or
+            // `visibility:hidden` would put us back to WKWebView not presenting a keyboard.
+            opacity: "0",
+            zIndex: "-5",
+          } satisfies Partial<CSSStyleDeclaration>);
+          return;
+        }
         // Keep xterm's textarea from ever becoming a live IME target: inputmode=none stops it
         // summoning the WebView's own (broken) keyboard, readOnly stops Chromium binding an
         // editable InputConnection to it. The native overlay is the sole editor; input is fed

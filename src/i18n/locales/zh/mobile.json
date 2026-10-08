@@ -251,6 +251,10 @@
         "newVault": "新建保险库",
         "namePlaceholder": "保险库名称"
       }
+    },
+    "extraKeys": {
+      "showKeyboard": "显示键盘",
+      "hideKeyboard": "隐藏键盘"
     }
   }
 }

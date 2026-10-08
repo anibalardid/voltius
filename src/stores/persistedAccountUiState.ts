@@ -70,6 +70,7 @@ export const DEVICE_SCOPED_STORAGE_KEYS = [
   "voltius-shortcuts",
   "voltius-sftp-settings",
   "voltius-terminal-settings",
+  "voltius-extra-key-combos",
   "voltius-toggle-settings",
   "voltius-connectivity-settings",
   "voltius-mcp-contributions",

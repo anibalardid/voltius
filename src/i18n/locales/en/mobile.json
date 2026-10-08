@@ -251,6 +251,10 @@
         "newVault": "New vault",
         "namePlaceholder": "Vault name"
       }
+    },
+    "extraKeys": {
+      "showKeyboard": "Show keyboard",
+      "hideKeyboard": "Hide keyboard"
     }
   }
 }

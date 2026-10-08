@@ -28,7 +28,7 @@ export default function BottomTabBar() {
       style={{
         background: "var(--t-bg-chrome)",
         borderColor: "var(--t-border)",
-        paddingBottom: "env(safe-area-inset-bottom)",
+        paddingBottom: "var(--sa-b)",
       }}
     >
       {TABS.map((t) => {

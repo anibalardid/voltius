@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import BottomSheet from "@/components/mobile/sheets/BottomSheet";
-import { useIsAndroid } from "@/utils/platform";
+import { useIsMobile } from "@/utils/platform";
 
 interface Pos { top?: number; bottom?: number; left?: number; right?: number; width?: number; maxHeight: number }
 
@@ -39,14 +39,14 @@ export function PickerSurface({
    *  hover-opened surface has no gap for the pointer to fall through. */
   gap?: number;
 }) {
-  const isAndroid = useIsAndroid();
+  const isMobile = useIsMobile();
   const surfaceRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<Pos>({ left: 0, width: 0, maxHeight });
 
   // Desktop: measure the anchor on open, and keep the float pinned to it while open as the
   // form panel scrolls or the window resizes (the fixed-position float doesn't move on its own).
   useEffect(() => {
-    if (!open || isAndroid) return;
+    if (!open || isMobile) return;
     const measure = () => {
       const el = anchorRef.current;
       if (!el) return;
@@ -71,11 +71,11 @@ export function PickerSurface({
       window.removeEventListener("scroll", measure, true);
       window.removeEventListener("resize", measure);
     };
-  }, [open, isAndroid, anchorRef, width, maxHeight, align, gap]);
+  }, [open, isMobile, anchorRef, width, maxHeight, align, gap]);
 
   // Desktop: outside-mousedown dismiss (ignores the anchor so the trigger toggles cleanly).
   useEffect(() => {
-    if (!open || isAndroid) return;
+    if (!open || isMobile) return;
     const handler = (e: MouseEvent) => {
       const t = e.target as Node;
       // A submenu portals to the body, so it is not a DOM descendant of the surface
@@ -85,11 +85,11 @@ export function PickerSurface({
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [open, isAndroid, anchorRef, onClose]);
+  }, [open, isMobile, anchorRef, onClose]);
 
   if (!open) return null;
 
-  if (isAndroid) {
+  if (isMobile) {
     return <BottomSheet title={title} onClose={onClose}>{children}</BottomSheet>;
   }
 

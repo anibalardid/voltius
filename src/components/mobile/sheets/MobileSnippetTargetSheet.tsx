@@ -112,7 +112,9 @@ export default function MobileSnippetTargetSheet(
       {p.filteredHosts.length === 0 && <p className="px-4 py-3 text-xs text-(--t-text-dim)">{t("mobile.sheets.snippetTarget.noHosts")}</p>}
 
       {p.totalSelected > 0 && (
-        <div className="sticky bottom-0 px-3 pt-2 pb-[env(safe-area-inset-bottom)]" style={{ background: "var(--t-bg-modal)" }}>
+        // No safe-area padding here: BottomSheet's panel already insets the bottom edge, so
+        // adding it again left ~2x the inset of dead space between the button and the screen.
+        <div className="sticky bottom-0 px-3 pt-2 pb-1" style={{ background: "var(--t-bg-modal)" }}>
           <button data-snippet-target-confirm onClick={() => void go()}
             className="w-full h-11 rounded-xl text-sm font-bold flex items-center justify-center gap-2"
             style={{ background: "var(--t-accent)", color: "#fff" }}>

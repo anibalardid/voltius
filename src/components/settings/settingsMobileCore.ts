@@ -11,7 +11,7 @@ export function mobileSettingsNav<T extends { id: SettingsSection }>(nav: T[]): 
 /** Plugins visible in the list: drop desktopOnly when on mobile. */
 export function visiblePlugins<T extends { manifest: { desktopOnly?: boolean } }>(
   plugins: T[],
-  isAndroid: boolean,
+  isMobile: boolean,
 ): T[] {
-  return plugins.filter((p) => !(isAndroid && p.manifest.desktopOnly));
+  return plugins.filter((p) => !(isMobile && p.manifest.desktopOnly));
 }

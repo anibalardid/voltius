@@ -4,18 +4,12 @@ import { Icon } from "@iconify/react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { PluginAPI } from "@/plugins/api";
 import { useActiveSession } from "@voltius/ui";
+import { useIsMobile } from "@/utils/platform";
 import { createProcessesService } from "../services";
 import { useProcessList } from "../useProcessList";
 import type { ProcessEntry, SortCol } from "../types";
 
 const ROW_H = 30;
-
-/** Android restricts /proc to the app's own process — only remote (SSH) works. No
- *  host platform primitive is exposed to plugins, so this checks the WebView UA
- *  directly; it is UX gating only, same as the host's own useIsAndroid. */
-function isAndroidPlatform(): boolean {
-  return typeof navigator !== "undefined" && /android/i.test(navigator.userAgent);
-}
 
 function fmtMem(kb: number): string {
   if (kb < 1024) return `${kb}K`;
@@ -172,8 +166,8 @@ export function createProcessPanel(api: PluginAPI): FC {
 
   return function ProcessPanel() {
     const activeSession = useActiveSession(api);
-    const isAndroid = isAndroidPlatform();
-    const localUnsupported = isAndroid && !!activeSession && activeSession.type !== "ssh";
+    const isMobile = useIsMobile();
+    const localUnsupported = isMobile && !!activeSession && activeSession.type !== "ssh";
 
     const { snapshot, entries, filter, setFilter, sortCol, sortAsc, setSort, kill, killError, setKillError } =
       useProcessList(service, activeSession ?? undefined, localUnsupported);

@@ -65,7 +65,13 @@ export default function MobileShell() {
   // must sit on the OUTER container — a flex-1 inner child would grow past the keyboard
   // regardless of an explicit height. usableHeight is 0 until first measured.
   const { usableHeight, keyboardVisible } = useVisualViewport();
-  const shellHeight = immersive && usableHeight > 0 ? usableHeight : undefined;
+  // Pin to the visual viewport while a terminal is foreground, and also whenever
+  // the keyboard is open anywhere else. Gating the second case on `immersive`
+  // alone left the tab bar and the tail of every list behind the keyboard on the
+  // hosts/snippets/more/sftp tabs, so the user could not switch tabs out of it.
+  // Scoped to `keyboardVisible` so desktop never sees a pinned height.
+  const shellHeight =
+    usableHeight > 0 && (immersive || keyboardVisible) ? usableHeight : undefined;
   useEffect(() => {
     if (terminalVisible && activeSessionId) {
       const id = requestAnimationFrame(() => refitSession(activeSessionId));
@@ -76,8 +82,16 @@ export default function MobileShell() {
 
   return (
     <div
-      className="h-full w-full flex flex-col overflow-hidden bg-(--t-bg-base)"
-      style={{ paddingTop: "env(safe-area-inset-top)", height: shellHeight }}
+      className="mobile-shell h-full w-full flex flex-col overflow-hidden bg-(--t-bg-base)"
+      style={{
+        // All four edges: in landscape on a notched iPhone, --sa-t is 0 while
+        // --sa-l/--sa-r are ~59pt, so padding only the top inset put the header
+        // controls and the tab bar under the notch.
+        paddingTop: "var(--sa-t)",
+        paddingLeft: "var(--sa-l)",
+        paddingRight: "var(--sa-r)",
+        height: shellHeight,
+      }}
     >
       <div
         className="flex-1 relative flex flex-col"

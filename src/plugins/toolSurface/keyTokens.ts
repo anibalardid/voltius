@@ -69,7 +69,7 @@ export function tokensToBytes(keys: string[], appCursor: boolean): TokenResult {
     }
     const delegated = DELEGATED[token];
     if (delegated) {
-      text += keyToBytes(delegated, { ctrl: false, alt: false, appCursor });
+      text += keyToBytes(delegated, { ctrl: false, alt: false, shift: false, appCursor });
       continue;
     }
     const extra = EXTRA[token];

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 import { useActiveSession } from "@voltius/ui";
+import { useIsMobile } from "@/utils/platform";
 import { getDockerApi } from "../runtime";
 import { useDockerList } from "../useDockerList";
 import {
@@ -25,13 +26,6 @@ import { VolumeList } from "./VolumeList";
 import type { DockerContainer } from "../types";
 import { matchContainer, matchImage, matchVolume, matchNetwork, matchStack } from "../filter";
 import type { DockerTarget } from "@/plugins/api";
-
-/** Android restricts /proc and can't exec a local docker CLI — only remote (SSH)
- *  docker works. No host platform primitive is exposed to plugins, so this checks
- *  the WebView UA directly; it is UX gating only, same as the host's own useIsAndroid. */
-function isAndroidPlatform(): boolean {
-  return typeof navigator !== "undefined" && /android/i.test(navigator.userAgent);
-}
 
 type Action =
   | { type: "SET_VIEW"; view: DockerView }
@@ -162,8 +156,8 @@ export function DockerPanel() {
   const sessionId = activeSession?.id ?? "";
   const localShell = activeSession?.type === "local" ? (activeSession.localShell ?? null) : null;
   const target: DockerTarget = { sessionId, isRemote, localShell };
-  // Android can't exec a local docker CLI — only remote (SSH) docker is supported.
-  const isAndroid = isAndroidPlatform();
+  // Android and iOS can't exec a local docker CLI — only remote (SSH) docker is supported.
+  const isMobile = useIsMobile();
 
   // The exec-into-terminal flow lives in the shared hook; the list polling stays
   // reducer-driven here (enabled: false) so desktop behavior is byte-identical.
@@ -172,7 +166,7 @@ export function DockerPanel() {
   const fetchForView = useCallback(
     async (view: DockerView) => {
       if (!activeSession || activeSession.status !== "connected") return;
-      if (isAndroid && !isRemote) return; // never attempt local docker on Android
+      if (isMobile && !isRemote) return; // never attempt local docker on mobile
       dispatch({ type: "SET_LOADING", loading: true });
       try {
         switch (view) {
@@ -256,7 +250,7 @@ export function DockerPanel() {
   }
 
   // Android sandbox can't exec a local docker CLI; only remote (SSH) docker works.
-  if (isAndroid && !isRemote) {
+  if (isMobile && !isRemote) {
     return (
       <div className="flex h-full items-center justify-center px-6 text-center">
         <div className="max-w-[260px] space-y-2">

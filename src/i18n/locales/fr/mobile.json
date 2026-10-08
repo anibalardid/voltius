@@ -251,6 +251,10 @@
         "newVault": "Nouveau coffre",
         "namePlaceholder": "Nom du coffre"
       }
+    },
+    "extraKeys": {
+      "showKeyboard": "Afficher le clavier",
+      "hideKeyboard": "Masquer le clavier"
     }
   }
 }

@@ -153,12 +153,18 @@ export function SnippetVariableModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.55)" }}
       onKeyDown={handleKeyDown}
     >
+      {/*
+        `max-w` is load-bearing, not decoration. At a fixed 520px on a 390pt phone the panel
+        spanned x=-65..455, which put the header's close button off-screen entirely — and with
+        no click handler on the scrim and no Esc key on a phone, the modal was undismissable.
+        Sized here, capped to the viewport, and given side gutters so it always has a margin.
+      */}
       <div
-        className="w-[520px] max-h-[90vh] rounded-xl shadow-2xl border flex flex-col overflow-hidden"
+        className="w-[520px] max-w-full max-h-[90vh] rounded-xl shadow-2xl border flex flex-col overflow-hidden"
         style={{ background: "var(--t-bg-modal)", borderColor: "var(--t-border)" }}
       >
         {/* Header */}

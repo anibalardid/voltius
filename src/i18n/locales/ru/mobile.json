@@ -257,6 +257,10 @@
         "newVault": "Новое хранилище",
         "namePlaceholder": "Название хранилища"
       }
+    },
+    "extraKeys": {
+      "showKeyboard": "Показать клавиатуру",
+      "hideKeyboard": "Скрыть клавиатуру"
     }
   }
 }

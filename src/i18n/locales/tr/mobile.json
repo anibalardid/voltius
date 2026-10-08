@@ -251,6 +251,10 @@
         "newVault": "Yeni kasa",
         "namePlaceholder": "Kasa adı"
       }
+    },
+    "extraKeys": {
+      "showKeyboard": "Klavyeyi göster",
+      "hideKeyboard": "Klavyeyi gizle"
     }
   }
 }

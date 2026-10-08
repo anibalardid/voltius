@@ -10,7 +10,7 @@ import { getConnectionIcon, getConnectionIconColor } from "@/utils/icons";
 import { AvatarTile } from "@/components/shared/AvatarTile";
 import { SORT_MODE_ICONS, useFilterShortcut } from "./ToolbarViewControls";
 import type { SortMode } from "./ToolbarViewControls";
-import { useIsAndroid } from "@/utils/platform";
+import { useIsMobile } from "@/utils/platform";
 import type { Connection } from "@/types";
 import { connectionDisplayName } from "@/utils/connectionDisplayName";
 
@@ -36,7 +36,7 @@ export function HostPickerPanel({ onPick, selectedHostId, onBack, sshOnly, vault
   const [wslDistros, setWslDistros] = useState<string[]>([]);
   useEffect(() => { wslListDistros().then(setWslDistros).catch(() => {}); }, []);
   // Android sandbox can't spawn a local shell — hide local/WSL host targets.
-  const isAndroid = useIsAndroid();
+  const isMobile = useIsMobile();
   const searchRef = useRef<HTMLInputElement>(null);
   useFilterShortcut(searchRef);
 
@@ -101,7 +101,7 @@ export function HostPickerPanel({ onPick, selectedHostId, onBack, sshOnly, vault
 
       {/* List */}
       <div className="flex-1 overflow-y-auto py-1.5 px-2">
-        {!isAndroid && (
+        {!isMobile && (
           <HostRow
             avatar={
               <div
@@ -117,7 +117,7 @@ export function HostPickerPanel({ onPick, selectedHostId, onBack, sshOnly, vault
           />
         )}
 
-        {!isAndroid && wslDistros
+        {!isMobile && wslDistros
           .filter((d) => d.toLowerCase().includes(search.toLowerCase()))
           .map((d) => {
             const icon = getConnectionIcon(d.split(/[-_ ]/)[0]);

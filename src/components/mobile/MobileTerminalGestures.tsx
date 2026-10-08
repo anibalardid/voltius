@@ -304,7 +304,7 @@ export default function MobileTerminalGestures({ sessionId, active }: { sessionI
             e.preventDefault();
             e.stopPropagation();
             lastTap.current = null; // a triple-tap is not two double-taps
-            sendSpecialKey(sessionId, "Tab", { ctrl: false, alt: false });
+            sendSpecialKey(sessionId, "Tab", { ctrl: false, alt: false, shift: false });
             setHintKey((k) => k + 1);
             reset();
             return;

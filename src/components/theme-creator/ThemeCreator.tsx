@@ -705,9 +705,11 @@ export default function ThemeCreator() {
         className="fixed right-0 top-0 bottom-0 z-200 flex flex-col border-l border-(--t-border) bg-(--t-bg-modal)"
         style={{
           width: 320,
-          paddingTop: "env(safe-area-inset-top)",
-          paddingBottom: "env(safe-area-inset-bottom)",
-          paddingRight: "env(safe-area-inset-right)",
+          paddingTop: "var(--sa-t)",
+          paddingBottom: "var(--sa-b)",
+          // Right-anchored, so only the trailing edge can collide with the notch — but in
+          // landscape that inset is the non-zero one, which is the case this was missing.
+          paddingRight: "var(--sa-r)",
         }}
       >
         {/* Panel header */}

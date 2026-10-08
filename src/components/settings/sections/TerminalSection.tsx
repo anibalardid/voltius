@@ -5,6 +5,7 @@ import { DEFAULT_SCROLLBACK_LINES, MAX_SCROLLBACK_LINES, MIN_SCROLLBACK_LINES } 
 import { FormSelect } from "@/components/shared/FormSelect";
 import { Toggle } from "@/components/shared/Toggle";
 import { SettingRow } from "./shared";
+import ExtraKeyCombosEditor from "./ExtraKeyCombosEditor";
 
 export default function TerminalSection() {
   const { t } = useTranslation();
@@ -107,6 +108,8 @@ export default function TerminalSection() {
         >
           <Toggle checked={ignoreBracketedPaste} onChange={setIgnoreBracketedPaste} />
         </SettingRow>
+        {/* Renders nothing off-mobile: the extra-keys row these configure does not exist there. */}
+        <ExtraKeyCombosEditor />
       </div>
     </div>
   );

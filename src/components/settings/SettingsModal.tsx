@@ -6,7 +6,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { Modal } from "@/components/shared/Modal";
 import { getSettingsNav } from "@/components/settings/settingsNav";
 import { renderSettingsSection } from "@/components/settings/settingsSections";
-import { useIsAndroid } from "@/utils/platform";
+import { useIsMobile } from "@/utils/platform";
 import { useLocaleStore } from "@/stores/localeStore";
 import MobileSettings from "@/components/settings/MobileSettings";
 import { usePluginNavChildren, useResolvedPluginPage } from "@/components/settings/usePluginNavChildren";
@@ -16,7 +16,7 @@ export default function SettingsModal() {
   const setOpen = useUIStore((s) => s.setSettingsOpen);
   const section = useUIStore((s) => s.settingsSection);
   const setSection = useUIStore((s) => s.setSettingsSection);
-  const isAndroid = useIsAndroid();
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   const locale = useLocaleStore((s) => s.locale);
   const nav = useMemo(() => getSettingsNav(), [locale]);
@@ -30,7 +30,7 @@ export default function SettingsModal() {
   const showChildren = pluginChildren.length > 0 && (navExpanded || pluginPageId !== null);
 
   if (!open) return null;
-  if (isAndroid) return <MobileSettings />;
+  if (isMobile) return <MobileSettings />;
 
   return (
     <Modal onClose={() => setOpen(false)} blur>

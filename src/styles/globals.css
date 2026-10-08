@@ -107,6 +107,22 @@
   - card-ring: subtle accent hover ring (replaces themes whose borderHover is transparent)
 */
 :root {
+  /*
+    Safe-area insets, declared once.
+
+    On a notched iPhone in landscape the sensor housing moves to the short edge:
+    inset-top is 0 and inset-left/inset-right are ~44-59pt. Hand-writing the
+    `env()` calls per component is how a shell ended up padding only the edge
+    that is zero in landscape, so its controls sat under the notch. Grep for
+    `env(safe-area-inset` and it should hit these four lines and nothing else.
+
+    The 0px fallbacks matter on desktop, where no insets are defined at all.
+  */
+  --sa-t: env(safe-area-inset-top, 0px);
+  --sa-r: env(safe-area-inset-right, 0px);
+  --sa-b: env(safe-area-inset-bottom, 0px);
+  --sa-l: env(safe-area-inset-left, 0px);
+
   /* deep navy: mostly the dark base, a touch of elevated for a quiet lift */
   --t-bg-chrome: color-mix(in srgb, var(--t-bg-base) 82%, var(--t-bg-elevated) 18%);
   /* command-palette field — a lighter slate pill that floats above the chrome */
@@ -651,6 +667,57 @@ button svg *,
 .form-input:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--t-accent) 22%, transparent);
+}
+
+/*
+  iOS zooms the whole page when an input takes focus while its computed font-size
+  is under 16px, and never zooms back out. This app sets `html { font-size: 15px }`
+  for the desktop type scale, so every Tailwind rem is 15/16 of its nominal value —
+  even `text-base` (1rem) computes to 15px. Left alone, every field zooms on iOS.
+
+  Scope by *platform*, not by shell: bottom sheets and the settings overlay are
+  portalled to `document.body` and are siblings of the mobile shell, not
+  descendants, so a `.mobile-shell`-scoped rule silently left every sheet input
+  unprotected. Only real form controls get the floor; `max()` keeps a design that
+  is already larger from being shrunk.
+
+  Must be px, not rem: 1rem in this project is 15px, so `1rem` fixes nothing.
+*/
+input:not(.xterm-helper-textarea),
+textarea:not(.xterm-helper-textarea),
+select {
+  font-size: max(16px, 1em);
+}
+
+/*
+  iOS long-press affordances. The mobile shell implements its own selection
+  (long-press in the terminal, tap-to-pick in the file pane) and has no use for
+  the system callout or magnifier, which currently stacks on top of it after
+  ~500ms on any text-bearing control. Inputs opt back in so they can be edited.
+*/
+.mobile-shell {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.mobile-shell input,
+.mobile-shell textarea,
+.mobile-shell .notes-preview,
+.mobile-shell [contenteditable] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/*
+  `touch-action: manipulation` drops WebKit's double-tap-to-zoom heuristic while
+  leaving pan and pinch intact. Without it, double-tapping a non-form surface
+  (the bottom-sheet scrim, plain div headers) zooms the page — and the shell's
+  `overflow: clip` means there is no way to scroll back out. The terminal keeps
+  its own `touch-action: none` (below), which is more specific and lets the
+  gesture layer own every touch there.
+*/
+.mobile-shell {
+  touch-action: manipulation;
 }
 
 @keyframes voltius-kill-drain { from { width: 100%; } to { width: 0%; } }

@@ -78,7 +78,7 @@ export default function MobileSftpScreen({ presetConnectionId, asTab }: { preset
       </div>
 
       {active.length > 0 && (
-        <div className="absolute left-0 right-0 bottom-0 px-3 pb-3 flex flex-col gap-1.5" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.75rem)" }}>
+        <div className="absolute left-0 right-0 bottom-0 px-3 pb-3 flex flex-col gap-1.5" style={{ paddingBottom: "calc(var(--sa-b) + 0.75rem)" }}>
           {active.map((t) => {
             const pct = t.total > 0 ? Math.round((t.transferred / t.total) * 100) : 0;
             return (

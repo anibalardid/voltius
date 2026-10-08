@@ -75,7 +75,18 @@ export default function BottomSheet({ onClose, children, title, registerBack = t
       // of the screen. Offsetting top by offsetTop + sizing to usableHeight (== visual height)
       // pins the container to the visible region, so the panel sits flush above the keyboard.
       // Keyboard closed: offsetTop is 0 and usableHeight is the full height — identical to before.
-      style={{ top: offsetTop, height: usableHeight > 0 ? usableHeight : "100%" }}
+      //
+      // The container spans the full width and portals to document.body, so it sits outside the
+      // mobile shell and cannot inherit its safe-area padding. In landscape on a notched iPhone
+      // the left/right insets are ~59pt while the top inset is 0, so without these the sheet's
+      // full-bleed content (and its rounded top corners) ran under both notches. Padding the
+      // container rather than the panel keeps the panel edge-to-edge.
+      style={{
+        top: offsetTop,
+        height: usableHeight > 0 ? usableHeight : "100%",
+        paddingLeft: "var(--sa-l)",
+        paddingRight: "var(--sa-r)",
+      }}
     >
       <div
         className="absolute inset-0 transition-opacity"
@@ -89,7 +100,7 @@ export default function BottomSheet({ onClose, children, title, registerBack = t
           background: "var(--t-bg-elevated)",
           border: "1px solid var(--t-border)",
           transform: `translateY(${translateY}px)`,
-          paddingBottom: "env(safe-area-inset-bottom)",
+          paddingBottom: "var(--sa-b)",
         }}
         onTransitionEnd={(e) => {
           if (closing && e.propertyName === "transform") {

@@ -49,7 +49,7 @@ function feedKey(name: string): void {
   if (name === "Backspace") { writeToSession(id, "\x7f"); return; }
   if (name === "Delete") { writeToSession(id, "\x1b[3~"); return; }
   const sk = SPECIAL[name];
-  if (sk) sendSpecialKey(id, sk, { ctrl: false, alt: false });
+  if (sk) sendSpecialKey(id, sk, { ctrl: false, alt: false, shift: false });
 }
 
 function ensureInstalled(): void {
