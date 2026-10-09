@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { getPlatformSync } from "@/utils/platform";
 import { computeKeyboardLayout, type KeyboardLayout } from "./visualViewportCore";
 
 const INITIAL: KeyboardLayout = { keyboardVisible: false, bottomInset: 0, usableHeight: 0, offsetTop: 0 };
@@ -8,6 +9,10 @@ export function useVisualViewport(): KeyboardLayout {
   useEffect(() => {
     const vv = window.visualViewport;
     let frame: number | null = null;
+    // Only iOS leaves `window.scrollY` stuck at the keyboard height while
+    // visualViewport.offsetTop already reports 0 (the shell stays shifted up).
+    // Android resizes the viewport instead, so keep its resume behavior intact.
+    const isIOS = getPlatformSync() === "ios";
     // iOS suspends the web content process on background, so a blur in the
     // `visibilitychange` that fires before suspension is lost with the process.
     // The first `window.focus` after returning is the earliest point JS runs
@@ -41,7 +46,7 @@ export function useVisualViewport(): KeyboardLayout {
       }
     };
     const onFocus = () => {
-      if (wasHidden) dismissKeyboard();
+      if (isIOS && wasHidden) dismissKeyboard();
       schedule();
     };
     read();
