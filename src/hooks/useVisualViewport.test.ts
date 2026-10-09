@@ -1,10 +1,17 @@
 import { act, cleanup, renderHook } from "@testing-library/react";
-import { afterEach, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { useVisualViewport } from "./useVisualViewport";
+
+const platform = vi.hoisted(() => ({ os: "ios" }));
+vi.mock("@/utils/platform", () => ({ getPlatformSync: () => platform.os }));
 
 const originalInnerHeight = Object.getOwnPropertyDescriptor(window, "innerHeight");
 const originalVisualViewport = Object.getOwnPropertyDescriptor(window, "visualViewport");
 const originalVisibilityState = Object.getOwnPropertyDescriptor(document, "visibilityState");
+
+beforeEach(() => {
+  platform.os = "ios";
+});
 
 afterEach(() => {
   cleanup();
@@ -17,7 +24,8 @@ afterEach(() => {
   if (originalVisibilityState) Object.defineProperty(document, "visibilityState", originalVisibilityState);
 });
 
-test("dismisses the keyboard and resets scroll on the first window focus after being hidden", () => {
+test("dismisses the keyboard and resets scroll on the first window focus after being hidden (iOS)", () => {
+  platform.os = "ios";
   const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
   const input = document.createElement("input");
   document.body.append(input);
@@ -33,6 +41,24 @@ test("dismisses the keyboard and resets scroll on the first window focus after b
 
   expect(document.activeElement).not.toBe(input);
   expect(scrollTo).toHaveBeenCalledWith(0, 0);
+});
+
+test("keeps the focused input and does not reset scroll on non-iOS resume", () => {
+  platform.os = "android";
+  const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+  const input = document.createElement("input");
+  document.body.append(input);
+  input.focus();
+  renderHook(() => useVisualViewport());
+
+  Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+  act(() => document.dispatchEvent(new Event("visibilitychange")));
+
+  Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+  act(() => window.dispatchEvent(new Event("focus")));
+
+  expect(document.activeElement).toBe(input);
+  expect(scrollTo).not.toHaveBeenCalled();
 });
 
 test.each(["visibilitychange", "focus"] as const)(

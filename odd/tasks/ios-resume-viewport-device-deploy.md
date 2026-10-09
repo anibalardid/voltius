@@ -30,7 +30,10 @@ Keep the mobile shell correctly aligned after an iOS background/foreground cycle
   - Commit: N/A (verification-only)
 
 - [x] 4. Dismiss the keyboard and reset the residual scroll on iOS resume.
-  - Evidence: device log showed `window.scrollY = 349` while `visualViewport.offsetTop = 0` after returning from Home (they diverged; the shell stayed shifted up by the keyboard height). RED confirmed `scrollTo` never fired; GREEN `pnpm vitest run src/hooks/useVisualViewport.test.ts src/hooks/visualViewportCore.test.ts` passed 2 files / 4 tests, `tsc --noEmit` and `git diff --check` clean. Physical retest: user confirmed the screen returns full and aligned.
+  - Evidence: device log showed `window.scrollY = 349` while `visualViewport.offsetTop = 0` after returning from Home (they diverged; the shell stayed shifted up by the keyboard height). RED confirmed `scrollTo` never fired; GREEN passed 2 files / 4 tests, `tsc --noEmit` and `git diff --check` clean. Physical retest: user confirmed the screen returns full and aligned.
+  - Commit: `7d2491aaa89593189a8a7ac06d29cef4b6a436f1` (`fix(mobile): dismiss keyboard and reset scroll on iOS resume`)
+- [x] 5. Scope the resume workaround (blur + scrollTo) to iOS only so Android keeps its previous resume behavior.
+  - Evidence: RED confirmed non-iOS still blurred the input; GREEN passed 2 files / 5 tests with `getPlatformSync() === "ios"` gating. `tsc --noEmit` and `git diff --check` clean.
   - Commit: pending (this work unit)
 
 ## Review history
