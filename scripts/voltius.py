@@ -392,6 +392,67 @@ def run_ios_simulator(runner: Runner, device_name: str) -> None:
     runner.run([script, device_name], cwd=repo_root(), confirm=True)
 
 
+def _connected_iphone() -> str | None:
+    """Name of the first physical (non-simulator) iPhone from `xctrace`, or None."""
+    try:
+        out = subprocess.run(
+            ["xcrun", "xctrace", "list", "devices"],
+            capture_output=True, text=True, timeout=15,
+        ).stdout
+    except Exception:
+        return None
+    for line in out.splitlines():
+        s = line.strip()
+        if "iPhone" in s and "Simulator" not in s and "My Mac" not in s:
+            # e.g. "iPhone Anibal (27.0) (00008150-...)" -> "iPhone Anibal"
+            return s.split(" (")[0]
+    return None
+
+
+def run_ios_device(runner: Runner) -> None:
+    if detect_os() != "macos":
+        print(warn("  iOS device builds only run on macOS with Xcode."))
+        return
+    if not which("xcrun"):
+        print(warn("  Missing xcrun — install Xcode first."))
+        return
+    if not require_tools(runner, [("pnpm", "Prerequisites menu")]):
+        return
+
+    device = _connected_iphone()
+    if not device:
+        print(warn("  No connected iPhone detected. Connect or pair it with Xcode, then unlock it."))
+        return
+
+    xcodeproj = os.path.join(repo_root(), "src-tauri", "gen", "apple", "voltius.xcodeproj")
+    if not os.path.isdir(xcodeproj):
+        print(dim("  No src-tauri/gen/apple — generating the iOS project first."))
+        runner.run(tauri(["ios", "init"]), cwd=repo_root(), confirm=True)
+
+    print(bold(f"\nBuilding and running on {device}"))
+    print("  1. Keep the device unlocked; tap \"Trust\" when asked (Mac and device).")
+    print("  2. Signing uses DEVELOPMENT_TEAM in src-tauri/gen/apple/project.yml.")
+    print("  3. First launch only: on the device, Settings → General → VPN & Device Management →")
+    print("     trust your developer certificate.")
+    print(dim("  Requires iOS 15+. A free Apple ID (Personal Team) is enough to sideload."))
+    print()
+
+    # tauri-cli 2.11.x deletes its temporary ExportOptions.plist before
+    # `ios run` exports the archive (tauri-apps/tauri#14593). The script keeps
+    # tauri alive through archive-only, then exports from a stable plist and uses
+    # devicectl to install and launch the app.
+    script = os.path.join(repo_root(), "scripts", "ios-run-device.sh")
+    runner.run([script, device], cwd=repo_root(), confirm=True)
+
+
+def ios_build_check(runner: Runner) -> None:
+    if not require_tools(runner, [("pnpm", "Prerequisites menu")]):
+        return
+    script = os.path.join(repo_root(), "scripts", "ios-build-check.sh")
+    print(dim("  Verifies frontend + device Rust + simulator bundle (no device needed)."))
+    runner.run([script], cwd=repo_root(), confirm=True)
+
+
 def frontend_checks(runner: Runner) -> None:
     if not require_tools(runner, [("pnpm", "Prerequisites menu")]):
         return
@@ -487,6 +548,8 @@ MENU = [
     ("Build / run Android", lambda r: build_android(r)),
     ("Run iPhone simulator", lambda r: run_ios_simulator(r, "iPhone 17 Pro")),
     ("Run iPad simulator", lambda r: run_ios_simulator(r, "iPad Pro 11-inch (M5)")),
+    ("Run on connected iPhone", lambda r: run_ios_device(r)),
+    ("iOS build check", lambda r: ios_build_check(r)),
     ("Frontend checks (tsc, tests, build)", lambda r: frontend_checks(r)),
 ]
 
