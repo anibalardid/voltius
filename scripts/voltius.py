@@ -367,17 +367,20 @@ def build_windows(runner: Runner) -> None:
     runner.run(tauri(build_args("--bundles", "nsis,msi")), cwd=repo_root(), confirm=True)
 
 
-def build_android(runner: Runner) -> None:
+def run_android_emulator(runner: Runner, device: str) -> None:
     if not require_tools(runner, [("pnpm", "Prerequisites menu")]):
         return
-    print(dim("  Requires Android SDK/NDK + JDK 21. See docs/android-dev.md."))
-    print("  1. Android dev run")
-    print("  2. Android release build (APK/AAB)")
-    choice = input(f"\n  Choice: {bold('2')}> ").strip() or "2"
-    if choice == "1":
-        runner.run(tauri(["android", "dev"]), cwd=repo_root(), confirm=True)
-    else:
-        runner.run(tauri(["android", "build"]), cwd=repo_root(), confirm=True)
+    script = os.path.join(repo_root(), "scripts", "android-run-emulator.sh")
+    print(dim(f"  Boots the Android {device} emulator and runs Voltius on it."))
+    runner.run([script, device], cwd=repo_root(), confirm=True)
+
+
+def build_android_apk(runner: Runner) -> None:
+    if not require_tools(runner, [("pnpm", "Prerequisites menu")]):
+        return
+    script = os.path.join(repo_root(), "scripts", "android-build-apk.sh")
+    print(dim("  Builds the Android release APK/AAB using the external-volume SDK."))
+    runner.run([script], cwd=repo_root(), confirm=True)
 
 
 def run_ios_simulator(runner: Runner, device_name: str) -> None:
@@ -545,7 +548,9 @@ MENU = [
     ("Build macOS universal (.app + .dmg)", lambda r: build_macos(r, universal=True)),
     ("Build Linux (deb, rpm, AppImage)", lambda r: build_linux(r)),
     ("Build Windows (nsis, msi)", lambda r: build_windows(r)),
-    ("Build / run Android", lambda r: build_android(r)),
+    ("Run Android phone emulator", lambda r: run_android_emulator(r, "phone")),
+    ("Run Android tablet emulator", lambda r: run_android_emulator(r, "tablet")),
+    ("Build Android release APK", lambda r: build_android_apk(r)),
     ("Run iPhone simulator", lambda r: run_ios_simulator(r, "iPhone 17 Pro")),
     ("Run iPad simulator", lambda r: run_ios_simulator(r, "iPad Pro 11-inch (M5)")),
     ("Run on connected iPhone", lambda r: run_ios_device(r)),
