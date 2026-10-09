@@ -8,11 +8,31 @@ const originalVisibilityState = Object.getOwnPropertyDescriptor(document, "visib
 
 afterEach(() => {
   cleanup();
+  document.body.replaceChildren();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
   if (originalInnerHeight) Object.defineProperty(window, "innerHeight", originalInnerHeight);
   if (originalVisualViewport) Object.defineProperty(window, "visualViewport", originalVisualViewport);
   else delete (window as { visualViewport?: VisualViewport }).visualViewport;
   if (originalVisibilityState) Object.defineProperty(document, "visibilityState", originalVisibilityState);
+});
+
+test("dismisses the keyboard and resets scroll on the first window focus after being hidden", () => {
+  const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+  const input = document.createElement("input");
+  document.body.append(input);
+  input.focus();
+  renderHook(() => useVisualViewport());
+
+  Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+  act(() => document.dispatchEvent(new Event("visibilitychange")));
+  expect(document.activeElement).toBe(input);
+
+  Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+  act(() => window.dispatchEvent(new Event("focus")));
+
+  expect(document.activeElement).not.toBe(input);
+  expect(scrollTo).toHaveBeenCalledWith(0, 0);
 });
 
 test.each(["visibilitychange", "focus"] as const)(

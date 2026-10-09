@@ -29,17 +29,25 @@ Keep the mobile shell correctly aligned after an iOS background/foreground cycle
   - Evidence: viewport tests passed 2 files / 3 tests; physical iPhone build/archive/export/install/launch passed; `ios-build-check.sh` passed frontend + device Rust + simulator bundle; user confirmed IP/port → background → foreground returns full and aligned. Full suite: 459 files / 3413 tests passed; 2 unrelated failures remain (`SFTPTypes.format` timezone expectation and `pluginCatalogPublish` spaced-path guard).
   - Commit: N/A (verification-only)
 
+- [x] 4. Dismiss the keyboard and reset the residual scroll on iOS resume.
+  - Evidence: device log showed `window.scrollY = 349` while `visualViewport.offsetTop = 0` after returning from Home (they diverged; the shell stayed shifted up by the keyboard height). RED confirmed `scrollTo` never fired; GREEN `pnpm vitest run src/hooks/useVisualViewport.test.ts src/hooks/visualViewportCore.test.ts` passed 2 files / 4 tests, `tsc --noEmit` and `git diff --check` clean. Physical retest: user confirmed the screen returns full and aligned.
+  - Commit: pending (this work unit)
+
+## Review history
+
+- RDD lineage `review-b4c8c6a49df2b281` was abandoned with `operator_disposition` after the physical repro invalidated the frozen candidate. No reviewer runs or lens results were consumed.
+
 ## Blockers
 
-- Human observation is required for the physical viewport alignment after resume.
 - The pre-existing full-suite failures are outside this feature's changed paths and remain unresolved.
 
 ## Current diagnosis
 
-`src/hooks/useVisualViewport.ts` measures on visual viewport resize/scroll and window resize only. iOS can restore the WebView from background without emitting those events, leaving the shell with stale keyboard height/offset. Existing project lifecycle patterns re-evaluate on both `window.focus` and visible `document.visibilitychange`.
+On return from Home, iOS dismisses the keyboard and reports `visualViewport.offsetTop = 0`, but leaves the document scrolled by the keyboard height (`window.scrollY` ≈ 349). The shell reads only `visualViewport.offsetTop`, so its compensating `translateY` is dropped while the residual scroll keeps the shell shifted up (header off-screen, blank band at the bottom). The fix blurs the focused editable on the first `window.focus` after hidden and resets `window.scrollTo(0, 0)`.
 
 ## Notes
 
 - `graphify` is unavailable in this shell (`command not found`), so source navigation used bounded direct reads.
 - The first `gentle-ai-explore` attempt failed before returning evidence; the parent performed a bounded inline fallback.
+- `tauri://suspended` / `tauri://resumed` were registered but never emitted in this iOS stack; the reliable signal is `visibilitychange hidden` → `window.focus`.
 - No push, PR, or merge is authorized.
