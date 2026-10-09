@@ -64,7 +64,7 @@ export default function MobileShell() {
   // row lands flush above it) instead of the WebView growing behind the keyboard. This
   // must sit on the OUTER container — a flex-1 inner child would grow past the keyboard
   // regardless of an explicit height. usableHeight is 0 until first measured.
-  const { usableHeight, keyboardVisible } = useVisualViewport();
+  const { usableHeight, keyboardVisible, offsetTop } = useVisualViewport();
   // Pin to the visual viewport while a terminal is foreground, and also whenever
   // the keyboard is open anywhere else. Gating the second case on `immersive`
   // alone left the tab bar and the tail of every list behind the keyboard on the
@@ -91,6 +91,12 @@ export default function MobileShell() {
         paddingLeft: "var(--sa-l)",
         paddingRight: "var(--sa-r)",
         height: shellHeight,
+        // iOS scrolls the layout viewport under the keyboard on input focus
+        // (visualViewport.offsetTop > 0) rather than insetting it. Without this,
+        // the shell's top scrolls out of view (the back/save header disappears)
+        // and an offsetTop-tall blank gap opens above the keyboard. Shifting the
+        // shell down by offsetTop pins its top to the visible top.
+        transform: offsetTop > 0 ? `translateY(${offsetTop}px)` : undefined,
       }}
     >
       <div

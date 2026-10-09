@@ -17,15 +17,20 @@ export function useVisualViewport(): KeyboardLayout {
       }));
     };
     const schedule = () => { if (frame === null) frame = requestAnimationFrame(read); };
+    const onVisible = () => { if (document.visibilityState === "visible") schedule(); };
     read();
     vv?.addEventListener("resize", schedule);
     vv?.addEventListener("scroll", schedule);
     window.addEventListener("resize", schedule);
+    window.addEventListener("focus", schedule);
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       if (frame !== null) cancelAnimationFrame(frame);
       vv?.removeEventListener("resize", schedule);
       vv?.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", schedule);
+      window.removeEventListener("focus", schedule);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
   return layout;
