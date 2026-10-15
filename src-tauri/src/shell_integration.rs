@@ -677,7 +677,10 @@ pub fn parse_persistent_list(output: &str) -> Vec<ListedPersistentSession> {
                 .next()
                 .and_then(|s| s.parse::<i64>().ok())
                 .filter(|n| *n > 0);
-            let clients = parts.next().and_then(|s| s.parse::<u32>().ok()).unwrap_or(0);
+            let clients = parts
+                .next()
+                .and_then(|s| s.parse::<u32>().ok())
+                .unwrap_or(0);
             push_listed(
                 &mut out,
                 ListedPersistentSession {
