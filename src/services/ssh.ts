@@ -144,6 +144,33 @@ export async function sshExecCommand(params: {
   });
 }
 
+export interface ListedPersistentSession {
+  sessionId: string;
+  backend: "tmux" | "screen";
+  created: number | null;
+  clients: number;
+}
+
+export async function sshListPersistent(params: {
+  host: string;
+  port: number;
+  username: string;
+  password?: string;
+  privateKey?: string;
+  passphrase?: string;
+  legacyAlgorithms?: boolean;
+}): Promise<ListedPersistentSession[]> {
+  return invoke("ssh_list_persistent", {
+    host: params.host,
+    port: params.port,
+    username: params.username,
+    password: params.password ?? null,
+    privateKey: params.privateKey ?? null,
+    passphrase: params.passphrase ?? null,
+    legacyAlgorithms: params.legacyAlgorithms ?? false,
+  });
+}
+
 export async function sshKillPersistent(params: {
   host: string;
   port: number;

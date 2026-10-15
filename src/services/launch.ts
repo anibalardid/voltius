@@ -12,8 +12,9 @@ export function goToTerminal(): void {
 
 /** Connect to a saved host by id, then switch to the terminal view. */
 export function launchHost(connectionId: string): void {
+  // Navigation happens when a session is actually created. A live-session
+  // picker must not yank the user into an empty terminal.
   useSessionStore.getState().connect(connectionId).catch(() => {});
-  goToTerminal();
 }
 
 /** Launch an SSH/serial/local quick-connect intent, then switch to the terminal view. */

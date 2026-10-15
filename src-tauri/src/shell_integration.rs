@@ -270,6 +270,17 @@ pub const MAX_EXEC_COMMAND_LEN: usize = 8192;
 
 const TMUX_SOCKET: &str = "voltius";
 
+/// Non-login SSH exec never sources the profile, so package-manager bins are
+/// invisible to `command -v`. Appended so a tmux already on PATH still wins.
+/// ponytail: standard prefixes only. A tmux that exists solely because a shell
+/// rc prepends a custom dir still needs that dir on the non-login PATH.
+const MUX_PATH: &str =
+    "PATH=\"$PATH:/opt/homebrew/bin:/usr/local/bin:/opt/local/bin:$HOME/.local/bin\"\n";
+
+fn with_mux_path(script: &str) -> String {
+    format!("{MUX_PATH}{script}")
+}
+
 /// Prepended to the pane command so the session shell no longer looks like it
 /// is inside a multiplexer (#159). The persistence wrapper is an implementation
 /// detail, but tmux exports `$TMUX` into the shell it starts, and a tmux client
@@ -441,7 +452,7 @@ fi
         no_mux_notice =
             notice_printf("[voltius] tmux/screen not found - session will not survive disconnects"),
     );
-    encode_wrapper(&script)
+    encode_wrapper(&with_mux_path(&script))
 }
 
 /// Attach-only wrapper: co-attaches a live session (tmux plain attach, screen
@@ -461,7 +472,7 @@ exit 97
         socket = TMUX_SOCKET,
         key = session_key,
     );
-    encode_wrapper(&script)
+    encode_wrapper(&with_mux_path(&script))
 }
 
 /// One-shot existence probe mirroring the wrapper's tmux-first order. Prints
@@ -479,7 +490,7 @@ true"#,
         socket = TMUX_SOCKET,
         key = session_key,
     );
-    encode_wrapper(&script)
+    encode_wrapper(&with_mux_path(&script))
 }
 
 /// One-shot exec that dumps the scrollback history of a persistent session,
@@ -501,7 +512,7 @@ true"#,
 /// Exits silently when the multiplexer or session is gone (host rebooted): the
 /// capture is empty and the caller skips replay.
 pub fn capture_history_command(session_key: &str, pty_rows: u32) -> String {
-    format!(
+    with_mux_path(&format!(
         r#"if command -v tmux >/dev/null 2>&1 && tmux -L {socket} has-session -t {key} 2>/dev/null; then
   tmux -L {socket} capture-pane -t {key} -peJ -S -50000 -E -1 2>/dev/null
 elif command -v screen >/dev/null 2>&1; then
@@ -518,7 +529,7 @@ true"#,
         socket = TMUX_SOCKET,
         key = session_key,
         rows = pty_rows,
-    )
+    ))
 }
 
 /// One-shot exec that resolves the current working directory of a persistent
@@ -546,7 +557,7 @@ true"#,
         key = session_key,
         descent = SCREEN_CWD_DESCENT,
     );
-    encode_wrapper(&script)
+    encode_wrapper(&with_mux_path(&script))
 }
 
 /// Walks from `$pid` down to the foreground process, leaving the deepest usable
@@ -601,7 +612,7 @@ true"#,
         key = session_key,
         max = max_clients,
     );
-    encode_wrapper(&script)
+    encode_wrapper(&with_mux_path(&script))
 }
 
 /// Client count no real session reaches; keeps the `-le` guard in
@@ -613,6 +624,116 @@ const FORCE_KILL_CLIENTS: usize = 1_000_000;
 /// user-initiated destroy of a session this device is not attached to.
 pub fn force_kill_command(session_id: &str) -> String {
     persistent_kill_command(&tmux_session_key(session_id), FORCE_KILL_CLIENTS)
+}
+
+/// One-shot listing of Voltius multiplexers on a host. The host is the source
+/// of truth: a tab closed locally can leave the remote session alive, and a
+/// session started on another device never had a local id. Markers keep the
+/// parser from treating `screen -ls` chatter as session names.
+pub fn persistent_list_command() -> String {
+    let script = r#"echo '---TMUX---'
+if command -v tmux >/dev/null 2>&1; then
+  tmux -L voltius list-sessions -F '#{session_name} #{session_created} #{session_attached}' 2>/dev/null || true
+fi
+echo '---SCREEN---'
+if command -v screen >/dev/null 2>&1; then
+  screen -wipe >/dev/null 2>&1 || true
+  screen -ls 2>/dev/null || true
+fi
+true"#;
+    encode_wrapper(&with_mux_path(script))
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ListedPersistentSession {
+    pub session_id: String,
+    pub backend: String,
+    pub created: Option<i64>,
+    pub clients: u32,
+}
+
+/// Parse [`persistent_list_command`] stdout. Names that are not `voltius_<id>`
+/// are ignored, so a user's own tmux/screen sessions never show up.
+pub fn parse_persistent_list(output: &str) -> Vec<ListedPersistentSession> {
+    let mut out = Vec::new();
+    let mut section = "";
+    for raw in output.lines() {
+        let line = raw.trim();
+        if line == "---TMUX---" {
+            section = "tmux";
+            continue;
+        }
+        if line == "---SCREEN---" {
+            section = "screen";
+            continue;
+        }
+        if section == "tmux" {
+            let mut parts = line.split_whitespace();
+            let Some(id) = session_id_from_mux_name(parts.next().unwrap_or("")) else {
+                continue;
+            };
+            let created = parts
+                .next()
+                .and_then(|s| s.parse::<i64>().ok())
+                .filter(|n| *n > 0);
+            let clients = parts.next().and_then(|s| s.parse::<u32>().ok()).unwrap_or(0);
+            push_listed(
+                &mut out,
+                ListedPersistentSession {
+                    session_id: id,
+                    backend: "tmux".into(),
+                    created,
+                    clients,
+                },
+            );
+        } else if section == "screen" && !line.contains("Dead") {
+            let Some(name) = extract_voltius_name(line) else {
+                continue;
+            };
+            let Some(id) = session_id_from_mux_name(name) else {
+                continue;
+            };
+            push_listed(
+                &mut out,
+                ListedPersistentSession {
+                    session_id: id,
+                    backend: "screen".into(),
+                    created: None,
+                    clients: u32::from(line.contains("(Attached)")),
+                },
+            );
+        }
+    }
+    out
+}
+
+fn session_id_from_mux_name(name: &str) -> Option<String> {
+    let id = name.strip_prefix("voltius_")?;
+    if id.is_empty()
+        || !id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+    {
+        return None;
+    }
+    Some(id.to_string())
+}
+
+fn extract_voltius_name(line: &str) -> Option<&str> {
+    let start = line.find("voltius_")?;
+    let rest = &line[start..];
+    let end = rest
+        .find(|c: char| !(c.is_ascii_alphanumeric() || c == '_' || c == '-'))
+        .unwrap_or(rest.len());
+    Some(&rest[..end])
+}
+
+fn push_listed(out: &mut Vec<ListedPersistentSession>, item: ListedPersistentSession) {
+    if out.iter().any(|s| s.session_id == item.session_id) {
+        return;
+    }
+    out.push(item);
 }
 
 /// Same shape as `ssh_exec_command` but encodes the WSL-flavored wrapper,
@@ -732,6 +853,64 @@ mod tests {
     fn session_key_sanitizes_unsafe_chars() {
         assert_eq!(tmux_session_key("abc-123"), "voltius_abc-123");
         assert_eq!(tmux_session_key("a.b:c d"), "voltius_a_b_c_d");
+    }
+
+    #[test]
+    fn mux_lookup_searches_prefixes_sshd_omits() {
+        // A non-login exec never sources the profile, so `command -v tmux`
+        // misses Homebrew on Apple Silicon. Every probe must search those
+        // prefixes, not only the create path.
+        let key = "voltius_s1";
+        let scripts = [
+            decode_bootstrap(&persistent_exec_command(key, "true")),
+            decode_bootstrap(&persistent_attach_command(key)),
+            decode_bootstrap(&persistent_probe_command(key)),
+            capture_history_command(key, 24),
+            decode_bootstrap(&cwd_probe_command(key)),
+            decode_bootstrap(&persistent_kill_command(key, 1)),
+            decode_bootstrap(&persistent_list_command()),
+        ];
+        for script in scripts {
+            assert!(
+                script.contains("/opt/homebrew/bin"),
+                "mux probe must search Homebrew, got:\n{script}"
+            );
+        }
+    }
+
+    #[test]
+    fn persistent_list_parses_tmux_and_screen_and_ignores_foreign_sessions() {
+        let output = "\
+---TMUX---
+voltius_abc-123 1710000000 2
+no server running
+other_session 1710000000 1
+---SCREEN---
+There is a screen on:
+\t362.voltius_463da0cb-5a3a-4a66-9daa-63292f4abb0a\t(Detached)
+\t99.voltius_deadbeef\t(Dead ???)
+\t7.voltius_abc-123\t(Attached)
+\t8.my_screen\t(Detached)
+1 Socket in /tmp.
+";
+        let listed = parse_persistent_list(output);
+        assert_eq!(
+            listed,
+            vec![
+                ListedPersistentSession {
+                    session_id: "abc-123".into(),
+                    backend: "tmux".into(),
+                    created: Some(1_710_000_000),
+                    clients: 2,
+                },
+                ListedPersistentSession {
+                    session_id: "463da0cb-5a3a-4a66-9daa-63292f4abb0a".into(),
+                    backend: "screen".into(),
+                    created: None,
+                    clients: 0,
+                },
+            ]
+        );
     }
 
     #[test]

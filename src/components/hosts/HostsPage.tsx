@@ -493,13 +493,12 @@ export default function HostsPage() {
     // Persist any pending edits (e.g. a just-typed inline password) before
     // connecting, so credential resolution sees them.
     formRef.current?.flush();
-    setActiveNav("terminal");
     try {
       await connect(conn.id);
     } catch {
       // Error is shown in ConnectionOverlay
     }
-  }, [connect, handleBulkConnect, selectedConnections, selectedIdSet, setActiveNav]);
+  }, [connect, handleBulkConnect, selectedConnections, selectedIdSet]);
 
   const handleDeleteConnection = useCallback((id: string) => {
     const targetIds = getHostDeleteTargetIds(id, selectedIdSet, selectedConnections.map((c) => c.id));

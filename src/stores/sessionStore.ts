@@ -15,7 +15,7 @@ export interface ConnectRetryOverride {
   privateKey?: string;
   passphrase?: string;
 }
-import { sshConnect, sshDisconnect, sshDisconnectForReconnect, sshDetectDistro, sshSendInput } from "@/services/ssh";
+import { sshConnect, sshDisconnect, sshDisconnectForReconnect, sshDetectDistro, sshKillPersistent, sshListPersistent, sshSendInput } from "@/services/ssh";
 import { resolveKeepalive } from "@/utils/keepalive";
 import { normalizeTabTitle } from "@/utils/sessionLabel";
 import { getGlobalKeepalivePreset, resolvePersistSession } from "@/stores/connectivitySettingsStore";
@@ -38,16 +38,23 @@ import { useTerminalCwdStore } from "./terminalCwdStore";
 import { usePanelSftpStore } from "./panelSftpStore";
 import { formatLocalShellTitle } from "@/utils/localShellTitle";
 import { cancelBackoff, isSessionEnded, type ReconnectWait } from "./reconnectBackoffCore";
+import { usePersistentSessionPicker } from "./persistentSessionPicker";
+import { useMobileNavStore } from "./mobileNavStore";
 import { inlineCommandForBackend, resolveHostCommand } from "@/services/hostCommand";
 import { runHostCommand } from "@/services/hostCommandRun";
 
-/** `background: true` opens the session without taking the user's active tab. */
-export type OpenOptions = { background?: boolean };
+/** `background` opens without taking the active tab. `offerSessions: false`
+ * skips the live-session picker (agents, "open at path"). */
+export type OpenOptions = { background?: boolean; offerSessions?: boolean };
 
 interface SessionStore {
   sessions: TerminalSession[];
   activeSessionId: string | null;
   connect: (connectionId: string, options?: OpenOptions) => Promise<string>;
+  /** Attach a tab to a multiplexer that is already alive on the host. */
+  resumePersistent: (connectionId: string, sessionId: string) => Promise<void>;
+  /** Destroy one remote Voltius session. Does not open a tab. */
+  killPersistent: (connectionId: string, sessionId: string) => Promise<void>;
   /** connect() without the wait: the session appears now, connects in the background. */
   beginSession: (connectionId: string, initialCwd?: string) => string;
   connectMany: (connectionIds: string[]) => Promise<string[]>;
@@ -110,6 +117,21 @@ function findConnection(connectionId: string): Connection | undefined {
 /** The saved, team or ephemeral connection a session was opened from. */
 export function connectionForSession(session: TerminalSession): Connection | undefined {
   return session.connectionId ? findConnection(session.connectionId) : undefined;
+}
+
+function showTerminalView() {
+  const ui = useUIStore.getState();
+  ui.setHomeView(false);
+  ui.setSidebarOpen(false);
+  ui.setSftpPanelOpen(false);
+  ui.setActiveNav("terminal");
+  useMobileNavStore.getState().setTab("terminal");
+}
+
+function offerLiveSessions(connection: Connection | undefined, options?: OpenOptions): boolean {
+  if (!connection || options?.background || options?.offerSessions === false) return false;
+  if (connection.connection_type === "ftp" || connection.connection_type === "serial") return false;
+  return resolvePersistSession(connection.persist_session);
 }
 
 function reportConnectionAudit(connection: Connection, action: ClientAuditAction): void {
@@ -573,6 +595,7 @@ async function connectConnection(
 
   if (connection.connection_type === "serial") {
     await startSerialSession(set, connection, sessionId, options);
+    if (!options.background) showTerminalView();
     return sessionId;
   }
 
@@ -580,6 +603,7 @@ async function connectConnection(
   // guard (sessions.length === 0 → redirect to hosts) doesn't fire during the
   // async credential resolution window.
   createSshSession(set, connection, sessionId, options);
+  if (!options.background) showTerminalView();
 
   try {
     const credentials = await resolveConnectionCredentials(connection);
@@ -600,7 +624,71 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   activeSessionId: null,
 
   connect: async (connectionId, options) => {
+    const connection = findConnection(connectionId);
+    if (offerLiveSessions(connection, options) && connection) {
+      const picker = usePersistentSessionPicker.getState();
+      const generation = picker.begin(connection.id);
+      try {
+        const creds = await resolveConnectionCredentials(connection);
+        const listed = await sshListPersistent({
+          host: connection.host,
+          port: connection.port,
+          username: creds.username || connection.username,
+          password: creds.password,
+          privateKey: creds.privateKey,
+          passphrase: creds.passphrase,
+          legacyAlgorithms: connection.legacy_algorithms,
+        });
+        if (!usePersistentSessionPicker.getState().isCurrent(generation)) return "";
+        if (listed.length > 0) {
+          usePersistentSessionPicker.getState().ready(generation, listed);
+          return "";
+        }
+      } catch {
+        if (!usePersistentSessionPicker.getState().isCurrent(generation)) return "";
+      }
+      usePersistentSessionPicker.getState().close();
+    }
     return connectConnection(set as SessionSetter, connectionId, options);
+  },
+
+  resumePersistent: async (connectionId, sessionId) => {
+    if (!/^[A-Za-z0-9_-]+$/.test(sessionId)) return;
+    const existing = get().sessions.find((s) => s.id === sessionId);
+    if (existing) {
+      get().setActive(sessionId);
+      showTerminalView();
+      return;
+    }
+    const connection = findConnection(connectionId);
+    if (!connection) throw new Error(i18n.t("common.error.connectionNotFound"));
+    createSshSession(set as SessionSetter, connection, sessionId);
+    set((s) => ({
+      sessions: s.sessions.map((sess) =>
+        sess.id === sessionId ? { ...sess, everConnected: true, persist: true } : sess,
+      ),
+    }));
+    showTerminalView();
+    await get().reconnect(sessionId, { restore: true });
+  },
+
+  killPersistent: async (connectionId, sessionId) => {
+    if (!/^[A-Za-z0-9_-]+$/.test(sessionId)) return;
+    const connection = findConnection(connectionId);
+    if (!connection) throw new Error(i18n.t("common.error.connectionNotFound"));
+    const creds = await resolveConnectionCredentials(connection);
+    await sshKillPersistent({
+      host: connection.host,
+      port: connection.port,
+      username: creds.username || connection.username,
+      password: creds.password,
+      privateKey: creds.privateKey,
+      passphrase: creds.passphrase,
+      sessionId,
+      legacyAlgorithms: connection.legacy_algorithms,
+    });
+    const open = get().sessions.find((s) => s.id === sessionId);
+    if (open) get().removeSession(sessionId);
   },
 
   beginSession: (connectionId, initialCwd) => beginConnection(set as SessionSetter, connectionId, initialCwd),
@@ -704,7 +792,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   },
 
   connectAt: async (connectionId, cwd) => {
-    await get().connect(connectionId);
+    await get().connect(connectionId, { offerSessions: false });
     const sessionId = get().activeSessionId;
     if (sessionId) {
       // Brief delay so the shell prompt has time to appear before we send cd
@@ -819,8 +907,8 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     } else {
       const connection = session?.connectionId ? findConnection(session.connectionId) : undefined;
       const wasAttached = session?.status === "connected";
-      // The tab closes immediately; kill resolves in the background. The backend
-      // kills unless a client is still attached host-side.
+      // Detach, don't kill. The remote multiplexer stays so it can be resumed
+      // from this app or another device. Explicit destroy goes through killPersistent.
       void (async () => {
         const postCmd = connection ? resolveHostCommand(connection, "post") : null;
         try {
@@ -832,7 +920,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
             await sshDisconnect(
               sessionId,
               postCmd?.kind === "inline" ? postCmd.text : undefined,
-              true,
+              false,
               wasAttached,
             );
           } catch {

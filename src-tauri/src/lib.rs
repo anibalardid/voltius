@@ -651,6 +651,7 @@ pub fn run() {
             commands::ssh::ssh_get_system_info,
             commands::ssh::ssh_exec_command,
             commands::ssh::ssh_kill_persistent,
+            commands::ssh::ssh_list_persistent,
             commands::known_hosts::known_host_list,
             commands::known_hosts::known_host_delete,
             commands::known_hosts::known_host_move_vault,

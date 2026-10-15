@@ -6,6 +6,20 @@
       "insertAndExecute": "Insert & execute",
       "noActiveSession": "No active session"
     },
+    "persistentSessions": {
+      "title": "Open sessions",
+      "looking": "Looking for sessions on this host…",
+      "resume": "Resume",
+      "newSession": "New session",
+      "inUse": "In use",
+      "detached": "Detached",
+      "killTitle": "Close this session?",
+      "killBody": "This ends the remote session. Anything still running in it will stop.",
+      "killBodyInUse": "Someone is attached to this session. Closing it stops whatever is running, including on another device.",
+      "killConfirm": "Close session",
+      "closeSession": "Close session",
+      "killFailed": "Could not close that session."
+    },
     "historyPanel": {
       "relativeTime": {
         "justNow": "just now",

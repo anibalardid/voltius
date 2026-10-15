@@ -96,7 +96,6 @@ export default function MobileHostsScreen() {
   const allFolders = useAllFolders();
   const selectedVaultIds = useVaultStore((s) => s.selectedVaultIds);
   const connect = useSessionStore((s) => s.connect);
-  const setTab = useMobileNavStore((s) => s.setTab);
   const push = useMobileNavStore((s) => s.push);
   const openSheet = useMobileNavStore((s) => s.openSheet);
   const search = useMobileNavStore((s) => s.hostSearch);
@@ -150,7 +149,6 @@ export default function MobileHostsScreen() {
       return;
     }
     void connect(id).catch(console.error);
-    setTab("terminal");
   };
 
 

@@ -24,7 +24,6 @@ export default function HostActionsSheet({ hostId }: { hostId: string }) {
   const { t } = useTranslation();
   const closeSheet = useMobileNavStore((s) => s.closeSheet);
   const push = useMobileNavStore((s) => s.push);
-  const setTab = useMobileNavStore((s) => s.setTab);
   const connections = useAllConnections();
   const conn = connections.find((c) => c.id === hostId);
   const saveConnection = useConnectionStore((s) => s.saveConnection);
@@ -84,7 +83,7 @@ export default function HostActionsSheet({ hostId }: { hostId: string }) {
   }
 
   const items: SheetAction[] = [
-    ...(!isSerial && !isFtp ? [{ icon: "lucide:terminal", label: t("common.action.connect"), slug: "connect", onTap: () => { closeSheet(); void connect(hostId).catch(console.error); setTab("terminal"); } }] : []),
+    ...(!isSerial && !isFtp ? [{ icon: "lucide:terminal", label: t("common.action.connect"), slug: "connect", onTap: () => { closeSheet(); void connect(hostId).catch(console.error); } }] : []),
     { icon: "lucide:pencil", label: t("common.action.edit"), slug: "edit", onTap: () => { closeSheet(); push({ kind: "host-edit", hostId }); } },
     ...(!isSerial ? [{ icon: "lucide:folder-open", label: isFtp ? t("mobile.sheets.hostActions.openFiles") : t("mobile.panelItems.sftp"), slug: isFtp ? "open-files" : "sftp", onTap: () => { closeSheet(); push({ kind: "panel-sftp", connectionId: hostId }); } }] : []),
     ...(conn.host ? [{ icon: "lucide:clipboard-copy", label: t("mobile.sheets.hostActions.copyAddress"), slug: "copy-address", onTap: () => {

@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 import { useAllConnections } from "@/hooks/useAllConnections";
 import { useVaultStore } from "@/stores/vaultStore";
-import { useUIStore } from "@/stores/uiStore";
 import { useSessionStore } from "@/stores/sessionStore";
 import { ConnectionAvatar } from "@/components/shared/ConnectionAvatar";
 import { useEffectivePinnedPredicate } from "@/hooks/useEffectivePinned";
@@ -83,13 +82,9 @@ export function VaultsOverview() {
   const connections = useAllConnections();
   const vaults = useVaultStore((s) => s.vaults);
   const connect = useSessionStore((s) => s.connect);
-  const setActiveNav = useUIStore((s) => s.setActiveNav);
-  const setHomeView = useUIStore((s) => s.setHomeView);
 
   const handleConnect = (conn: Connection) => {
     connect(conn.id).catch(() => {});
-    setHomeView(false);
-    setActiveNav("terminal");
   };
 
   const isPinnedFn = useEffectivePinnedPredicate();

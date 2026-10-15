@@ -1691,7 +1691,7 @@ function createPluginAPI(manifest: PluginManifest): PluginAPI {
       },
       async open(connectionId, options) {
         requirePerm(manifest, "sessions:write");
-        return useSessionStore.getState().connect(connectionId, options);
+        return useSessionStore.getState().connect(connectionId, { ...options, offerSessions: false });
       },
       async close(sessionId) {
         requirePerm(manifest, "sessions:write");

@@ -28,6 +28,7 @@ import { NotificationToastContainer } from "@/components/notifications/Notificat
 import ThemeCreator from "@/components/theme-creator/ThemeCreator";
 import WhatsNewModal from "@/components/changelog/WhatsNewModal";
 import { DeepLinkConfirmModal } from "@/components/terminal/DeepLinkConfirmModal";
+import { PersistentSessionPicker } from "@/components/terminal/PersistentSessionPicker";
 import { useDeepLinkStore } from "@/stores/deepLinkStore";
 import { GlobalTransferQueue } from "@/components/filetransfer/GlobalTransferQueue";
 
@@ -73,6 +74,7 @@ function App() {
       <ThemeCreator />
       <WhatsNewModal />
       <DeepLinkConfirmModal />
+      <PersistentSessionPicker />
       <GlobalTransferQueue />
 
       {/* Global snippet variable modal — triggered from OmniSearch, the

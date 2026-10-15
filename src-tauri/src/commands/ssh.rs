@@ -316,3 +316,63 @@ pub async fn ssh_kill_persistent(
 
     Ok(String::from_utf8_lossy(&output).contains("VOLTIUS_KILLED"))
 }
+
+/// List live Voltius multiplexers on a host. Same one-shot connect as
+/// `ssh_kill_persistent`: no jump hosts. A jumped host skips the picker.
+#[tauri::command]
+pub async fn ssh_list_persistent(
+    known_hosts: tauri::State<'_, Arc<KnownHostsStore>>,
+    host: String,
+    port: u16,
+    username: String,
+    password: Option<String>,
+    private_key: Option<String>,
+    passphrase: Option<String>,
+    legacy_algorithms: Option<bool>,
+) -> Result<Vec<crate::shell_integration::ListedPersistentSession>, String> {
+    use tokio::io::AsyncReadExt;
+    use tokio::time::{timeout, Duration};
+
+    let handle = client::connect_authenticated(
+        Arc::clone(&*known_hosts),
+        &host,
+        port,
+        &username,
+        password.as_deref(),
+        private_key.as_deref(),
+        passphrase.as_deref(),
+        legacy_algorithms.unwrap_or(false),
+    )
+    .await?;
+
+    let command = crate::shell_integration::persistent_list_command();
+    let channel = handle
+        .channel_open_session()
+        .await
+        .map_err(|e| format!("Channel error: {}", e))?;
+    channel
+        .exec(true, command.as_str())
+        .await
+        .map_err(|e| format!("Exec error: {}", e))?;
+
+    let mut stream = channel.into_stream();
+    let mut output = Vec::new();
+    let _ = timeout(Duration::from_secs(15), async {
+        let mut buf = [0u8; 1024];
+        loop {
+            match stream.read(&mut buf).await {
+                Ok(0) | Err(_) => break,
+                Ok(n) => output.extend_from_slice(&buf[..n]),
+            }
+        }
+    })
+    .await;
+
+    let _ = handle
+        .disconnect(russh::Disconnect::ByApplication, "Done", "en")
+        .await;
+
+    Ok(crate::shell_integration::parse_persistent_list(
+        &String::from_utf8_lossy(&output),
+    ))
+}

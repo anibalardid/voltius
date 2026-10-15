@@ -1,7 +1,6 @@
 import { Icon } from "@iconify/react";
 import { useTranslation } from "react-i18next";
 import { useAllConnections } from "@/hooks/useAllConnections";
-import { useUIStore } from "@/stores/uiStore";
 import { useSessionStore } from "@/stores/sessionStore";
 import { DashboardHostCard } from "./DashboardHostCard";
 import { useEffectivePinnedPredicate } from "@/hooks/useEffectivePinned";
@@ -26,11 +25,9 @@ export function AllHostsView({ onBack }: Props) {
   const { t } = useTranslation();
   const connections = useAllConnections();
   const connect = useSessionStore((s) => s.connect);
-  const setActiveNav = useUIStore((s) => s.setActiveNav);
 
   const handleConnect = (conn: Connection) => {
     connect(conn.id).catch(() => {});
-    setActiveNav("terminal");
   };
 
   const isPinnedFn = useEffectivePinnedPredicate();
