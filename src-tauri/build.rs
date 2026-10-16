@@ -249,7 +249,10 @@ fn globalize_ios_swift_cdecl() {
 }
 
 fn llvm_objcopy() -> Option<PathBuf> {
-    let sysroot = Command::new("rustc").args(["--print", "sysroot"]).output().ok()?;
+    let sysroot = Command::new("rustc")
+        .args(["--print", "sysroot"])
+        .output()
+        .ok()?;
     let sysroot = String::from_utf8(sysroot.stdout).ok()?;
     let host = format!("{}-apple-darwin", std::env::consts::ARCH);
     let path = Path::new(sysroot.trim())
@@ -262,7 +265,9 @@ fn llvm_objcopy() -> Option<PathBuf> {
 fn find_named(dir: &Path, file_name: &str) -> Option<PathBuf> {
     let mut stack = vec![dir.to_path_buf()];
     while let Some(path) = stack.pop() {
-        let Ok(rd) = fs::read_dir(&path) else { continue };
+        let Ok(rd) = fs::read_dir(&path) else {
+            continue;
+        };
         for entry in rd.flatten() {
             let child = entry.path();
             if child.file_name().and_then(|n| n.to_str()) == Some(file_name) {
