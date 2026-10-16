@@ -6,7 +6,7 @@ export const DEFAULT_LIGHT_THEME_ID = "voltius-light";
 export const BUILT_IN_THEMES: AppTheme[] = [
   {
     id: "voltius",
-    name: "Voltius",
+    name: "RoMix",
     builtIn: true,
     uiFontFamily: "'Inter Variable', system-ui, sans-serif",
     uiFontSize: 14,
@@ -70,7 +70,7 @@ export const BUILT_IN_THEMES: AppTheme[] = [
   },
   {
     id: "voltius-light",
-    name: "Voltius Light",
+    name: "RoMix Light",
     builtIn: true,
     uiFontFamily: "'Inter Variable', system-ui, sans-serif",
     uiFontSize: 14,

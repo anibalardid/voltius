@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build Voltius for iOS and run it on an iPhone or iPad simulator.
+# Build RoMix for iOS and run it on an iPhone or iPad simulator.
 #
 #   scripts/ios-emulator.sh                      # iPhone 17 Pro
 #   scripts/ios-emulator.sh "iPad Pro 11-inch (M5)"
@@ -23,8 +23,8 @@ set -euo pipefail
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO"
 
-APP_ID="com.voltius.app"
-APP_BUNDLE="$REPO/src-tauri/gen/apple/build/arm64-sim/Voltius.app"
+APP_ID="com.romix.app"
+APP_BUNDLE="$REPO/src-tauri/gen/apple/build/arm64-sim/RoMix.app"
 GEN_DIR="$REPO/src-tauri/gen/apple"
 STATE_DIR="$REPO/target"
 
@@ -129,12 +129,13 @@ mkdir -p "$STATE_DIR"; printf '%s' "$UDID" >"$PIN_FILE"
 if [ "$DO_BUILD" = 1 ]; then
   # Tauri finishes the archive by rename()ing the bundled .app into
   # build/arm64-sim/. rename(2) onto a directory requires the destination to be
-  # empty, so a leftover Voltius.app from the previous run aborts the build with
+  # empty, so a leftover RoMix.app from the previous run aborts the build with
   # "Directory not empty (os error 66)". Clear the whole output dir; it is a
   # build artifact and gitignored.
   rm -rf "$REPO/src-tauri/gen/apple/build"
-  echo "==> Building Voltius for iOS simulator (this compiles Rust + Swift)…"
-  pnpm tauri ios build --debug --target aarch64-sim --no-sign
+  echo "==> Building RoMix for iOS simulator (this compiles Rust + Swift)…"
+  # Not --debug: that build loads http://localhost:1420 instead of the bundled UI.
+  pnpm tauri ios build --target aarch64-sim --no-sign
   [ -d "$APP_BUNDLE" ] || { echo "ERROR: no app at $APP_BUNDLE" >&2; exit 1; }
 fi
 [ -d "$APP_BUNDLE" ] || { echo "ERROR: no app at $APP_BUNDLE (drop --no-build?)" >&2; exit 1; }
@@ -187,7 +188,7 @@ cat <<EOF
 
 Running on $REAL_NAME ($RUNTIME_NAME).
 
-  App logs:   xcrun simctl spawn $UDID log stream --predicate 'process == "Voltius"'
+  App logs:   xcrun simctl spawn $UDID log stream --predicate 'process == "RoMix"'
   Screenshot: xcrun simctl io $UDID screenshot /tmp/voltius-ios.png
   Reload webview (R + R in the Simulator): it re-runs the JS bundle without a
   full cargo rebuild.

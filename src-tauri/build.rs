@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::process::Command;
 
 /// Folders that must be embedded in a release build. A mismatch fails the build
 /// rather than silently shipping a binary with missing built-ins.
@@ -25,6 +26,7 @@ type Discovered = BTreeMap<String, Vec<(String, String)>>;
 fn main() {
     tauri_build::build();
     embed_seeded_plugins();
+    globalize_ios_swift_cdecl();
 }
 
 fn embed_seeded_plugins() {
@@ -187,6 +189,91 @@ fn check(found: &Discovered) -> Vec<String> {
     }
 
     problems
+}
+
+/// Xcode 27 makes `@_cdecl` exports in SwiftRs.o local. swift-rs 1.0.8 only
+/// promotes the package's own .o, so Rust still fails to link `_release_object`.
+/// Promote them in libTauri.a only — doing it in every embedded copy duplicates globals.
+fn globalize_ios_swift_cdecl() {
+    let target = std::env::var("TARGET").unwrap_or_default();
+    if !target.contains("apple-ios") {
+        return;
+    }
+    let Ok(out_dir) = std::env::var("OUT_DIR") else {
+        return;
+    };
+    let Some(build_dir) = Path::new(&out_dir).parent().and_then(|p| p.parent()) else {
+        return;
+    };
+    let Some(objcopy) = llvm_objcopy() else {
+        println!("cargo:warning=llvm-objcopy missing; run `rustup component add llvm-tools`");
+        return;
+    };
+    let Ok(entries) = fs::read_dir(build_dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let name = entry.file_name();
+        let Some(name) = name.to_str() else { continue };
+        // Only the tauri crate archive. Plugin copies of SwiftRs.o must stay local.
+        if !(name.starts_with("tauri-")
+            && !name.starts_with("tauri-plugin")
+            && !name.starts_with("tauri-runtime")
+            && !name.starts_with("tauri-utils")
+            && !name.starts_with("tauri-build")
+            && !name.starts_with("tauri-macros"))
+        {
+            continue;
+        }
+        let Some(archive) = find_named(&entry.path(), "libTauri.a") else {
+            continue;
+        };
+        let ok = Command::new(&objcopy)
+            .args([
+                "--globalize-symbol=_release_object",
+                "--globalize-symbol=_retain_object",
+                "--globalize-symbol=_string_from_bytes",
+                "--globalize-symbol=_data_from_bytes",
+            ])
+            .arg(&archive)
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+        if !ok {
+            println!(
+                "cargo:warning=failed to globalize swift-rs cdecl symbols in {}",
+                archive.display()
+            );
+        }
+    }
+}
+
+fn llvm_objcopy() -> Option<PathBuf> {
+    let sysroot = Command::new("rustc").args(["--print", "sysroot"]).output().ok()?;
+    let sysroot = String::from_utf8(sysroot.stdout).ok()?;
+    let host = format!("{}-apple-darwin", std::env::consts::ARCH);
+    let path = Path::new(sysroot.trim())
+        .join("lib/rustlib")
+        .join(host)
+        .join("bin/llvm-objcopy");
+    path.exists().then_some(path)
+}
+
+fn find_named(dir: &Path, file_name: &str) -> Option<PathBuf> {
+    let mut stack = vec![dir.to_path_buf()];
+    while let Some(path) = stack.pop() {
+        let Ok(rd) = fs::read_dir(&path) else { continue };
+        for entry in rd.flatten() {
+            let child = entry.path();
+            if child.file_name().and_then(|n| n.to_str()) == Some(file_name) {
+                return Some(child);
+            }
+            if child.is_dir() {
+                stack.push(child);
+            }
+        }
+    }
+    None
 }
 
 fn render(found: &Discovered) -> String {

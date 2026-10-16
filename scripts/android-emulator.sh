@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Bring up a headless Android emulator in Docker (system-image ABI matches the
-# host arch — x86_64 or arm64) and load the Voltius debug APK into it, ready for
+# host arch — x86_64 or arm64) and load the RoMix debug APK into it, ready for
 # the tauri-android MCP. One-shot: build image → build matching-arch APK → run
 # container → wait for boot → install.
 #
@@ -66,7 +66,7 @@ if [ -n "$APK" ]; then
   REL="/project/${APK#"$REPO"/}"
   echo "==> Installing $REL …"
   docker exec "$NAME" adb install -r "$REL"
-  docker exec "$NAME" adb shell am start -n com.voltius.app/.MainActivity
+  docker exec "$NAME" adb shell am start -n com.romix.app/.MainActivity
 fi
 
 cat <<EOF

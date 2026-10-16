@@ -242,12 +242,12 @@
       "selectAll": "Tümünü seç",
       "selectNone": "Temizle",
       "error": {
-        "unsupportedCatalog": "Bu kod parçacığı kataloğu, Voltius'un bu sürümünün tanımadığı bir biçimde. Uygulamayı güncellemeyi deneyin."
+        "unsupportedCatalog": "Bu kod parçacığı kataloğu, RoMix'un bu sürümünün tanımadığı bir biçimde. Uygulamayı güncellemeyi deneyin."
       }
     },
     "deepLinkInstall": {
       "title": "Bu kod parçacıkları yüklensin mi?",
-      "body": "Bu bağlantı, Voltius topluluk kataloğundan kod parçacıkları yükler. Kod parçacıkları, kullandığınızda sunucularınızda çalışan kabuk komutlarıdır.",
+      "body": "Bu bağlantı, RoMix topluluk kataloğundan kod parçacıkları yükler. Kod parçacıkları, kullandığınızda sunucularınızda çalışan kabuk komutlarıdır.",
       "summary": "{{name}} ({{author}}) — {{count}} kod parçacığı",
       "unknownAuthor": "adı belirtilmemiş yazar",
       "destination": "{{vault}} kasasına eklenecekler.",

@@ -18,7 +18,7 @@ import {
   setExportDestinations,
   type GistRegistration,
 } from "./sync-engine";
-import { getManifest, listVoltiusGists, GistApiError, type GistDevice, type GistManifest } from "./gist-api";
+import { getManifest, listRoMixGists, GistApiError, type GistDevice, type GistManifest } from "./gist-api";
 
 // @voltius/ui exports exactly Icon/InfoTooltip/useAutosave (no SaveState) — derive it.
 type SaveState = ReturnType<typeof useAutosave>["saveState"];
@@ -451,9 +451,9 @@ export function createSettingsPage(api: PluginAPI): React.FC {
       if (!currentPat) { setError("Enter your GitHub PAT first."); return; }
       setDetecting(true); setError(null); setDetectedGists(null); setShowLinkInput(false);
       try {
-        const found = await listVoltiusGists(api.http, currentPat);
+        const found = await listRoMixGists(api.http, currentPat);
         setDetectedGists(found);
-        if (found.length === 0) setError("No Voltius gists found on this account.");
+        if (found.length === 0) setError("No RoMix gists found on this account.");
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       } finally {
@@ -597,7 +597,7 @@ export function createSettingsPage(api: PluginAPI): React.FC {
         </div>
 
         <p className="text-sm text-(--t-text-dim) -mt-4">
-          Sync your data across devices via encrypted GitHub Gist — no Voltius account required.
+          Sync your data across devices via encrypted GitHub Gist — no RoMix account required.
           Data is XChaCha20-Poly1305 encrypted client-side before upload.
         </p>
 
@@ -728,7 +728,7 @@ export function createSettingsPage(api: PluginAPI): React.FC {
           {detectedGists !== null && detectedGists.length > 0 && (
             <div className="flex flex-col gap-1.5">
               <p className="text-xs text-(--t-text-dim)">
-                Found {detectedGists.length} Voltius gist{detectedGists.length !== 1 ? "s" : ""} — select to link:
+                Found {detectedGists.length} RoMix gist{detectedGists.length !== 1 ? "s" : ""} — select to link:
               </p>
               {detectedGists.map((g) => {
                 const alreadyLinked = gists.some((r) => r.id === g.id);

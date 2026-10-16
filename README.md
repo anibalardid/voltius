@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="src-tauri/icons/128x128.png" alt="Voltius Logo" width="96" />
+  <img src="src-tauri/icons/128x128.png" alt="RoMix Logo" width="96" />
   <br/>
-  <h1>Voltius</h1>
+  <h1>RoMix</h1>
   
   <p><strong>A local-first SSH/SFTP/Serial client with E2EE sync, plugins, and no account required — a modern alternative to Termius.</strong></p>
   
@@ -35,7 +35,7 @@ No account required. Everything below is free, forever.
 - **Local Terminal** — Bash, Zsh, Fish, PowerShell, WSL, Git Bash, CMD, and more.
 - **MCP Server** — Let Claude Code, Claude Desktop, Cursor or VS Code drive your fleet: 52 tools covering hosts, keys, identities, sessions, commands, files, vaults, folders, the audit log and your installed plugins. Off by default, one toggle in Settings → Integrations, and it never leaves your machine. [How it works →](https://voltius.app/blog/mcp-server) *(written for 0.19.0, when the surface was 41 tools — the design and the security model still hold, the tool list has grown)*
 - **Plugin System** — Install plugins from the [official registry](https://github.com/VoltiusApp/marketplace) or point to your own custom repo.
-- **Container Management** — Docker and Proxmox LXC. Browse containers, open terminals, and manage resources without leaving Voltius.
+- **Container Management** — Docker and Proxmox LXC. Browse containers, open terminals, and manage resources without leaving RoMix.
 - **Process Manager** — View and kill processes on connected hosts.
 - **System Monitoring** — Live CPU, memory, and disk stats from connected hosts.
 
@@ -68,7 +68,7 @@ One command installs the app on Debian/Ubuntu, Fedora/RHEL and Arch:
 curl -fsSL https://repo.voltius.app/setup.sh | sudo bash
 ```
 
-On Debian/Ubuntu and Fedora/RHEL it adds the signed Voltius repository, so updates arrive through your normal `sudo apt upgrade` / `sudo dnf upgrade`. Packages are GPG-signed and provided for both `amd64`/`x86_64` and `arm64`/`aarch64`. On Arch it installs `voltius-bin` from the AUR with `paru` or `yay`.
+On Debian/Ubuntu and Fedora/RHEL it adds the signed RoMix repository, so updates arrive through your normal `sudo apt upgrade` / `sudo dnf upgrade`. Packages are GPG-signed and provided for both `amd64`/`x86_64` and `arm64`/`aarch64`. On Arch it installs `voltius-bin` from the AUR with `paru` or `yay`.
 
 <details>
 <summary>Manual setup</summary>
@@ -101,23 +101,23 @@ Community-maintained by [ezhkov](https://aur.archlinux.org/account/ezhkov/), not
 brew install --cask voltiusapp/voltius/voltius
 ```
 
-Voltius is ad-hoc signed but not yet notarized (no Apple Developer account yet).
+RoMix is ad-hoc signed but not yet notarized (no Apple Developer account yet).
 If macOS Gatekeeper blocks the first launch, right-click the app and choose
 **Open**. To clear the quarantine flag from an existing installation instead,
 run:
 
 ```sh
-xattr -dr com.apple.quarantine /Applications/Voltius.app
+xattr -dr com.apple.quarantine /Applications/RoMix.app
 ```
 
-If you download the `.dmg` directly and macOS says **"Voltius.app is damaged and
+If you download the `.dmg` directly and macOS says **"RoMix.app is damaged and
 cannot be opened"**, the same command clears the quarantine flag after you copy
-Voltius to Applications.
+RoMix to Applications.
 
 ### <img src=".github/media/icons/windows.svg" alt="" height="22" align="center" /> Windows — winget
 
 ```sh
-winget install --id Voltius.Voltius -e
+winget install --id RoMix.RoMix -e
 ```
 
 Windows SmartScreen may warn that the publisher is unverified (the app is not yet
@@ -130,7 +130,7 @@ platform-only features are gated off (no local terminal, no serial console — r
 is the point here). There is no Play Store listing. [Obtainium](https://github.com/ImranR98/Obtainium)
 watches this repo's releases and installs updates the way a store would.
 
-[<img src=".github/media/badge_obtainium.png" alt="Get it on Obtainium" height="54">](https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22com.voltius.app%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2FVoltiusApp%2Fvoltius%22%2C%22author%22%3A%22VoltiusApp%22%2C%22name%22%3A%22Voltius%22%7D)
+[<img src=".github/media/badge_obtainium.png" alt="Get it on Obtainium" height="54">](https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22com.romix.app%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2FVoltiusApp%2Fvoltius%22%2C%22author%22%3A%22VoltiusApp%22%2C%22name%22%3A%22RoMix%22%7D)
 
 Tap that badge **on the phone** — it opens Obtainium with the source pre-filled, or offers
 to install Obtainium first. By hand: **Add App** → `https://github.com/VoltiusApp/voltius`.
@@ -146,21 +146,21 @@ the top; an APK from anywhere else — including one you built yourself — fail
 - Android asks you to allow **Install unknown apps** for Obtainium on the first install.
 - Unauthenticated GitHub API calls are capped at 60/hour per IP address. If update checks
   start failing, add a personal access token in Obtainium under **Settings → Source-specific → GitHub**.
-- Without Obtainium: grab the `Voltius_<version>_aarch64.apk` asset from the
+- Without Obtainium: grab the `RoMix_<version>_aarch64.apk` asset from the
   [latest release](https://github.com/VoltiusApp/voltius/releases/latest) — updates are then manual.
 </details>
 
 ### Other downloads
 
 Direct installers (`.dmg`, `.msi`, `.exe`, `.AppImage`) are on
-[voltius.app/download](https://voltius.app/download). Voltius updates itself in-app
+[voltius.app/download](https://voltius.app/download). RoMix updates itself in-app
 on macOS and Windows after installation.
 
 ## ⚖️ Comparison
 
 ✅ yes · ❌ no · 🟡 partial or paid-tier · ? not tested
 
-| Feature | Voltius | Termius | [Reach](https://github.com/alexandrosnt/Reach) | [Termix](https://github.com/Termix-SSH/Termix) | Tabby |
+| Feature | RoMix | Termius | [Reach](https://github.com/alexandrosnt/Reach) | [Termix](https://github.com/Termix-SSH/Termix) | Tabby |
 | --- | --- | --- | --- | --- | --- |
 | **Engine** | **Rust + Tauri** 🦀 | likely Electron (closed-source) | **Rust + Tauri** 🦀 | Web (React + Node.js) | Electron / Node.js |
 | **RAM Usage** | ~300MB | ~500MB+ | ~300MB | ? | ? |
@@ -198,7 +198,7 @@ on macOS and Windows after installation.
 | **OS Detection** | ✅ | ✅ | ✅ | ❌ | ❌ |
 
 ## 🛡️ Architecture & Security
-Voltius is built on a **Local-First, Zero-Knowledge** architecture. Your sensitive data (private keys, passwords, and server metadata) is encrypted on your machine before it ever touches a disk or a network.
+RoMix is built on a **Local-First, Zero-Knowledge** architecture. Your sensitive data (private keys, passwords, and server metadata) is encrypted on your machine before it ever touches a disk or a network.
 
 ### Account & Encryption Tiers
 We offer three levels of security to fit your workflow:
@@ -303,7 +303,7 @@ flowchart TD
         subgraph CloudSync ["Cloud Sync (Pro/Teams · SSE)"]
             direction TB
             SseAead{"XChaCha20-Poly1305\n(Rust · encrypt_payload)"}:::secure
-            SSE[("Voltius SSE Server")]:::remote
+            SSE[("RoMix SSE Server")]:::remote
             SseAead <==>|"Encrypted CRDT payloads"| SSE
         end
     end
@@ -352,7 +352,7 @@ Build artifacts are automatically handed back to your host user on exit, so noth
 
 The `--no-bundle` flag skips NSIS installer creation (not supported in cross-compilation). The built executable is at:
 ```
-target/aarch64-pc-windows-msvc/release/voltius.exe
+target/aarch64-pc-windows-msvc/release/RoMix.exe
 ```
 
 You can replace `aarch64-pc-windows-msvc` with the appropriate target. Here's a quick reference for targets:
@@ -392,5 +392,5 @@ Output installers are placed in `target/release/bundle/`.
 | Security    | Argon2id, HKDF-SHA256, XChaCha20-Poly1305 (E2EE) |
 
 ## 📄 Licensing
-Voltius is licensed under the AGPLv3 for the core application and MIT for plugins. This means you can use and modify the core app for free, but if you distribute a modified version, you must also share your changes under the same license. Plugins can be used and shared with more flexibility under the MIT license.
+RoMix is licensed under the AGPLv3 for the core application and MIT for plugins. This means you can use and modify the core app for free, but if you distribute a modified version, you must also share your changes under the same license. Plugins can be used and shared with more flexibility under the MIT license.
 Copyright © 2026 Killian Pavy. All rights reserved.

@@ -1,11 +1,11 @@
 ---
 name: capturing-voltius-media
-description: Use when producing screenshots or videos of the Voltius app UI for docs, blog posts, changelog, or demos — capturing or recording the live headless dev build and editing the result (crop, zoom, loop) with ffmpeg.
+description: Use when producing screenshots or videos of the RoMix app UI for docs, blog posts, changelog, or demos — capturing or recording the live headless dev build and editing the result (crop, zoom, loop) with ffmpeg.
 ---
 
-# Capturing Voltius Media (screenshots & video)
+# Capturing RoMix Media (screenshots & video)
 
-Produce real screenshot and video assets of the Voltius desktop app by driving the
+Produce real screenshot and video assets of the RoMix desktop app by driving the
 **headless dev build** and screen-grabbing its Xvfb framebuffer. Same stack as
 [[iterating-on-voltius-ui]] (`compose.headless.yml`: `tauri-headless` = app + Xvfb +
 tauri-driver on 4444; `ssh-host-1` = throwaway SSH host `voltius`/`voltius`).

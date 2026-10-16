@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { useUIStore } from "@/stores/uiStore";
 import { getToggle } from "@/stores/toggleSettingsStore";
-import { isNewerFeature } from "@/services/changelog";
+import { SHOW_CHANGELOG_MODAL, isNewerFeature } from "@/services/changelog";
 
 /**
  * Once per app launch: auto-open the What's New modal when the installed feature
@@ -11,6 +11,7 @@ import { isNewerFeature } from "@/services/changelog";
  */
 export function useChangelogAutoOpen() {
   useEffect(() => {
+    if (!SHOW_CHANGELOG_MODAL) return;
     let alive = true;
     getVersion()
       .then((current) => {

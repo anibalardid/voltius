@@ -1,5 +1,8 @@
 const CHANGELOG_URL =
-  "https://raw.githubusercontent.com/VoltiusApp/voltius/main/CHANGELOG.md";
+  "https://raw.githubusercontent.com/anibalardid/voltius/main/CHANGELOG.md";
+
+/** Master switch for the What's New modal. False hides it everywhere, including launch. */
+export const SHOW_CHANGELOG_MODAL = false;
 const CACHE_KEY = "voltius-changelog-cache";
 
 export interface ChangelogGroup {

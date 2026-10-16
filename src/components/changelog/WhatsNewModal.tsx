@@ -15,6 +15,7 @@ import {
   type UpdaterStatus,
 } from "@/services/updater";
 import {
+  SHOW_CHANGELOG_MODAL,
   fetchChangelog,
   parseChangelog,
   cmpSemver,
@@ -23,16 +24,15 @@ import {
 
 function getQuickLinks(t: TFunction) {
   return [
-    { icon: "simple-icons:github", title: "GitHub", href: "https://github.com/VoltiusApp/voltius" },
-    { icon: "lucide:book-open", title: t("changelog.quickLinks.documentation"), href: "https://docs.voltius.app" },
-    { icon: "simple-icons:x", title: "@VoltiusApp", href: "https://x.com/VoltiusApp" },
+    { icon: "simple-icons:github", title: "GitHub", href: "https://github.com/anibalardid/voltius" },
+    { icon: "lucide:book-open", title: t("changelog.quickLinks.documentation"), href: "https://github.com/anibalardid/voltius/blob/main/NOTICE.md" },
     { icon: "simple-icons:kofi", title: "Ko-Fi", href: "https://ko-fi.com/kipavy" },
   ];
 }
 
 export default function WhatsNewModal() {
   const open = useUIStore((s) => s.whatsNewOpen);
-  if (!open) return null;
+  if (!SHOW_CHANGELOG_MODAL || !open) return null;
   return <WhatsNewInner />;
 }
 

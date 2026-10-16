@@ -1,4 +1,4 @@
-# Voltius Android Dev Workflow
+# RoMix Android Dev Workflow
 
 How to build the Android app, run it on a real phone, and drive its WebView from
 Claude Code through the `mcp-tauri-automation` MCP (adb + Chrome DevTools Protocol backend).
@@ -62,7 +62,7 @@ Prereqs on the phone: Developer Options → USB debugging ON (authorize the RSA 
 
 ```
 scripts/android-deploy.sh <apk-path>
-# = adb install -r <apk> ; adb shell am start -n com.voltius.app/.MainActivity
+# = adb install -r <apk> ; adb shell am start -n com.romix.app/.MainActivity
 ```
 Then confirm the WebView exposes its CDP socket:
 ```
@@ -80,7 +80,7 @@ claude mcp add tauri-android --env PLATFORM=android \
 ```
 (Drop the `ADB_SERVER_SOCKET` line if you used usbipd / native adb.)
 
-Optional env: `ANDROID_APP_ID` (default `com.voltius.app`), `ANDROID_MAIN_ACTIVITY`
+Optional env: `ANDROID_APP_ID` (default `com.romix.app`), `ANDROID_MAIN_ACTIVITY`
 (default `.MainActivity`), `ANDROID_SERIAL`, `ANDROID_FORWARD_PORT` (default 9222),
 `ANDROID_ADB_PATH`.
 

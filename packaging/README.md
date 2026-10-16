@@ -1,6 +1,6 @@
 # Packaging channels
 
-Where Voltius is published, and what each channel needs from a human.
+Where RoMix is published, and what each channel needs from a human.
 
 Automated channels live in `.github/workflows/publish-installers.yml`, which
 `tag-release.yml` calls once a release is published. Their generators are in
@@ -56,12 +56,12 @@ The manifest carries `checkver` + `autoupdate`, so Scoop's excavator bot follows
 releases afterwards and nothing here has to run again.
 
 The install and uninstall scripts drive the NSIS installer with `/S` and assume
-Tauri's per-user install location (`%LOCALAPPDATA%\Voltius`). **Test both on a
+Tauri's per-user install location (`%LOCALAPPDATA%\RoMix`). **Test both on a
 real Windows machine before opening the PR** — nothing in CI exercises them.
 
 ### Flathub — abandoned 2026-08-24
 
-**Not a Voltius channel, and the files are gone.** `packaging/flatpak/` and
+**Not a RoMix channel, and the files are gone.** `packaging/flatpak/` and
 `scripts/gen-flatpak-manifest.sh` were removed with this section; recover them
 from git history if this is ever revisited.
 
@@ -79,8 +79,8 @@ low-quality, the channel was not worth pursuing.
 
 Three things worth keeping if it ever is:
 
-- The app id is `app.voltius.Voltius`, matching the `voltius.app` domain rather
-  than the Tauri identifier (`com.voltius.app`), because Flathub verification
+- The app id is `app.voltius.RoMix`, matching the `voltius.app` domain rather
+  than the Tauri identifier (`com.romix.app`), because Flathub verification
   checks the id against a domain the publisher controls.
 - Three linter errors were expected and deliberate, each needing a written
   exception: `finish-args-home-filesystem-access` (SFTP has to reach the local
@@ -97,7 +97,7 @@ externally updated rather than writing to the read-only `/app`.
 
 ### Microsoft Store — retired 2026-08-24
 
-**The Store is not a Voltius channel.** The listing was reserved, submitted by
+**The Store is not a RoMix channel.** The listing was reserved, submitted by
 hand at 0.28.0, certified, and then unpublished. `tag-release` does not call
 `publish-msix.yml`. Nothing here needs maintaining; this section records why, so
 the decision does not get re-litigated from scratch.
@@ -172,7 +172,7 @@ Signature verification failed: Scan completed, but failed because the software
 is not signed by a distributor that meets the system Gatekeeper requirements.
 ```
 
-Voltius is ad-hoc signed, not notarized, so this cannot pass without an Apple
+RoMix is ad-hoc signed, not notarized, so this cannot pass without an Apple
 Developer account. `brew style` and the rest of the audit are clean, so this is
 the only thing standing in the way.
 

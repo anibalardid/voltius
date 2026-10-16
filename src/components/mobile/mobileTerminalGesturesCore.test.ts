@@ -3,6 +3,9 @@ import {
   wordRangeAt,
   isBlankCell,
   linesFromPixelDelta,
+  fingerSwipeAction,
+  scrollbarThumb,
+  scrollbarTopFromPointer,
   extendSelection,
   selectionLength,
   cellPixel,
@@ -41,6 +44,18 @@ assert(!isBlankCell("a b", 0), "letter is not blank");
 eq(linesFromPixelDelta(8, 16, 0), { lines: 0, carry: 0.5 }, "half a cell carries");
 eq(linesFromPixelDelta(8, 16, 0.5), { lines: 1, carry: 0 }, "carry completes a line");
 eq(linesFromPixelDelta(-24, 16, 0), { lines: -1, carry: -0.5 }, "negative truncates toward zero");
+
+// A swipe must scroll the output. Up/Down would recall shell history.
+eq(fingerSwipeAction(3), { kind: "scroll", delta: -3 }, "finger-down scrolls up into output");
+eq(fingerSwipeAction(-2), { kind: "scroll", delta: 2 }, "finger-up scrolls toward the prompt");
+eq(fingerSwipeAction(0), { kind: "none" }, "sub-cell drag sends nothing");
+
+// Side scrollbar: thumb tracks the viewport, a drag maps back to a buffer line.
+const thumb = scrollbarThumb({ top: 50, rows: 20, length: 120, track: 200, minThumb: 36 });
+eq(thumb && { offset: thumb.offset, size: thumb.size, maxTop: thumb.maxTop }, { offset: 82, size: 36, maxTop: 100 }, "thumb sits mid-track");
+eq(scrollbarTopFromPointer(0, 200, 36, 100), 0, "top of the track is the oldest line");
+eq(scrollbarTopFromPointer(200, 200, 36, 100), 100, "bottom of the track is the prompt");
+eq(scrollbarThumb({ top: 0, rows: 20, length: 20, track: 200, minThumb: 36 })?.maxTop, 0, "no scrollback fills the track");
 
 // extendSelection: char-precise, same line or crossing lines.
 eq(

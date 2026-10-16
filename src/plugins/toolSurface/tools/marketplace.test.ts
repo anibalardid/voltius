@@ -3,7 +3,7 @@ import { buildMarketplaceTools } from "./marketplace";
 import type { ToolSurfacePorts } from "../coreTools";
 
 const source = { id: "custom", name: "Custom", url: "https://x/p.json", enabled: true, deletable: true };
-const builtIn = { id: "voltius", name: "Voltius", url: "https://voltius/p.json", enabled: true, deletable: false };
+const builtIn = { id: "voltius", name: "RoMix", url: "https://voltius/p.json", enabled: true, deletable: false };
 const tokenSource = {
   id: "http---127-0-0-1-8099-plugins-json-token-secret789",
   name: "Team", url: "http://127.0.0.1:8099/plugins.json?token=secret789", enabled: true, deletable: true,

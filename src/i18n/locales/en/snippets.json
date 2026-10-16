@@ -242,12 +242,12 @@
       "selectAll": "Select all",
       "selectNone": "Clear",
       "error": {
-        "unsupportedCatalog": "This snippet catalogue is in a format this version of Voltius doesn’t understand. Try updating the app."
+        "unsupportedCatalog": "This snippet catalogue is in a format this version of RoMix doesn’t understand. Try updating the app."
       }
     },
     "deepLinkInstall": {
       "title": "Install these snippets?",
-      "body": "This link installs snippets from the Voltius community catalogue. Snippets are shell commands that run on your hosts when you use them.",
+      "body": "This link installs snippets from the RoMix community catalogue. Snippets are shell commands that run on your hosts when you use them.",
       "summary": "{{name}} by {{author}} — {{count}} snippets",
       "unknownAuthor": "an unnamed author",
       "destination": "They will be added to the {{vault}} vault.",

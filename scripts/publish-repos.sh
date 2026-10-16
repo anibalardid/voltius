@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Publish the Voltius apt + yum repositories to Cloudflare R2 from the last N
+# Publish the RoMix apt + yum repositories to Cloudflare R2 from the last N
 # GitHub releases. Stateless: downloads packages, rebuilds both repos from
 # scratch, smoke-tests a real install of each, then rclone-syncs to R2.
 #
@@ -85,7 +85,7 @@ docker run --rm -e GPG_PRIVATE_KEY -v "$WORK:/w:ro" fedora:latest bash -euc '
     rpm --import /tmp/voltius.gpg
     cat > /etc/yum.repos.d/voltius.repo <<R
 [voltius]
-name=Voltius
+name=RoMix
 baseurl=file:///w/out/rpm
 enabled=1
 gpgcheck=1

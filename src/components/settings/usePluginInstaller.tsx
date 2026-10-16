@@ -32,7 +32,7 @@ export function usePluginInstaller() {
   const notifyError = (e: unknown) => {
     const { key, params } = pluginInstallErrorMessage(e, "settings.plugins.install.failed");
     useNotificationStore.getState().addToast({
-      source: { kind: "plugin", id: "system", name: "Voltius" },
+      source: { kind: "plugin", id: "system", name: "RoMix" },
       type: "toast",
       severity: "error",
       message: t(key, params),

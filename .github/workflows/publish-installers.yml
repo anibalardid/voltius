@@ -127,7 +127,7 @@ jobs:
       - name: Submit/update winget manifest
         uses: vedantmgoyal9/winget-releaser@v2
         with:
-          identifier: Voltius.Voltius
+          identifier: RoMix.RoMix
           release-tag: ${{ needs.tag.outputs.tag }}
           installers-regex: '_(x64|arm64)-setup\.exe$'
           token: ${{ secrets.WINGET_PKGS_TOKEN }}

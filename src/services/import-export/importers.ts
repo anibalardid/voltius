@@ -24,12 +24,12 @@ function connectionsOnlyBundle(connections: ConnectionExport[]): ExportBundle {
 
 export const IMPORTERS: Importer[] = [
   {
-    key: "voltius",
-    label: "Voltius JSON",
+    key: "romix",
+    label: "RoMix JSON",
     icon: "lucide:braces",
     sub: "JSON",
     fileAccept: ".json",
-    placeholder: 'Paste Voltius JSON here, or drop a .json file…\n\n{ "version": 1, "connections": [...] }',
+    placeholder: 'Paste RoMix JSON here, or drop a .json file…\n\n{ "version": 1, "connections": [...] }',
     parse: fromJSON,
   },
   {

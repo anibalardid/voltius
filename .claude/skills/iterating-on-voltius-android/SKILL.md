@@ -1,9 +1,9 @@
 ---
 name: iterating-on-voltius-android
-description: Use when building, deploying, running, screenshotting, clicking through, or debugging the Voltius Tauri app on a real Android phone — drives the on-device debug APK through the tauri-android MCP (adb + Chrome DevTools Protocol) so changes are seen and interacted with on the device, not just compiled.
+description: Use when building, deploying, running, screenshotting, clicking through, or debugging the RoMix Tauri app on a real Android phone — drives the on-device debug APK through the tauri-android MCP (adb + Chrome DevTools Protocol) so changes are seen and interacted with on the device, not just compiled.
 ---
 
-# Iterating on Voltius Android
+# Iterating on RoMix Android
 
 ## Overview
 
@@ -33,7 +33,7 @@ the three non-obvious blockers (Hyper-V firewall, adb version match, RSA auth) l
 export ADB_SERVER_SOCKET=tcp:192.168.240.1:5037   # set inline EVERY Bash call (fresh shell each time)
 timeout 3 bash -c 'echo > /dev/tcp/192.168.240.1/5037' && echo OPEN || echo "DROPPED — firewall"
 adb devices                                        # want: <serial>  device  (not unauthorized/empty)
-scripts/android-deploy.sh <apk>                    # install -r + am start com.voltius.app/.MainActivity
+scripts/android-deploy.sh <apk>                    # install -r + am start com.romix.app/.MainActivity
 adb shell grep -a webview_devtools_remote /proc/net/unix   # want @webview_devtools_remote_<pid> = app up
 ```
 

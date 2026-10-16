@@ -30,7 +30,7 @@ const marketplaceState = {
   appVersion: null as string | null,
   loadAppVersion: vi.fn(async () => {}),
 };
-const FIRST_PARTY_SOURCE = vi.hoisted(() => ({ id: "voltius", name: "Voltius Marketplace", url: "", enabled: true, deletable: false }));
+const FIRST_PARTY_SOURCE = vi.hoisted(() => ({ id: "voltius", name: "RoMix Marketplace", url: "", enabled: true, deletable: false }));
 vi.mock("@/stores/marketplaceStore", () => ({
   useMarketplaceStore: (selector?: (s: typeof marketplaceState) => unknown) =>
     selector ? selector(marketplaceState) : marketplaceState,
@@ -192,7 +192,7 @@ test("a genuine seeded artifact with a newer catalogue entry shows the Update bu
   usePluginStore.setState({ settingsPages: new Map() });
   seeded.entries = new Map([["plugin-ai-agent", { folder: "ai-agent", manifest: AI }]]);
   marketplaceState.catalog = [
-    { id: "plugin-ai-agent", name: "AI Agent", author: "Voltius", description: "", repo: "", version: "2.0.0", tags: [], theme: false, sourceId: "voltius" },
+    { id: "plugin-ai-agent", name: "AI Agent", author: "RoMix", description: "", repo: "", version: "2.0.0", tags: [], theme: false, sourceId: "voltius" },
   ];
   render(<InstalledTab />);
   await waitFor(() => {
@@ -207,7 +207,7 @@ test("a loaded id with NO real seeded artifact never shows the seeded Update but
   // missing on this device) but has no genuine app-bundled artifact behind it.
   seeded.entries = new Map();
   marketplaceState.catalog = [
-    { id: "plugin-ai-agent", name: "AI Agent", author: "Voltius", description: "", repo: "", version: "2.0.0", tags: [], theme: false, sourceId: "voltius" },
+    { id: "plugin-ai-agent", name: "AI Agent", author: "RoMix", description: "", repo: "", version: "2.0.0", tags: [], theme: false, sourceId: "voltius" },
   ];
   render(<InstalledTab />);
   // Let the async loadSeededEntries effect (and its state update) settle before

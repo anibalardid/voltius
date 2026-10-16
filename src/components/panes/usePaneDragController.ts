@@ -41,7 +41,7 @@ export function usePaneDragController() {
           const duplicated = duplicateSession(drag.sessionId, drag.dropTarget.position, anchor);
           if (!duplicated) {
             useNotificationStore.getState().addToast({
-              source: { kind: "plugin", id: "core", name: "Voltius" },
+              source: { kind: "plugin", id: "core", name: "RoMix" },
               type: "toast",
               message: i18n.t("panes.dragToast.cannotDuplicate"),
               severity: "info",
@@ -74,7 +74,7 @@ export function usePaneDragController() {
           if (existing) {
             activateSplitTabPane(existing.tabId, existing.paneId);
             useNotificationStore.getState().addToast({
-              source: { kind: "plugin", id: "core", name: "Voltius" },
+              source: { kind: "plugin", id: "core", name: "RoMix" },
               type: "toast",
               message: i18n.t("panes.dragToast.alreadyVisible"),
               severity: "info",
@@ -88,7 +88,7 @@ export function usePaneDragController() {
             useSessionStore.getState().setActive(drag.sessionId);
           } else {
             useNotificationStore.getState().addToast({
-              source: { kind: "plugin", id: "core", name: "Voltius" },
+              source: { kind: "plugin", id: "core", name: "RoMix" },
               type: "toast",
               message: i18n.t("panes.dragToast.invalidDropTarget"),
               severity: "info",

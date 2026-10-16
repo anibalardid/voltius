@@ -80,7 +80,7 @@
     "convert": {
       "title": "要与他人共享 \"{{vault}}\" 吗？",
       "body": "这会将您的私有保险库转变为团队保险库。其中已有的所有内容都会一并转移，因此您添加的人也能看到。",
-      "offlineWarning": "仅在 Voltius 可连接同步服务器时才能打开——不支持离线访问。",
+      "offlineWarning": "仅在 RoMix 可连接同步服务器时才能打开——不支持离线访问。",
       "keyCustody": "您添加的每个人都会获得密钥副本。之后移除也无法收回。",
       "change": "无法再改回私有状态。",
       "cancel": "取消",
@@ -200,7 +200,7 @@
       "copyInviteLink": "复制邀请链接",
       "revoke": "撤销邀请",
       "remove": "从保险库中移除",
-      "inviteLinkCopied": "邀请链接已复制 — 它会在 Voltius 中打开对方的邀请。"
+      "inviteLinkCopied": "邀请链接已复制 — 它会在 RoMix 中打开对方的邀请。"
     },
     "cta": {
       "signInTitle": "登录以使用团队功能",

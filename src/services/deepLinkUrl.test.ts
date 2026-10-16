@@ -24,7 +24,7 @@ const cases: DeepLinkIntent[] = [
 test("every route round-trips through the https form", () => {
   for (const intent of cases) {
     const url = buildDeepLink(intent, "https");
-    expect(url.startsWith("https://voltius.app/open#"), url).toBe(true);
+    expect(url.startsWith("https://romix.app/open#"), url).toBe(true);
     expect(parseDeepLink(url), JSON.stringify(intent)).toEqual(intent);
   }
 });
@@ -32,18 +32,18 @@ test("every route round-trips through the https form", () => {
 test("every route round-trips through the scheme form", () => {
   for (const intent of cases) {
     const url = buildDeepLink(intent, "scheme");
-    expect(url.startsWith("voltius://"), url).toBe(true);
+    expect(url.startsWith("romix://"), url).toBe(true);
     expect(parseDeepLink(url), JSON.stringify(intent)).toEqual(intent);
   }
 });
 
 test("a plugin-install link defaults its source when none is named", () => {
-  const parsed = parseDeepLink("voltius://plugin-install?id=plugin-docker");
+  const parsed = parseDeepLink("romix://plugin-install?id=plugin-docker");
   expect(parsed).toEqual({ route: "plugin-install", pluginId: "plugin-docker", sourceId: DEFAULT_PLUGIN_SOURCE_ID });
 });
 
 test("http is rejected: a cleartext App Link would be hijackable", () => {
-  expect(parseDeepLink("http://voltius.app/open#settings?section=terminal")).toBeNull();
+  expect(parseDeepLink("http://romix.app/open#settings?section=terminal")).toBeNull();
 });
 
 test("an unknown host is rejected", () => {
@@ -51,15 +51,15 @@ test("an unknown host is rejected", () => {
 });
 
 test("an unknown route is rejected", () => {
-  expect(parseDeepLink("voltius://join?s=1&t=2")).toBeNull();
+  expect(parseDeepLink("romix://join?s=1&t=2")).toBeNull();
 });
 
 test("a settings link naming an unknown section is rejected", () => {
-  expect(parseDeepLink("voltius://settings?section=nope")).toBeNull();
+  expect(parseDeepLink("romix://settings?section=nope")).toBeNull();
 });
 
 test("a plugin-install link with an invalid plugin id is rejected", () => {
-  expect(parseDeepLink(`voltius://plugin-install?id=../evil&src=voltius`)).toBeNull();
+  expect(parseDeepLink(`romix://plugin-install?id=../evil&src=voltius`)).toBeNull();
 });
 
 test("the intent key is stable across property order", () => {
@@ -76,5 +76,5 @@ test("trust classes classify the remaining routes", () => {
 
 test("the uuid constant is not needed by any remaining route", () => {
   // Guards against a silent re-introduction of the removed vault-join route.
-  expect(parseDeepLink(`voltius://vault-join?g=${UUID}&k=x`)).toBeNull();
+  expect(parseDeepLink(`romix://vault-join?g=${UUID}&k=x`)).toBeNull();
 });

@@ -55,7 +55,7 @@ export function buildMarketplaceTools(ports: ToolSurfacePorts): Tool[] {
       name: "marketplace_source_list",
       description:
         "The marketplace sources this app reads plugins from, whether each is enabled, and whether "
-        + "it can be removed. The built-in Voltius source cannot.",
+        + "it can be removed. The built-in RoMix source cannot.",
       risk: "auto",
       schema: z.object({}),
       execute: async () => ports.api.plugins.sources(),

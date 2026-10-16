@@ -36,7 +36,7 @@ test("isShortCode accepts every spelling the server would accept", () => {
 test("isShortCode rejects the other invite shapes", () => {
   expect(isShortCode("8f3c1e0a-4b2d-47aa-9e11-2c6d5a7b8f90")).toBe(false);
   expect(isShortCode("8f3c1e0a-4b2d-47aa-9e11-2c6d5a7b8f90:faketoken")).toBe(false);
-  expect(isShortCode("voltius://join?s=8f3c1e0a-4b2d-47aa-9e11-2c6d5a7b8f90&t=faketoken")).toBe(false);
+  expect(isShortCode("romix://join?s=8f3c1e0a-4b2d-47aa-9e11-2c6d5a7b8f90&t=faketoken")).toBe(false);
   expect(isShortCode("host:22")).toBe(false);
 });
 

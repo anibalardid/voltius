@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the Voltius Android debug APK inside the voltius-android image.
+# Build the RoMix Android debug APK inside the voltius-android image.
 # Usage: scripts/android-build.sh [ARCH]   (ARCH default: aarch64; e.g. armv7|x86_64|i686)
 # Run from anywhere; resolves the repo root itself.
 set -euo pipefail

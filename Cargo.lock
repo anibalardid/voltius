@@ -5315,6 +5315,71 @@ dependencies = [
 ]
 
 [[package]]
+name = "romix"
+version = "1.0.0"
+dependencies = [
+ "aes 0.9.0",
+ "apple-native-keyring-store",
+ "async-trait",
+ "base64 0.22.1",
+ "bollard",
+ "cfb8",
+ "chacha20poly1305",
+ "chrono",
+ "crypto_secretbox",
+ "dbus-secret-service-keyring-store",
+ "dirs",
+ "fontdb",
+ "futures-util",
+ "gio",
+ "hostname",
+ "jni 0.21.1",
+ "keyring-core",
+ "libc",
+ "libsecret",
+ "linux-keyutils-keyring-store",
+ "log",
+ "portable-pty",
+ "rand 0.8.6",
+ "reqwest",
+ "rsa 0.9.10",
+ "russh",
+ "russh-sftp",
+ "rustls",
+ "rustls-native-certs",
+ "rusty-leveldb",
+ "serde",
+ "serde_json",
+ "serialport",
+ "sha2 0.10.9",
+ "ssh-key 0.6.7",
+ "suppaftp",
+ "sysinfo",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-clipboard-manager",
+ "tauri-plugin-deep-link",
+ "tauri-plugin-dialog",
+ "tauri-plugin-log",
+ "tauri-plugin-opener",
+ "tauri-plugin-shell",
+ "tauri-plugin-single-instance",
+ "tauri-plugin-updater",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-rustls",
+ "tokio-util",
+ "uuid",
+ "voltius-crypto",
+ "voltius-diagnostics",
+ "webpki-roots",
+ "windows-native-keyring-store",
+ "windows-registry 0.6.1",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
 name = "rsa"
 version = "0.9.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6577,8 +6642,6 @@ dependencies = [
 [[package]]
 name = "tao"
 version = "0.35.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a33f7f9e486ade65fcf1e45c440f9236c904f5c1002cdc7fc6ae582777345ce4"
 dependencies = [
  "bitflags 2.11.1",
  "block2",
@@ -7695,71 +7758,6 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
-
-[[package]]
-name = "voltius"
-version = "0.40.0"
-dependencies = [
- "aes 0.9.0",
- "apple-native-keyring-store",
- "async-trait",
- "base64 0.22.1",
- "bollard",
- "cfb8",
- "chacha20poly1305",
- "chrono",
- "crypto_secretbox",
- "dbus-secret-service-keyring-store",
- "dirs",
- "fontdb",
- "futures-util",
- "gio",
- "hostname",
- "jni 0.21.1",
- "keyring-core",
- "libc",
- "libsecret",
- "linux-keyutils-keyring-store",
- "log",
- "portable-pty",
- "rand 0.8.6",
- "reqwest",
- "rsa 0.9.10",
- "russh",
- "russh-sftp",
- "rustls",
- "rustls-native-certs",
- "rusty-leveldb",
- "serde",
- "serde_json",
- "serialport",
- "sha2 0.10.9",
- "ssh-key 0.6.7",
- "suppaftp",
- "sysinfo",
- "tauri",
- "tauri-build",
- "tauri-plugin-clipboard-manager",
- "tauri-plugin-deep-link",
- "tauri-plugin-dialog",
- "tauri-plugin-log",
- "tauri-plugin-opener",
- "tauri-plugin-shell",
- "tauri-plugin-single-instance",
- "tauri-plugin-updater",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tokio-rustls",
- "tokio-util",
- "uuid",
- "voltius-crypto",
- "voltius-diagnostics",
- "webpki-roots",
- "windows-native-keyring-store",
- "windows-registry 0.6.1",
- "windows-sys 0.59.0",
-]
 
 [[package]]
 name = "voltius-crypto"

@@ -96,7 +96,7 @@ pub fn plugin_delete(id: String) -> Result<(), String> {
 #[tauri::command]
 pub async fn plugin_fetch_url(url: String) -> Result<String, String> {
     let client = reqwest::Client::builder()
-        .user_agent("Voltius")
+        .user_agent("RoMix")
         .build()
         .map_err(|e| e.to_string())?;
     let resp = client.get(&url).send().await.map_err(|e| e.to_string())?;

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@iconify/react";
-import LogoSvg from "/logo.svg?react";
+const logo = "/romix-logo.png";
 import { useDefaultVaultId, resolveVaultIdForSave } from "@/hooks/useWritableVaultIds";
 import { decryptText, fromJSON } from "@/services/import-export/formats";
 import type { ConnectionExport, ExportBundle, FolderExport, IdentityExport, KeyExport, PortForwardingRuleExport, SnippetExport } from "@/services/import-export/formats";
@@ -698,8 +698,8 @@ export function ImportTab({ defaultSource, autoTrigger }: { defaultSource?: stri
                   color: active ? "var(--t-accent)" : "var(--t-text-primary)",
                 }}
               >
-                {importer.key === "voltius"
-                  ? <LogoSvg style={{ height: 14, width: "auto" }} />
+                {importer.key === "romix"
+                  ? <img src={logo} alt="" style={{ height: 14, width: "auto" }} />
                   : <Icon icon={importer.icon} width={14} />}
                 {importer.label}
               </button>

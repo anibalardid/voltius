@@ -56,8 +56,8 @@ done
 
 # --- Release (over the dists/<suite> tree), then sign ---
 apt-ftparchive \
-  -o APT::FTPArchive::Release::Origin=Voltius \
-  -o APT::FTPArchive::Release::Label=Voltius \
+  -o APT::FTPArchive::Release::Origin=RoMix \
+  -o APT::FTPArchive::Release::Label=RoMix \
   -o APT::FTPArchive::Release::Suite="$SUITE" \
   -o APT::FTPArchive::Release::Codename="$SUITE" \
   -o APT::FTPArchive::Release::Components="$COMPONENT" \

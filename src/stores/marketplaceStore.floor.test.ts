@@ -40,7 +40,7 @@ let networkManifestId = "plugin-other";
 
 function floorPlugin(over: Partial<MarketplacePlugin> = {}): MarketplacePlugin {
   return {
-    id: "plugin-docker", name: "Docker", author: "Voltius", description: "d",
+    id: "plugin-docker", name: "Docker", author: "RoMix", description: "d",
     repo: "", version: "1.1.0", tags: [], theme: false, sourceId: "builtin", builtin: true,
     ...over,
   };
@@ -165,7 +165,7 @@ function seededMap(): Map<string, SeededEntry> {
 
 function catalogEntry(over: Partial<MarketplacePlugin> = {}): MarketplacePlugin {
   return {
-    id: "plugin-docker", name: "Docker", author: "Voltius", description: "d",
+    id: "plugin-docker", name: "Docker", author: "RoMix", description: "d",
     repo: "voltiusApp/plugin-docker", version: "1.2.0", tags: [], theme: false, sourceId: "voltius",
     ...over,
   };

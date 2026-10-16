@@ -2,7 +2,7 @@ import { test, expect, beforeEach, vi } from "vitest";
 import { useDeepLinkStore } from "@/stores/deepLinkStore";
 import { startDeepLinks } from "./deepLink";
 
-const URL_A = `voltius://snippet-install?id=s1`;
+const URL_A = `romix://snippet-install?id=s1`;
 
 const getCurrent = vi.fn();
 const onOpenUrl = vi.fn();

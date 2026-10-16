@@ -62,7 +62,7 @@ impl HttpSseStreamManager {
 /// rustls config using the `ring` provider and bundled webpki roots instead. Desktop
 /// keeps reqwest's working default.
 fn client_builder() -> reqwest::ClientBuilder {
-    let builder = reqwest::Client::builder().user_agent("Voltius");
+    let builder = reqwest::Client::builder().user_agent("RoMix");
     #[cfg(target_os = "android")]
     let builder = builder.use_preconfigured_tls(android_tls_config());
     builder

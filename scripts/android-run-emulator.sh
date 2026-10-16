@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Boots a native Android emulator (phone or tablet) and runs Voltius on it in dev
+# Boots a native Android emulator (phone or tablet) and runs RoMix on it in dev
 # mode, using the SDK/AVDs on the external volume (see android-env.sh).
 #
 #   scripts/android-run-emulator.sh phone    # pixel_phone on emulator-5556
@@ -45,5 +45,5 @@ fi
 # more than one emulator/device is connected.
 export ANDROID_SERIAL="$SERIAL"
 
-echo "==> Running Voltius on $AVD (tauri android dev)..."
+echo "==> Running RoMix on $AVD (tauri android dev)..."
 pnpm tauri android dev

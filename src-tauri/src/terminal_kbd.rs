@@ -8,7 +8,7 @@ fn call(op: &str, method: &str) -> Result<(), String> {
     with_env(op, |env, _ctx| {
         // Resolve via the app class loader: Tauri commands run on tokio workers whose default
         // FindClass only sees the system loader (see android_ctx::load_class).
-        let cls = load_class(env, "com.voltius.app.TerminalKeyboard")?;
+        let cls = load_class(env, "com.romix.app.TerminalKeyboard")?;
         env.call_static_method(&cls, method, "()V", &[])?.v()
     })
 }

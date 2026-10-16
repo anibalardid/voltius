@@ -115,7 +115,7 @@ export function fromJSON(text: string): ExportBundle {
     throw new Error(i18n.t("common.error.invalidJson"));
   }
   if (typeof parsed !== "object" || parsed === null || (parsed as ExportBundle).version !== 1) {
-    throw new Error(i18n.t("common.error.notVoltiusExportBundle"));
+    throw new Error(i18n.t("common.error.notRoMixExportBundle"));
   }
   const b = parsed as ExportBundle;
   return {
@@ -181,7 +181,7 @@ export async function decryptText(text: string, password: string): Promise<strin
   let parsed: unknown;
   try { parsed = JSON.parse(text); } catch { throw new Error(i18n.t("common.error.invalidEncryptedFile")); }
   const obj = parsed as EncryptedBundleFile;
-  if (obj?.type !== "voltius-encrypted") throw new Error(i18n.t("common.error.notEncryptedVoltiusBackup"));
+  if (obj?.type !== "voltius-encrypted") throw new Error(i18n.t("common.error.notEncryptedRoMixBackup"));
   if (obj.version !== 2 || obj.cipher !== "xchacha20poly1305") throw new Error(i18n.t("common.error.unsupportedEncryptedBackup"));
   const key = await deriveKey(password, b64ToBytes(obj.salt));
   let decrypted: Uint8Array;

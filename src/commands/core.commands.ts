@@ -2,6 +2,7 @@ import type { OmniCommand } from "@/plugins/api";
 import { useUIStore } from "@/stores/uiStore";
 import { useSessionStore } from "@/stores/sessionStore";
 import { checkForUpdate } from "@/services/updater";
+import { SHOW_CHANGELOG_MODAL } from "@/services/changelog";
 import { defineCommand, navCommand, pendingActionCommand } from "./defineCommand";
 
 export const commands: OmniCommand[] = [
@@ -54,7 +55,10 @@ export const commands: OmniCommand[] = [
     label: "What's New",
     icon: "lucide:megaphone",
     keywords: ["changelog", "release", "notes", "news", "update", "version"],
-    execute: () => useUIStore.getState().openWhatsNew(),
+    execute: () => {
+      if (!SHOW_CHANGELOG_MODAL) return;
+      useUIStore.getState().openWhatsNew();
+    },
   }),
   navCommand({
     id: "core:port-forwarding",

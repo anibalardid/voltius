@@ -7,11 +7,9 @@ import { useIsMobile } from "@/utils/platform";
 import { useUIStore } from "@/stores/uiStore";
 
 const LINKS = [
-  { icon: "simple-icons:github", key: "github",        sub: "VoltiusApp/voltius",   href: "https://github.com/VoltiusApp/voltius" },
-  { icon: "lucide:book-open",    key: "documentation", sub: "docs.voltius.app",     href: "https://docs.voltius.app" },
-  { icon: "simple-icons:x",      key: "x",             sub: "@VoltiusApp",           href: "https://x.com/VoltiusApp" },
+  { icon: "simple-icons:github", key: "github",        sub: "Source",               href: "https://github.com/anibalardid/voltius" },
+  { icon: "lucide:book-open",    key: "documentation", sub: "NOTICE.md",            href: "https://github.com/anibalardid/voltius/blob/main/NOTICE.md" },
   { icon: "simple-icons:kofi",   key: "kofi",          sub: "ko-fi.com/kipavy",     href: "https://ko-fi.com/kipavy" },
-  { icon: "lucide:mail",         key: "contact",       sub: "contact@voltius.app",  href: "mailto:contact@voltius.app" },
 ];
 import {
   getUpdaterState,
@@ -52,7 +50,7 @@ export default function AboutSection() {
         >
           <LogoBadge size={10} />
           <div>
-            <p className="text-sm font-medium text-(--t-text-primary)">Voltius</p>
+            <p className="text-sm font-medium text-(--t-text-primary)">RoMix</p>
             <p className="text-xs mt-0.5 text-(--t-text-dim)">
               {appVersion ? `v${appVersion}` : t("settings.about.loading")}
             </p>

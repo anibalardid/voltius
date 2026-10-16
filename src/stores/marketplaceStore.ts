@@ -66,7 +66,7 @@ const SOURCES_META_KEY = "marketplace-sources";
 
 export const FIRST_PARTY_SOURCE: MarketplaceSource = {
   id: "voltius",
-  name: "Voltius Marketplace",
+  name: "RoMix Marketplace",
   url: "https://raw.githubusercontent.com/voltiusApp/marketplace/main/plugins.json",
   enabled: true,
   deletable: false,

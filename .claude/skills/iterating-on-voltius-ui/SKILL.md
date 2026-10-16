@@ -1,9 +1,9 @@
 ---
 name: iterating-on-voltius-ui
-description: Use when modifying, running, screenshotting, clicking through, or verifying the Voltius Tauri app's UI — drives the live headless dev build through the tauri-docker MCP so changes can be seen and interacted with, not just compiled.
+description: Use when modifying, running, screenshotting, clicking through, or verifying the RoMix Tauri app's UI — drives the live headless dev build through the tauri-docker MCP so changes can be seen and interacted with, not just compiled.
 ---
 
-# Iterating on the Voltius UI
+# Iterating on the RoMix UI
 
 ## Overview
 

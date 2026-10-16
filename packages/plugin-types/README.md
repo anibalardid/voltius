@@ -1,6 +1,6 @@
 # @voltius/plugin-types
 
-TypeScript definitions for the [Voltius](https://github.com/VoltiusApp/voltius) plugin API.
+TypeScript definitions for the [RoMix](https://github.com/VoltiusApp/voltius) plugin API.
 
 ```bash
 npm install --save-dev @voltius/plugin-types
@@ -17,7 +17,7 @@ export default function register(api: PluginAPI): () => void {
 
 Types only — there is no runtime code. The host provides the implementation.
 
-**Versions track the app.** `@voltius/plugin-types@0.14.1` describes the API in Voltius 0.14.1.
+**Versions track the app.** `@voltius/plugin-types@0.14.1` describes the API in RoMix 0.14.1.
 
 `ui.d.ts` declares the `@voltius/ui` module (the host components plugins may import). It is
 included automatically; you do not need to reference it.

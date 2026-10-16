@@ -87,6 +87,57 @@ export function touchDistance(a: { clientX: number; clientY: number }, b: { clie
  * Scaling the size by the raw distance ratio makes the text track the fingers,
  * and rounding to whole pixels keeps xterm off fractional cell metrics.
  */
+export type FingerSwipe =
+  | { kind: "none" }
+  | { kind: "scroll"; delta: number };
+
+/**
+ * One-finger drag always scrolls the viewport. It must never emit Up/Down:
+ * at a shell prompt those keys recall command history, which is what a swipe
+ * was doing on iOS. Full-screen apps still have the extra-key arrows.
+ * `lines` is signed rows from the finger: positive = finger moved down.
+ * Scroll delta is negated so a downward drag reveals older output, matching iOS.
+ */
+export function fingerSwipeAction(lines: number): FingerSwipe {
+  if (lines === 0) return { kind: "none" };
+  return { kind: "scroll", delta: -lines };
+}
+
+export interface ScrollbarThumb {
+  /** Pixels from the top of the track. */
+  offset: number;
+  /** Thumb height in pixels. */
+  size: number;
+  /** Highest viewport-top line. 0 means the buffer fits on screen. */
+  maxTop: number;
+}
+
+/** Thumb geometry for a browser-style terminal scrollbar. Null when the track has no height. */
+export function scrollbarThumb(opts: {
+  top: number;
+  rows: number;
+  length: number;
+  track: number;
+  minThumb: number;
+}): ScrollbarThumb | null {
+  if (opts.track <= 0 || opts.rows <= 0 || opts.length <= 0) return null;
+  const maxTop = Math.max(0, opts.length - opts.rows);
+  const size = maxTop === 0
+    ? opts.track
+    : Math.min(opts.track, Math.max(opts.minThumb, Math.round(opts.track * (opts.rows / opts.length))));
+  const travel = Math.max(1, opts.track - size);
+  const offset = maxTop === 0 ? 0 : Math.round((Math.max(0, Math.min(opts.top, maxTop)) / maxTop) * travel);
+  return { offset, size, maxTop };
+}
+
+/** Viewport-top line for a pointer Y measured from the top of the track. */
+export function scrollbarTopFromPointer(pointerY: number, track: number, thumb: number, maxTop: number): number {
+  if (maxTop <= 0) return 0;
+  const travel = Math.max(1, track - thumb);
+  const y = Math.max(0, Math.min(pointerY - thumb / 2, travel));
+  return Math.round((y / travel) * maxTop);
+}
+
 export function fontSizeFromPinch(
   startSize: number,
   startDist: number,

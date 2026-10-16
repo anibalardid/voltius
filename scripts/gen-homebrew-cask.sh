@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Emits a complete Homebrew Cask for Voltius to stdout.
+# Emits a complete Homebrew Cask for RoMix to stdout.
 #
 # Usage: gen-homebrew-cask.sh <tag> [--core]
 #   e.g. gen-homebrew-cask.sh v0.4.0
@@ -26,7 +26,7 @@ if [ "$VARIANT" = "--core" ]; then
 else
   QUARANTINE_HINT="
     To clear the quarantine flag from an existing installation instead, run:
-      xattr -dr com.apple.quarantine /Applications/Voltius.app
+      xattr -dr com.apple.quarantine /Applications/RoMix.app
 "
 fi
 
@@ -38,8 +38,8 @@ cask "voltius" do
   sha256 arm:   "${SHA_ARM}",
          intel: "${SHA_INTEL}"
 
-  url "https://github.com/${REPO}/releases/download/v#{version}/Voltius_#{version}_#{arch}.dmg"
-  name "Voltius"
+  url "https://github.com/${REPO}/releases/download/v#{version}/RoMix_#{version}_#{arch}.dmg"
+  name "RoMix"
   desc "Cross-platform SSH client and terminal"
   homepage "https://voltius.app/"
 
@@ -51,16 +51,16 @@ cask "voltius" do
   auto_updates true
   depends_on :macos
 
-  app "Voltius.app"
+  app "RoMix.app"
 
   caveats <<~CAVEATS
-    Voltius is ad-hoc signed but not notarized, so on first launch macOS
+    RoMix is ad-hoc signed but not notarized, so on first launch macOS
     Gatekeeper will warn that the app cannot be checked for malware.
 
-    Right-click (or Control-click) Voltius in Applications and choose Open, then
+    Right-click (or Control-click) RoMix in Applications and choose Open, then
     confirm. You only need to do this once.
 ${QUARANTINE_HINT}
-    Voltius updates itself in-app after installation.
+    RoMix updates itself in-app after installation.
   CAVEATS
 end
 EOF

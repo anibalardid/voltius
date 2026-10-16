@@ -139,7 +139,7 @@ jobs:
           # target/ sits at the workspace root, which is the repository root.
           ./scripts/build-msix.ps1 `
             -Arch ${{ matrix.arch }} `
-            -ExePath "target/${{ matrix.target }}/release/voltius.exe"
+            -ExePath "target/${{ matrix.target }}/release/RoMix.exe"
 
       - name: Upload MSIX
         uses: actions/upload-artifact@v7

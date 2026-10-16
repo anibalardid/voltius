@@ -1,12 +1,12 @@
 ---
 name: voltius-release
-description: "Use this skill to cut a Voltius release: reading commits since the last release tag, bumping the version, updating CHANGELOG.md, committing on dev, merging dev into main, and watching CI until the release is published. Trigger whenever the user says 'release', 'cut a release', 'bump version', 'prepare release', 'ship', or anything implying they want to publish a new Voltius version."
+description: "Use this skill to cut a RoMix release: reading commits since the last release tag, bumping the version, updating CHANGELOG.md, committing on dev, merging dev into main, and watching CI until the release is published. Trigger whenever the user says 'release', 'cut a release', 'bump version', 'prepare release', 'ship', or anything implying they want to publish a new RoMix version."
 trigger: /release
 ---
 
-# /release — Voltius Release Skill
+# /release — RoMix Release Skill
 
-Cut a new Voltius release end-to-end: discover what changed, write the changelog entry, bump all version files on `dev`, merge `dev` into `main` (which auto-tags via CI), and watch CI through to a published release.
+Cut a new RoMix release end-to-end: discover what changed, write the changelog entry, bump all version files on `dev`, merge `dev` into `main` (which auto-tags via CI), and watch CI through to a published release.
 
 ## Project release facts (memorize these)
 

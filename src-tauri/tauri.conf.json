@@ -1,7 +1,8 @@
 {
-  "productName": "Voltius",
-  "version": "0.40.0",
-  "identifier": "com.voltius.app",
+  "productName": "RoMix",
+  "mainBinaryName": "RoMix",
+  "version": "1.0.0",
+  "identifier": "com.romix.app",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -11,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Voltius",
+        "title": "RoMix",
         "width": 1200,
         "height": 800,
         "minWidth": 800,
@@ -54,6 +55,11 @@
     "macOS": {
       "signingIdentity": "-"
     },
+    "iOS": {
+      "developmentTeam": "VRB3U44LF4",
+      "minimumSystemVersion": "15.0",
+      "bundleVersion": "4"
+    },
     "linux": {
       "deb": {
         "depends": [
@@ -71,20 +77,20 @@
     "deep-link": {
       "desktop": {
         "schemes": [
-          "voltius"
+          "romix"
         ]
       },
       "mobile": [
         {
           "scheme": [
-            "voltius"
+            "romix"
           ]
         },
         {
           "scheme": [
             "https"
           ],
-          "host": "voltius.app",
+          "host": "romix.app",
           "path": [
             "/open",
             "/open/"
@@ -95,7 +101,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDUxRDA4QkIxNzE3MDY4OEIKUldTTGFIQnhzWXZRVWNKR2w5LzRMS0cxZkF0RGs1KzdSUU1aVzdRM2lGZGozWjNHMkh6NXdvREwK",
       "endpoints": [
-        "https://updater.voltius.app/v1/{{target}}/{{arch}}/{{current_version}}"
+        "https://updater.romix.app/v1/{{target}}/{{arch}}/{{current_version}}"
       ]
     }
   }

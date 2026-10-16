@@ -68,7 +68,7 @@ export async function addKeyToHost({
   // a model-settable key name (key_create) would smuggle a second, attacker-
   // chosen line into authorized_keys under a name the approval prompt never shows.
   const label = String(sshKey.name ?? "SSH").replace(/[\r\n]+/g, " ");
-  const comment = `# ${label} Key by Voltius`;
+  const comment = `# ${label} Key by RoMix`;
   const command = `sh -c '${script}' sh ${shellQuote(safeLocation)} ${shellQuote(safeFilename)} ${shellQuote(comment)} ${shellQuote(trimmedPubKey)}`;
   const result = await sshExecCommand({
     host: connection.host,

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Emits the Scoop manifest for Voltius to stdout.
+# Emits the Scoop manifest for RoMix to stdout.
 # Usage: gen-scoop-manifest.sh <tag>   e.g. gen-scoop-manifest.sh v0.27.0
 #
 # The manifest carries `checkver` + `autoupdate`, so once it is merged into
@@ -27,11 +27,11 @@ cat <<EOF
     "license": "AGPL-3.0-or-later",
     "architecture": {
         "64bit": {
-            "url": "https://github.com/${REPO}/releases/download/${TAG}/Voltius_${VERSION}_x64-setup.exe#/setup.exe",
+            "url": "https://github.com/${REPO}/releases/download/${TAG}/RoMix_${VERSION}_x64-setup.exe#/setup.exe",
             "hash": "${SHA_X64}"
         },
         "arm64": {
-            "url": "https://github.com/${REPO}/releases/download/${TAG}/Voltius_${VERSION}_arm64-setup.exe#/setup.exe",
+            "url": "https://github.com/${REPO}/releases/download/${TAG}/RoMix_${VERSION}_arm64-setup.exe#/setup.exe",
             "hash": "${SHA_ARM64}"
         }
     },
@@ -44,8 +44,8 @@ cat <<EOF
     "uninstaller": {
         "script": [
             "\$keys = @('HKCU:\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Uninstall\\\\*', 'HKLM:\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Uninstall\\\\*')",
-            "\$entry = Get-ItemProperty \$keys -ErrorAction SilentlyContinue | Where-Object { \$_.DisplayName -eq 'Voltius' } | Select-Object -First 1",
-            "\$uninst = if (\$entry -and \$entry.UninstallString) { \$entry.UninstallString.Trim('\"') } else { Join-Path \$env:LOCALAPPDATA 'Voltius\\\\uninstall.exe' }",
+            "\$entry = Get-ItemProperty \$keys -ErrorAction SilentlyContinue | Where-Object { \$_.DisplayName -eq 'RoMix' } | Select-Object -First 1",
+            "\$uninst = if (\$entry -and \$entry.UninstallString) { \$entry.UninstallString.Trim('\"') } else { Join-Path \$env:LOCALAPPDATA 'RoMix\\\\uninstall.exe' }",
             "if (Test-Path \$uninst) { Start-Process -FilePath \$uninst -ArgumentList '/S' -Wait } else { Write-Host \"no uninstaller found at \$uninst\" }"
         ]
     },
@@ -55,15 +55,15 @@ cat <<EOF
     "autoupdate": {
         "architecture": {
             "64bit": {
-                "url": "https://github.com/${REPO}/releases/download/v\$version/Voltius_\$version_x64-setup.exe#/setup.exe",
+                "url": "https://github.com/${REPO}/releases/download/v\$version/RoMix_\$version_x64-setup.exe#/setup.exe",
                 "hash": {
-                    "url": "https://github.com/${REPO}/releases/download/v\$version/Voltius_\$version_x64-setup.exe.sha256"
+                    "url": "https://github.com/${REPO}/releases/download/v\$version/RoMix_\$version_x64-setup.exe.sha256"
                 }
             },
             "arm64": {
-                "url": "https://github.com/${REPO}/releases/download/v\$version/Voltius_\$version_arm64-setup.exe#/setup.exe",
+                "url": "https://github.com/${REPO}/releases/download/v\$version/RoMix_\$version_arm64-setup.exe#/setup.exe",
                 "hash": {
-                    "url": "https://github.com/${REPO}/releases/download/v\$version/Voltius_\$version_arm64-setup.exe.sha256"
+                    "url": "https://github.com/${REPO}/releases/download/v\$version/RoMix_\$version_arm64-setup.exe.sha256"
                 }
             }
         }

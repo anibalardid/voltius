@@ -387,10 +387,10 @@
       }
     },
     "diagnostics": {
-      "intro": "Un problème avec Voltius ? Créez un rapport et envoyez-le au développeur — cela aide à traquer les bugs difficiles à reproduire.",
+      "intro": "Un problème avec RoMix ? Créez un rapport et envoyez-le au développeur — cela aide à traquer les bugs difficiles à reproduire.",
       "troubleshootingTitle": "Dépannage",
       "verboseLabel": "Journalisation détaillée (cette session)",
-      "verboseSub": "Enregistre des détails supplémentaires pour aider à diagnostiquer les problèmes. Revient à la normale au redémarrage de Voltius.",
+      "verboseSub": "Enregistre des détails supplémentaires pour aider à diagnostiquer les problèmes. Revient à la normale au redémarrage de RoMix.",
       "verboseHint": "La journalisation détaillée est activée. Pour capturer le problème :\n1. Reproduisez le problème maintenant\n2. Revenez ici et créez un rapport de bug",
       "reportTitle": "Rapport de bug",
       "createButton": "Créer un rapport de bug",
@@ -398,7 +398,7 @@
       "createdButton": "Rapport enregistré",
       "reportSub": "Inclut les journaux de l'application et les infos système. N'inclut jamais vos mots de passe, clés ou le contenu du terminal.",
       "whatsIncluded": "Que contient le rapport ?",
-      "includedBody": "Inclus :\n• Journaux de l'application (ce que faisait Voltius, avec les valeurs sensibles retirées)\n• Version de l'application, système d'exploitation et extensions actives\nNON inclus :\n• Mots de passe, contenu du coffre-fort ou clés privées\n• Sortie du terminal ou tout ce que vous avez tapé\nLe rapport est enregistré sur votre ordinateur. Rien n'est envoyé automatiquement — vous choisissez où le partager.",
+      "includedBody": "Inclus :\n• Journaux de l'application (ce que faisait RoMix, avec les valeurs sensibles retirées)\n• Version de l'application, système d'exploitation et extensions actives\nNON inclus :\n• Mots de passe, contenu du coffre-fort ou clés privées\n• Sortie du terminal ou tout ce que vous avez tapé\nLe rapport est enregistré sur votre ordinateur. Rien n'est envoyé automatiquement — vous choisissez où le partager.",
       "toastSaved": "Rapport enregistré — {{name}}",
       "toastError": "Impossible de créer le rapport : {{reason}}",
       "toastGenericError": "Une erreur s'est produite."
@@ -406,7 +406,7 @@
     "integrations": {
       "mcp": {
         "title": "MCP",
-        "sub": "Permet aux clients MCP locaux (comme Claude Code) d'exécuter des commandes, de lire, écrire et supprimer des fichiers sur tous les hôtes de votre coffre ainsi que sur cet ordinateur, de créer, modifier ou supprimer des connexions, clés et identités enregistrées, d'exécuter vos snippets enregistrés sur ces hôtes, d'autoriser des clés d'hôte SSH, de lire les commandes que vous avez saisies, de voir, annuler ou relancer vos transferts de fichiers, de voir lesquels de vos hôtes enregistrés sont joignables, de réorganiser vos onglets de terminal et vos panneaux divisés, de gérer les membres et les invitations de votre équipe, de partager vos sessions de terminal avec votre équipe ou d'en céder le contrôle, de lire et modifier tous les réglages de l'application, et de lire votre abonnement, via un socket privé. L'approbation a lieu dans ce client, pas dans Voltius. Désactivé par défaut. Il peut aussi installer, mettre à jour et supprimer des plugins, et exporter ou importer vos objets enregistrés.",
+        "sub": "Permet aux clients MCP locaux (comme Claude Code) d'exécuter des commandes, de lire, écrire et supprimer des fichiers sur tous les hôtes de votre coffre ainsi que sur cet ordinateur, de créer, modifier ou supprimer des connexions, clés et identités enregistrées, d'exécuter vos snippets enregistrés sur ces hôtes, d'autoriser des clés d'hôte SSH, de lire les commandes que vous avez saisies, de voir, annuler ou relancer vos transferts de fichiers, de voir lesquels de vos hôtes enregistrés sont joignables, de réorganiser vos onglets de terminal et vos panneaux divisés, de gérer les membres et les invitations de votre équipe, de partager vos sessions de terminal avec votre équipe ou d'en céder le contrôle, de lire et modifier tous les réglages de l'application, et de lire votre abonnement, via un socket privé. L'approbation a lieu dans ce client, pas dans RoMix. Désactivé par défaut. Il peut aussi installer, mettre à jour et supprimer des plugins, et exporter ou importer vos objets enregistrés.",
         "running": "Actif",
         "quickSetup": {
           "title": "Configuration rapide",
@@ -426,7 +426,7 @@
             "opencode": "OpenCode"
           },
           "help": {
-            "claudeCode": "Exécutez ceci une fois pour enregistrer Voltius auprès de Claude Code. Le serveur doit être activé ci-dessus pour qu'un client puisse se connecter.",
+            "claudeCode": "Exécutez ceci une fois pour enregistrer RoMix auprès de Claude Code. Le serveur doit être activé ci-dessus pour qu'un client puisse se connecter.",
             "mcpServers": "Ajoutez ce bloc à claude_desktop_config.json (Claude Desktop) ou .cursor/mcp.json (Cursor, Cline, Windsurf). Le serveur doit être activé ci-dessus pour qu'un client puisse se connecter.",
             "vscode": "Ajoutez ce bloc à .vscode/mcp.json. VS Code utilise « servers », pas « mcpServers » — coller un bloc au format Cursor ici ne charge rien, silencieusement.",
             "opencode": "Ajoutez ce bloc à opencode.json (projet) ou ~/.config/opencode/opencode.json (global)."
@@ -483,7 +483,7 @@
       "reportBug": "Signaler un bug"
     },
     "sync": {
-      "voltiusCloud": "Voltius Cloud",
+      "voltiusCloud": "RoMix Cloud",
       "active": {
         "title": "Synchronisation cloud active",
         "syncing": "Synchronisation en cours…",
@@ -713,11 +713,11 @@
       },
       "deepLinkInstall": {
         "title": "Installer ce plugin ?",
-        "body": "Ce lien installe un plugin. Un plugin exécute du code dans Voltius avec les permissions listées ci-dessous.",
+        "body": "Ce lien installe un plugin. Un plugin exécute du code dans RoMix avec les permissions listées ci-dessous.",
         "summary": "{{name}} {{version}} par {{author}}",
         "source": "Depuis le catalogue {{source}}.",
         "action": "Installer",
-        "failed": "Ce lien ne désigne aucun plugin que Voltius puisse installer"
+        "failed": "Ce lien ne désigne aucun plugin que RoMix puisse installer"
       },
       "permissionModal": {
         "installTitle": "Installer {{name}} ?",
@@ -803,7 +803,7 @@
           },
           "mcpContribute": {
             "label": "Exposer des outils aux agents IA externes",
-            "description": "Permet à ce plugin d'ajouter ses propres commandes au serveur MCP de Voltius, afin que tout agent IA externe connecté puisse les exécuter — avec les autorisations de ce plugin."
+            "description": "Permet à ce plugin d'ajouter ses propres commandes au serveur MCP de RoMix, afin que tout agent IA externe connecté puisse les exécuter — avec les autorisations de ce plugin."
           },
           "vaultsRead": {
             "label": "Voir vos coffres",
@@ -951,7 +951,7 @@
           },
           "pluginsManage": {
             "label": "Gérer les plugins",
-            "description": "Installer, mettre à jour, supprimer, activer et désactiver des plugins, et ajouter des sources de marketplace. Un plugin installé exécute du code dans Voltius avec les permissions qu'il déclare."
+            "description": "Installer, mettre à jour, supprimer, activer et désactiver des plugins, et ajouter des sources de marketplace. Un plugin installé exécute du code dans RoMix avec les permissions qu'il déclare."
           },
           "importExportRead": {
             "label": "Exporter vos données",

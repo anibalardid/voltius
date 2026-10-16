@@ -47,12 +47,12 @@
       "selectAll": "Tout sélectionner",
       "selectNone": "Effacer",
       "error": {
-        "unsupportedCatalog": "Ce catalogue de snippets est dans un format que cette version de Voltius ne comprend pas. Essayez de mettre à jour l’application."
+        "unsupportedCatalog": "Ce catalogue de snippets est dans un format que cette version de RoMix ne comprend pas. Essayez de mettre à jour l’application."
       }
     },
     "deepLinkInstall": {
       "title": "Installer ces extraits ?",
-      "body": "Ce lien installe des extraits depuis le catalogue communautaire Voltius. Les extraits sont des commandes shell qui s'exécutent sur vos hôtes lorsque vous les utilisez.",
+      "body": "Ce lien installe des extraits depuis le catalogue communautaire RoMix. Les extraits sont des commandes shell qui s'exécutent sur vos hôtes lorsque vous les utilisez.",
       "summary": "{{name}} par {{author}} — {{count}} extraits",
       "unknownAuthor": "un auteur anonyme",
       "destination": "Ils seront ajoutés au coffre {{vault}}.",

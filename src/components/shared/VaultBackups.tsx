@@ -41,7 +41,7 @@ export function VaultBackups({ currentReadable, hideWhenEmpty, className }: Prop
     try {
       const setAside = await restoreVaultBackup(file);
       addToast({
-        source: { kind: "plugin", id: "system", name: "Voltius" },
+        source: { kind: "plugin", id: "system", name: "RoMix" },
         type: "toast",
         message: setAside
           ? t("shared.vaultBackups.restoredToast", { file: setAside })

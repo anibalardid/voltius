@@ -84,7 +84,7 @@
     "convert": {
       "title": "\"{{vault}}\" başkalarıyla paylaşılsın mı?",
       "body": "Bu işlem özel kasanızı bir ekip kasasına dönüştürür. İçindeki her şey aktarılır, böylece eklediğiniz kişiler de görebilir.",
-      "offlineWarning": "Yalnızca Voltius eşitleme sunucusuna erişebildiğinde açılır — çevrimdışı erişim yoktur.",
+      "offlineWarning": "Yalnızca RoMix eşitleme sunucusuna erişebildiğinde açılır — çevrimdışı erişim yoktur.",
       "keyCustody": "Eklediğiniz herkes kasanın anahtarının bir kopyasını alır. Kişileri sonradan kaldırmak bu kopyayı geri almaz.",
       "change": "Kasayı daha sonra yeniden özel yapabilirsiniz — bu herkesin erişimini kaldırır, ancak kişilerde zaten bulunan kopyaları kaldırmaz.",
       "cancel": "İptal",
@@ -204,7 +204,7 @@
       "copyInviteLink": "Davet bağlantısını kopyala",
       "revoke": "Daveti iptal et",
       "remove": "Kasadan kaldır",
-      "inviteLinkCopied": "Davet bağlantısı kopyalandı — bağlantı, daveti Voltius'ta açar."
+      "inviteLinkCopied": "Davet bağlantısı kopyalandı — bağlantı, daveti RoMix'ta açar."
     },
     "cta": {
       "signInTitle": "Ekip özelliklerini kullanmak için oturum açın",

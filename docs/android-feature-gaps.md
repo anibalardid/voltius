@@ -13,7 +13,7 @@ Recommended order = by likelihood of blocking app startup, then by value.
 
 ## 1. ✅ OS keychain / secret storage  — DONE (branch `android-keychain`, commit d3e804a)
 **Resolution:** Android keyring-core store backed by AndroidX EncryptedSharedPreferences
-(hardware-backed MasterKey) — `VoltiusKeychain.kt` + `src-tauri/src/keychain_android.rs`,
+(hardware-backed MasterKey) — `RoMixKeychain.kt` + `src-tauri/src/keychain_android.rs`,
 registered in `init_keychain_store`. VM+Context captured via `nativeInit` from
 `MainActivity.onCreate` (NOT `ndk_context` — tao 0.35 stopped populating it, which made
 `ndk_context::android_context()` panic→SIGABRT across the JNI boundary). Plus graceful

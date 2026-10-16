@@ -168,7 +168,7 @@ const ROUTES: { [K in Route]: RouteCodec<K> } = {
 export type LinkForm = "https" | "scheme";
 
 /** The landing site that bridges an `https` link back to the scheme. */
-export const WEB_ORIGIN = "https://voltius.app";
+export const WEB_ORIGIN = "https://romix.app";
 const WEB_PATH = "/open";
 
 /**
@@ -187,11 +187,11 @@ export function buildDeepLink(intent: DeepLinkIntent, form: LinkForm = "https"):
   // have to round-trip through `parseDeepLink` byte for byte.
   const suffix = query ? `?${query}` : "";
   return form === "scheme"
-    ? `voltius://${intent.route}${suffix}`
+    ? `romix://${intent.route}${suffix}`
     : `${WEB_ORIGIN}${WEB_PATH}#${intent.route}${suffix}`;
 }
 
-const WEB_HOSTS = new Set(["voltius.app", "www.voltius.app"]);
+const WEB_HOSTS = new Set(["romix.app", "www.romix.app"]);
 
 export function parseDeepLink(url: string): DeepLinkIntent | null {
   let parsed: URL;
@@ -201,7 +201,7 @@ export function parseDeepLink(url: string): DeepLinkIntent | null {
     return null;
   }
 
-  if (parsed.protocol === "voltius:") {
+  if (parsed.protocol === "romix:") {
     // Custom schemes are not special-scheme URLs, so the route lands in
     // `hostname` on some platforms and `pathname` on others.
     const route = parsed.hostname || parsed.pathname.replace(/^\/+/, "");

@@ -1,9 +1,9 @@
 ---
 name: iterating-on-voltius-android-emulator
-description: Use when building, deploying, running, screenshotting, clicking through, or debugging the Voltius Tauri app on a headless Android emulator running in Docker (no physical phone) — drives the in-container x86_64 emulator through the tauri-android MCP (adb + Chrome DevTools Protocol) so changes are seen and interacted with, not just compiled.
+description: Use when building, deploying, running, screenshotting, clicking through, or debugging the RoMix Tauri app on a headless Android emulator running in Docker (no physical phone) — drives the in-container x86_64 emulator through the tauri-android MCP (adb + Chrome DevTools Protocol) so changes are seen and interacted with, not just compiled.
 ---
 
-# Iterating on Voltius Android (Docker emulator)
+# Iterating on RoMix Android (Docker emulator)
 
 ## Overview
 
@@ -44,7 +44,7 @@ docker logs -f android-emulator     # wait for "boot completed"
 scripts/android-build.sh x86_64   # match the host: x86_64 on Intel/AMD, aarch64 on ARM → "universal" APK
 docker exec android-emulator adb install -r \
   /project/src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk
-docker exec android-emulator adb shell am start -n com.voltius.app/.MainActivity
+docker exec android-emulator adb shell am start -n com.romix.app/.MainActivity
 ```
 
 ## Register the MCP

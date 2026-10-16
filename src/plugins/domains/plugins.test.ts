@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const marketplace = {
   appVersion: "1.0.0",
-  sources: [{ id: "voltius", name: "Voltius Marketplace", url: "https://x/plugins.json", enabled: true, deletable: false }],
+  sources: [{ id: "voltius", name: "RoMix Marketplace", url: "https://x/plugins.json", enabled: true, deletable: false }],
   catalog: [
     { id: "acme", name: "Acme", author: "a", description: "d", repo: "r", version: "2.0.0", tags: [], theme: false, sourceId: "voltius" },
     { id: "widget", name: "Widget", author: "a", description: "d", repo: "r", version: "2.0.0", tags: [], theme: false, sourceId: "voltius" },
@@ -21,7 +21,7 @@ const marketplace = {
 };
 vi.mock("@/stores/marketplaceStore", () => ({
   useMarketplaceStore: { getState: () => marketplace },
-  FIRST_PARTY_SOURCE: { id: "voltius", name: "Voltius Marketplace", url: "https://x/plugins.json", enabled: true, deletable: false },
+  FIRST_PARTY_SOURCE: { id: "voltius", name: "RoMix Marketplace", url: "https://x/plugins.json", enabled: true, deletable: false },
 }));
 
 const registry = { isEnabled: vi.fn(() => true), setEnabled: vi.fn(async () => {}) };

@@ -100,7 +100,7 @@ jobs:
           else
             id=$(gh api -X POST "repos/$REPO/releases" \
               -f "tag_name=$TAG" \
-              -f "name=Voltius $TAG" \
+              -f "name=RoMix $TAG" \
               -f "body=$NOTES" \
               -F draft=true \
               -F prerelease=false \
@@ -310,7 +310,7 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           src="src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk"
-          dest="Voltius_${TAG#v}_aarch64.apk"
+          dest="RoMix_${TAG#v}_aarch64.apk"
           cp "$src" "$dest"
           gh release upload "$TAG" "$dest" --clobber -R "$REPO"
 

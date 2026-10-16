@@ -1,6 +1,6 @@
-name: voltius
+name: romix
 options:
-  bundleIdPrefix: com.voltius.app
+  bundleIdPrefix: com.romix.app
   deploymentTarget:
     # 15.0 is the floor for WebGL2, which @xterm/addon-webgl needs — on 14 the
     # addon throws at construction and xterm silently drops to the DOM renderer.
@@ -12,8 +12,8 @@ configs:
 settingGroups:
   app:
     base:
-      PRODUCT_NAME: Voltius
-      PRODUCT_BUNDLE_IDENTIFIER: com.voltius.app
+      PRODUCT_NAME: RoMix
+      PRODUCT_BUNDLE_IDENTIFIER: com.romix.app
       DEVELOPMENT_TEAM: VRB3U44LF4
       # The "Build Rust Code" phase runs cargo, which needs to walk the source
       # tree (external drive + .git). Xcode's user-script sandbox blocks that,
@@ -32,20 +32,20 @@ targetTemplates:
     settings:
       groups: [app]
 targets:
-  voltius_iOS:
+  romix_iOS:
     type: application
     platform: iOS
     sources:
       - path: Sources
       - path: Assets.xcassets
       - path: Externals
-      - path: voltius_iOS
+      - path: romix_iOS
       - path: assets
         buildPhase: resources
         type: folder
       - path: LaunchScreen.storyboard
     info:
-      path: voltius_iOS/Info.plist
+      path: romix_iOS/Info.plist
       properties:
         LSRequiresIPhoneOS: true
         UILaunchStoryboardName: LaunchScreen
@@ -65,10 +65,11 @@ targets:
           - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        CFBundleShortVersionString: 0.40.0
-        CFBundleVersion: "0.40.0"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        NSLocalNetworkUsageDescription: RoMix connects to SSH and SFTP servers on your local network.
     entitlements:
-      path: voltius_iOS/voltius_iOS.entitlements
+      path: romix_iOS/romix_iOS.entitlements
     scheme:
       environmentVariables:
         RUST_BACKTRACE: full
@@ -76,6 +77,8 @@ targets:
     settings:
       base:
         ENABLE_BITCODE: false
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: 4
         ARCHS: [arm64]
         VALID_ARCHS: arm64 
         LIBRARY_SEARCH_PATHS[arch=x86_64]: $(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)
@@ -94,7 +97,7 @@ targets:
       - sdk: UIKit.framework
       - sdk: WebKit.framework
     preBuildScripts:
-      - script: npm run -- tauri ios xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths "${FRAMEWORK_SEARCH_PATHS:?}" --header-search-paths "${HEADER_SEARCH_PATHS:?}" --gcc-preprocessor-definitions "${GCC_PREPROCESSOR_DEFINITIONS:-}" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS:?}
+      - script: '"${SRCROOT}/../../../scripts/ios-xcode-build.sh"'
         name: Build Rust Code
         basedOnDependencyAnalysis: false
         outputFiles:

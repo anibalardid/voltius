@@ -1,9 +1,9 @@
 ---
 name: testing-voltius-team-features-e2e
-description: Use when verifying, reproducing, or debugging Voltius TEAM / multiplayer features end-to-end with real accounts — team vaults, invitations, member vault-key distribution (X25519 wrap/unwrap), shared/collaborative terminals, live presence, and control handoff. These multi-user crypto + realtime flows are exactly what unit tests and single-instance UI runs structurally cannot prove. Not for single-user UI tweaks (use iterating-on-voltius-ui).
+description: Use when verifying, reproducing, or debugging RoMix TEAM / multiplayer features end-to-end with real accounts — team vaults, invitations, member vault-key distribution (X25519 wrap/unwrap), shared/collaborative terminals, live presence, and control handoff. These multi-user crypto + realtime flows are exactly what unit tests and single-instance UI runs structurally cannot prove. Not for single-user UI tweaks (use iterating-on-voltius-ui).
 ---
 
-# Testing Voltius team features end-to-end
+# Testing RoMix team features end-to-end
 
 ## Overview
 
@@ -58,7 +58,7 @@ docker exec $C node /app/wd.mjs eval "return document.body.innerText.slice(0,200
 - **React controlled inputs**: WebDriver `type`/`clear` leave React state stale (value re-reverts, or appends to a default). Use `setval` (native setter + `input` event).
 - **`window.__TAURI__` is NOT exposed** to injected JS → you cannot call backend `invoke`; drive the real UI instead.
 - **Some editors won't open** via synthetic events (host editor, right-click context menus). Filling `New Host` fields **auto-saves** (no Save button); if an editor/menu won't open, find another path rather than fighting it.
-- **App state lives in the OS keychain (keyutils), not files** — wiping `~/.local/share/com.voltius.app` does NOT sign you out. Use the app's **Account menu → Disconnect**. Account SWITCH reuses the cached master key (no password prompt).
+- **App state lives in the OS keychain (keyutils), not files** — wiping `~/.local/share/com.romix.app` does NOT sign you out. Use the app's **Account menu → Disconnect**. Account SWITCH reuses the cached master key (no password prompt).
 
 ## Two simultaneous clients (multiplayer / presence)
 

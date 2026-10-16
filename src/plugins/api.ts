@@ -789,7 +789,7 @@ export interface McpToolContribution {
   execute(args: Record<string, unknown>): Promise<unknown>;
 }
 
-/** Contribute tools to the Voltius MCP server. GATED (mcp:contribute). */
+/** Contribute tools to the RoMix MCP server. GATED (mcp:contribute). */
 export interface McpAPI {
   /** Register this plugin's whole tool set. Throws on any invalid tool and
    *  registers none of them. Returns a teardown that removes the whole set. */

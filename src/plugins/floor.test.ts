@@ -15,7 +15,7 @@ function seeded(over: Partial<PluginManifest> = {}): Map<string, SeededEntry> {
 
 function catalogEntry(over: Partial<MarketplacePlugin> = {}): MarketplacePlugin {
   return {
-    id: "plugin-docker", name: "Docker", author: "Voltius", description: "Manage containers",
+    id: "plugin-docker", name: "Docker", author: "RoMix", description: "Manage containers",
     repo: "voltiusApp/plugin-docker", version: "1.2.0", tags: [], theme: false, sourceId: "voltius",
     ...over,
   };

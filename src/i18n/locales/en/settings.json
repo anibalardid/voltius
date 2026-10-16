@@ -387,10 +387,10 @@
       }
     },
     "diagnostics": {
-      "intro": "Trouble with Voltius? Create a report and send it to the developer — it helps track down bugs that are hard to reproduce.",
+      "intro": "Trouble with RoMix? Create a report and send it to the developer — it helps track down bugs that are hard to reproduce.",
       "troubleshootingTitle": "Troubleshooting",
       "verboseLabel": "Verbose logging (this session)",
-      "verboseSub": "Records extra detail to help diagnose issues. Resets to normal when you restart Voltius.",
+      "verboseSub": "Records extra detail to help diagnose issues. Resets to normal when you restart RoMix.",
       "verboseHint": "Verbose logging is on. To capture the problem:\n1. Reproduce the issue now\n2. Come back and create a bug report",
       "reportTitle": "Bug report",
       "createButton": "Create bug report",
@@ -398,7 +398,7 @@
       "createdButton": "Report saved",
       "reportSub": "Includes app logs and system info. Never includes your passwords, keys, or terminal contents.",
       "whatsIncluded": "What's included?",
-      "includedBody": "Included:\n• App logs (what Voltius was doing, with sensitive values removed)\n• App version, operating system, and active plugins\nNOT included:\n• Passwords, vault contents, or private keys\n• Terminal output or anything you typed\nThe report is saved to your computer. Nothing is sent automatically — you choose where to share it.",
+      "includedBody": "Included:\n• App logs (what RoMix was doing, with sensitive values removed)\n• App version, operating system, and active plugins\nNOT included:\n• Passwords, vault contents, or private keys\n• Terminal output or anything you typed\nThe report is saved to your computer. Nothing is sent automatically — you choose where to share it.",
       "toastSaved": "Report saved — {{name}}",
       "toastError": "Couldn't create report: {{reason}}",
       "toastGenericError": "Something went wrong."
@@ -406,7 +406,7 @@
     "integrations": {
       "mcp": {
         "title": "MCP",
-        "sub": "Lets local MCP clients (like Claude Code) run commands, read, write and delete files on every host in your vault and on this computer, create, change or delete saved connections, keys and identities, run your saved snippets on those hosts, authorise SSH host keys, read the commands you have typed, see, cancel or retry your file transfers, see which of your saved hosts are reachable, rearrange your terminal tabs and split panes, manage your team's membership and invitations, share your terminal sessions with your team or hand off control of them, read and change every setting in this app, and read your subscription, over a private socket. Approval happens in that client, not in Voltius. Off by default. It can also install, update and remove plugins, and export or import your saved objects.",
+        "sub": "Lets local MCP clients (like Claude Code) run commands, read, write and delete files on every host in your vault and on this computer, create, change or delete saved connections, keys and identities, run your saved snippets on those hosts, authorise SSH host keys, read the commands you have typed, see, cancel or retry your file transfers, see which of your saved hosts are reachable, rearrange your terminal tabs and split panes, manage your team's membership and invitations, share your terminal sessions with your team or hand off control of them, read and change every setting in this app, and read your subscription, over a private socket. Approval happens in that client, not in RoMix. Off by default. It can also install, update and remove plugins, and export or import your saved objects.",
         "running": "Running",
         "quickSetup": {
           "title": "Quick setup",
@@ -426,7 +426,7 @@
             "opencode": "OpenCode"
           },
           "help": {
-            "claudeCode": "Run this once to register Voltius with Claude Code. The server must be enabled above for a client to connect.",
+            "claudeCode": "Run this once to register RoMix with Claude Code. The server must be enabled above for a client to connect.",
             "mcpServers": "Add this block to claude_desktop_config.json (Claude Desktop) or .cursor/mcp.json (Cursor, Cline, Windsurf). The server must be enabled above for a client to connect.",
             "vscode": "Add this block to .vscode/mcp.json. VS Code uses \"servers\", not \"mcpServers\" — pasting a Cursor-style block here silently loads nothing.",
             "opencode": "Add this block to opencode.json (project) or ~/.config/opencode/opencode.json (global)."
@@ -483,7 +483,7 @@
       "reportBug": "Report a bug"
     },
     "sync": {
-      "voltiusCloud": "Voltius Cloud",
+      "voltiusCloud": "RoMix Cloud",
       "active": {
         "title": "Cloud sync active",
         "syncing": "Syncing…",
@@ -713,11 +713,11 @@
       },
       "deepLinkInstall": {
         "title": "Install this plugin?",
-        "body": "This link installs a plugin. A plugin runs code inside Voltius with the permissions listed below.",
+        "body": "This link installs a plugin. A plugin runs code inside RoMix with the permissions listed below.",
         "summary": "{{name}} {{version}} by {{author}}",
         "source": "From the {{source}} catalogue.",
         "action": "Install",
-        "failed": "This link does not name a plugin Voltius can install"
+        "failed": "This link does not name a plugin RoMix can install"
       },
       "permissionModal": {
         "installTitle": "Install {{name}}?",
@@ -803,7 +803,7 @@
           },
           "mcpContribute": {
             "label": "Expose tools to external AI agents",
-            "description": "Lets this plugin add its own commands to the Voltius MCP server, so any external AI agent you have connected can run them — using this plugin's own permissions."
+            "description": "Lets this plugin add its own commands to the RoMix MCP server, so any external AI agent you have connected can run them — using this plugin's own permissions."
           },
           "vaultsRead": {
             "label": "See your vaults",
@@ -951,7 +951,7 @@
           },
           "pluginsManage": {
             "label": "Manage plugins",
-            "description": "Install, update, remove, enable and disable plugins, and add marketplace sources. An installed plugin runs code inside Voltius with the permissions it declares."
+            "description": "Install, update, remove, enable and disable plugins, and add marketplace sources. An installed plugin runs code inside RoMix with the permissions it declares."
           },
           "importExportRead": {
             "label": "Export your data",

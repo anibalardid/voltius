@@ -1,3 +1,11 @@
+# Notices
+
+RoMix is a modified version of Voltius.
+
+Voltius is copyright © 2026 Killian Pavy and contributors, and is licensed under the GNU Affero General Public License version 3. This modified version, RoMix, is released under the same license. The license text in `LICENSE` is unchanged. Modification date: 2026-10-15.
+
+The name RoMix and this distribution are independent of the upstream Voltius project. See `LICENSE` for the full terms.
+
 # Third-party notices
 
 ## Twemoji Country Flags font

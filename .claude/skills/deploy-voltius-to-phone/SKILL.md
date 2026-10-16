@@ -1,9 +1,9 @@
 ---
 name: deploy-voltius-to-phone
-description: Use when the user wants a working Voltius Android build installed on their own physical phone to test/poke at by hand (not MCP-driven automation) — builds the aarch64 debug APK and installs + launches it on the connected phone, then hands off for manual testing.
+description: Use when the user wants a working RoMix Android build installed on their own physical phone to test/poke at by hand (not MCP-driven automation) — builds the aarch64 debug APK and installs + launches it on the connected phone, then hands off for manual testing.
 ---
 
-# Deploy Voltius to my phone (manual testing)
+# Deploy RoMix to my phone (manual testing)
 
 ## Overview
 
@@ -42,12 +42,12 @@ adb devices    # want: <serial>  device   (not "unauthorized" → tap "Allow" on
 ADB_SERVER_SOCKET=tcp:192.168.240.1:5037 \
   scripts/android-deploy.sh src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk
 ```
-This runs `adb install -r` then `am start -n com.voltius.app/.MainActivity`. On success it prints the
+This runs `adb install -r` then `am start -n com.romix.app/.MainActivity`. On success it prints the
 WebView debug socket line — that confirms the app actually came up, not just installed.
 
 ## 4. Hand off
 
-Tell the user it's installed and launched on their phone (app name **Voltius**), and that they can
+Tell the user it's installed and launched on their phone (app name **RoMix**), and that they can
 reopen it from the launcher. If you changed something specific, tell them what to look for. If they
 report a crash, you can pull it: `ADB_SERVER_SOCKET=… adb logcat -b crash -d` (Rust panics show under
 `RustStdoutStderr`).

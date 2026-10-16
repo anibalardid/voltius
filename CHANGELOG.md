@@ -1,11 +1,17 @@
 # Changelog
 
-All notable changes to Voltius are documented in this file.
+All notable changes to RoMix are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [1.0.0] - 2026-10-16
+
+### Changed
+
+- Set the app version to 1.0.0 so desktop, iOS, and Android ship the same number.
 
 ## [0.40.0] - 2026-09-20
 
@@ -76,7 +82,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Every installed sync provider now shows alongside Voltius cloud sync — in the title bar, the sync menu, the mobile header and Settings › Sync — each with its own status and a Sync now action. Sync plugins you have not installed yet are offered there too.
+- Every installed sync provider now shows alongside RoMix cloud sync — in the title bar, the sync menu, the mobile header and Settings › Sync — each with its own status and a Sync now action. Sync plugins you have not installed yet are offered there too.
 
 ### Fixed
 
@@ -447,14 +453,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the paste landed in whichever session the pane had opened last rather than
   the one that received the keystroke.
 - Your own tmux works inside a persistent session again. A persistent session
-  wraps the remote shell in Voltius's own tmux, and that wrapper leaked its
-  socket and its `C-b` prefix into the shell: `tmux ls` listed Voltius's
+  wraps the remote shell in RoMix's own tmux, and that wrapper leaked its
+  socket and its `C-b` prefix into the shell: `tmux ls` listed RoMix's
   private sessions instead of yours, `tmux attach` refused to nest at all, and
   a forced nest lost every prefix key. The wrapper now clears the multiplexer
   environment and gives up its prefix. The fix reaches new sessions; a session
   started before this release keeps the old wrapper until it is restarted.
 - On a host that has screen but not tmux, the wrapper no longer swallows
-  `C-a`. A bare `C-a d` inside your own nested screen detached Voltius's
+  `C-a`. A bare `C-a d` inside your own nested screen detached RoMix's
   session instead, closing the connection and reconnecting underneath you.
 - Duplicating a session no longer lands in your home directory when the
   original's working directory has since been deleted. The directory probe
@@ -500,7 +506,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Voltius is packaged for four more channels: the AUR (`voltius-bin`), Flathub,
+- RoMix is packaged for four more channels: the AUR (`voltius-bin`), Flathub,
   Scoop and the Microsoft Store. The Store build installs without the unknown-
   publisher warning Windows shows for the standalone installer.
 - Deep links reach more of the app. Notifications, settings and billing each
@@ -508,7 +514,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   install now opens a confirmation sheet that names exactly what it is about to
   do before anything is applied.
 - Links work in their `https://voltius.app/open` form as well as the
-  `voltius://` scheme, so they survive the chat clients and mail readers that
+  `romix://` scheme, so they survive the chat clients and mail readers that
   strip custom schemes. On Android that address is registered as an App Link and
   opens the app directly. Sharing an invitation hands out the https form.
 - Presence is drawn by one component everywhere it appears — the title bar, the
@@ -519,7 +525,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The Linux `.deb` declares its dependency on libsecret, which it linked against
   without asking for. On a minimal Debian the app failed to start.
-- The generated desktop entry carries a category, so Voltius is filed under
+- The generated desktop entry carries a category, so RoMix is filed under
   Development instead of landing in whatever bucket a launcher uses for
   uncategorised apps.
 - A confirmation sheet queued behind another no longer inherits the click that
@@ -538,7 +544,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Voltius now answers `voltius://` links. A session invite, a team invite or an
+- RoMix now answers `romix://` links. A session invite, a team invite or an
   email verification opens the app straight on the thing it points at, on
   desktop and on mobile. Links are routed through a table that classifies each
   one by how much it is trusted, and a link that arrives before you are signed
@@ -625,7 +631,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
-- The display-name editor is gone. A handle is the single name Voltius shows
+- The display-name editor is gone. A handle is the single name RoMix shows
   for a person, everywhere.
 
 ### Fixed
@@ -886,7 +892,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Voltius can now act as an MCP server, so Claude Code and other MCP clients
+- RoMix can now act as an MCP server, so Claude Code and other MCP clients
   drive your infrastructure directly: 41 tools covering keys, identities,
   connections, sessions, commands and file transfers. It is off by default —
   turn it on in Settings → Integrations, which also carries the one-line client
@@ -1140,7 +1146,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Simplified Chinese (简体中文) interface language, contributed by
   [@CoconutHR](https://github.com/CoconutHR). Pick it under Appearance settings;
   like every language, it syncs across your devices.
-- Plugins: an update flow. Voltius now detects when an installed plugin has a
+- Plugins: an update flow. RoMix now detects when an installed plugin has a
   newer version, offers a one-click update, and asks you to re-consent if the
   update declares permissions you had not already granted (#52).
 - Plugins: bundle integrity. A plugin's bundle hash is verified on install and
@@ -1203,7 +1209,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sidebar account menu, or Appearance settings, with live preview as you browse
 - Automatic theme switching — follow the system appearance, a fixed schedule, or
   local sunrise/sunset
-- New built-in "Voltius Light" theme
+- New built-in "RoMix Light" theme
 - Importing an SSH config now adopts existing matching connections instead of
   creating duplicates (#39)
 
@@ -1263,8 +1269,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Auto port-forwarding no longer hijacks a local port that another process
   already uses. On Windows, connecting to a Docker-published service on
-  `127.0.0.1` (e.g. MongoDB on `27017`) could reach Voltius's tunnel instead of
-  the real service; Voltius now detects the in-use port and falls back to the
+  `127.0.0.1` (e.g. MongoDB on `27017`) could reach RoMix's tunnel instead of
+  the real service; RoMix now detects the in-use port and falls back to the
   next free one (#33)
 
 ## [0.9.2] - 2026-07-13
@@ -1282,7 +1288,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - macOS: the app bundle is now ad-hoc signed, so a directly downloaded `.dmg`
-  no longer fails on Apple Silicon with "Voltius.app is damaged and cannot be
+  no longer fails on Apple Silicon with "RoMix.app is damaged and cannot be
   opened"; the standard Gatekeeper prompt appears instead
 
 ## [0.9.0] - 2026-07-05
@@ -1389,7 +1395,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Voltius for Android — the full app now runs on Android (signed arm64 APK),
+- RoMix for Android — the full app now runs on Android (signed arm64 APK),
   with the terminal, hosts and folders, snippets, SFTP, Docker/metrics/processes
   panels, Proxmox, native keychain, and SAF download folders
 - Updater: download banner and external-update status for installs that can't
@@ -1509,7 +1515,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Fedora / RHEL builds: releases now include a native `.rpm` package, installable
-  with `sudo dnf install ./Voltius-*.x86_64.rpm`.
+  with `sudo dnf install ./RoMix-*.x86_64.rpm`.
 
 ### Fixed
 

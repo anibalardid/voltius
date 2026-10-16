@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Frame a captured clip with the Voltius brand gradient — matches the docs screenshots
+# Frame a captured clip with the RoMix brand gradient — matches the docs screenshots
 # (navy->lift gradient + top-left glow, rounded floating window + drop shadow, 1600px wide).
 # Reuses the docs frame.py as the single source of truth for the brand look.
 #

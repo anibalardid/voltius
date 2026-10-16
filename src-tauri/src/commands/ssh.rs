@@ -317,7 +317,7 @@ pub async fn ssh_kill_persistent(
     Ok(String::from_utf8_lossy(&output).contains("VOLTIUS_KILLED"))
 }
 
-/// List live Voltius multiplexers on a host. Same one-shot connect as
+/// List live RoMix multiplexers on a host. Same one-shot connect as
 /// `ssh_kill_persistent`: no jump hosts. A jumped host skips the picker.
 #[tauri::command]
 pub async fn ssh_list_persistent(

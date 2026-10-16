@@ -3,14 +3,14 @@ import { buildMcpRegisterCommand, buildAddMcpCommand } from "./registerCommand";
 
 describe("buildMcpRegisterCommand", () => {
   it("double-quotes a spaced Windows path", () => {
-    expect(buildMcpRegisterCommand("C:\\Program Files\\Voltius\\voltius.exe")).toBe(
-      'claude mcp add voltius -- "C:\\Program Files\\Voltius\\voltius.exe" mcp',
+    expect(buildMcpRegisterCommand("C:\\Program Files\\RoMix\\voltius.exe")).toBe(
+      'claude mcp add voltius -- "C:\\Program Files\\RoMix\\voltius.exe" mcp',
     );
   });
 
   it("single-quotes a spaced unix path", () => {
-    expect(buildMcpRegisterCommand("/Applications/My Voltius.app/Contents/MacOS/voltius")).toBe(
-      "claude mcp add voltius -- '/Applications/My Voltius.app/Contents/MacOS/voltius' mcp",
+    expect(buildMcpRegisterCommand("/Applications/My RoMix.app/Contents/MacOS/voltius")).toBe(
+      "claude mcp add voltius -- '/Applications/My RoMix.app/Contents/MacOS/voltius' mcp",
     );
   });
 
@@ -38,7 +38,7 @@ describe("buildAddMcpCommand", () => {
     expect(buildAddMcpCommand("/usr/bin/voltius")).toContain("add-mcp@2");
   });
 
-  it("passes the global flag — Voltius is not project-scoped and add-mcp defaults to per-project", () => {
+  it("passes the global flag — RoMix is not project-scoped and add-mcp defaults to per-project", () => {
     expect(buildAddMcpCommand("/usr/bin/voltius")).toMatch(/(^|\s)-g(\s|$)/);
   });
 
@@ -56,14 +56,14 @@ describe("buildAddMcpCommand", () => {
   });
 
   it("shell-quotes a spaced unix path so it survives as one argv token", () => {
-    expect(buildAddMcpCommand("/Applications/My Voltius.app/Contents/MacOS/voltius")).toBe(
-      "npx -y add-mcp@2 '/Applications/My Voltius.app/Contents/MacOS/voltius' --args mcp -n voltius -g",
+    expect(buildAddMcpCommand("/Applications/My RoMix.app/Contents/MacOS/voltius")).toBe(
+      "npx -y add-mcp@2 '/Applications/My RoMix.app/Contents/MacOS/voltius' --args mcp -n voltius -g",
     );
   });
 
   it("shell-quotes a spaced Windows path", () => {
-    expect(buildAddMcpCommand("C:\\Program Files\\Voltius\\voltius.exe")).toBe(
-      'npx -y add-mcp@2 "C:\\Program Files\\Voltius\\voltius.exe" --args mcp -n voltius -g',
+    expect(buildAddMcpCommand("C:\\Program Files\\RoMix\\voltius.exe")).toBe(
+      'npx -y add-mcp@2 "C:\\Program Files\\RoMix\\voltius.exe" --args mcp -n voltius -g',
     );
   });
 });

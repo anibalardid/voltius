@@ -29,6 +29,7 @@ import ThemeCreator from "@/components/theme-creator/ThemeCreator";
 import WhatsNewModal from "@/components/changelog/WhatsNewModal";
 import { DeepLinkConfirmModal } from "@/components/terminal/DeepLinkConfirmModal";
 import { PersistentSessionPicker } from "@/components/terminal/PersistentSessionPicker";
+import { CloseTabPrompt } from "@/components/terminal/CloseTabPrompt";
 import { useDeepLinkStore } from "@/stores/deepLinkStore";
 import { GlobalTransferQueue } from "@/components/filetransfer/GlobalTransferQueue";
 
@@ -75,6 +76,7 @@ function App() {
       <WhatsNewModal />
       <DeepLinkConfirmModal />
       <PersistentSessionPicker />
+      <CloseTabPrompt />
       <GlobalTransferQueue />
 
       {/* Global snippet variable modal — triggered from OmniSearch, the

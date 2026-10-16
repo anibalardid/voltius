@@ -1,5 +1,5 @@
 /**
- * Which Voltius instance an account lives on.
+ * Which RoMix instance an account lives on.
  *
  * Only a non-default instance is ever named in the UI: an account on the
  * official cloud reads exactly as it did before, and the host appears only when

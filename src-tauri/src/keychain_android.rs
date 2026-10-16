@@ -1,9 +1,9 @@
 //! keyring-core credential store backed by AndroidX EncryptedSharedPreferences.
 //!
 //! The EncryptedSharedPreferences / MasterKey work lives in Kotlin
-//! (`com.voltius.app.VoltiusKeychain`); this module just calls its three static methods
+//! (`com.romix.app.RoMixKeychain`); this module just calls its three static methods
 //! over JNI. The MasterKey is wrapped by the hardware-backed Android Keystore, so this
-//! matches the OS-keychain guarantee Voltius relies on for the vault key. Registered as
+//! matches the OS-keychain guarantee RoMix relies on for the vault key. Registered as
 //! keyring-core's default store on Android in `lib.rs::init_keychain_store`.
 
 use std::any::Any;
@@ -17,7 +17,7 @@ use keyring_core::{Credential, Entry, Error, Result};
 
 use crate::android_ctx::{load_class, with_env};
 
-const CLASS: &str = "com.voltius.app.VoltiusKeychain";
+const CLASS: &str = "com.romix.app.RoMixKeychain";
 
 fn platform_err(msg: String) -> Error {
     Error::PlatformFailure(msg.into())
@@ -152,7 +152,7 @@ impl Store {
 
 impl CredentialStoreApi for Store {
     fn vendor(&self) -> String {
-        String::from("Voltius Android EncryptedSharedPreferences store")
+        String::from("RoMix Android EncryptedSharedPreferences store")
     }
 
     fn id(&self) -> String {
@@ -196,7 +196,7 @@ mod tests {
     #[test]
     fn storage_key_combines_service_and_user() {
         assert_eq!(storage_key("voltius", "jwt"), "voltius\u{1f}jwt");
-        // Voltius services/keys are fixed ASCII names that never contain the unit
+        // RoMix services/keys are fixed ASCII names that never contain the unit
         // separator, so the join is unambiguous in practice.
         assert_ne!(
             storage_key("voltius", "jwt"),

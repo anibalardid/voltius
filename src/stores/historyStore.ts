@@ -76,7 +76,7 @@ export const useHistoryStore = create<HistoryStore>((set, get) => ({
         future: s.future.slice(1),
       }));
       useNotificationStore.getState().addToast({
-        source: { kind: "plugin", id: "core:history", name: "Voltius" },
+        source: { kind: "plugin", id: "core:history", name: "RoMix" },
         type: "toast",
         message: i18n.t("common.toast.undoFailed", { error: err instanceof Error ? err.message : String(err) }),
         severity: "error",
@@ -106,7 +106,7 @@ export const useHistoryStore = create<HistoryStore>((set, get) => ({
         future: [entry, ...s.future],
       }));
       useNotificationStore.getState().addToast({
-        source: { kind: "plugin", id: "core:history", name: "Voltius" },
+        source: { kind: "plugin", id: "core:history", name: "RoMix" },
         type: "toast",
         message: i18n.t("common.toast.redoFailed", { error: err instanceof Error ? err.message : String(err) }),
         severity: "error",

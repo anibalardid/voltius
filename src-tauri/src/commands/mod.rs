@@ -40,7 +40,7 @@ pub mod wsl;
 
 #[tauri::command]
 pub fn greet(name: &str) -> String {
-    format!("Hello, {}! Welcome to Voltius.", name)
+    format!("Hello, {}! Welcome to RoMix.", name)
 }
 
 /// Host OS the client is running on: "android" | "ios" | "linux" | "macos" |

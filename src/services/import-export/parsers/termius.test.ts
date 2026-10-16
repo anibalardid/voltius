@@ -183,7 +183,7 @@ run("resolves host → identity → key linkage via ssh_config_identities", () =
   assertEqual(conn?.username, "root");
   assertEqual(conn?.auth_type, "key");
   assertEqual(conn?._key_eid, bundle.keys[0]?._eid);
-  // Inlined: invisible identity should NOT create a Voltius Identity row.
+  // Inlined: invisible identity should NOT create a RoMix Identity row.
   assertEqual(bundle.identities.length, 0);
   assertEqual(conn?._identity_eid, undefined);
   // Settings flowed through.
@@ -192,7 +192,7 @@ run("resolves host → identity → key linkage via ssh_config_identities", () =
   assertEqual(conn?.agent_forwarding, false);
 });
 
-run("creates a Voltius Identity row for visible password identities", () => {
+run("creates a RoMix Identity row for visible password identities", () => {
   const bundle = bundleFromTermius(snapshot([
     sshConfig(100),
     host(101, 100, "Web Server", "10.0.0.1"),
@@ -209,7 +209,7 @@ run("creates a Voltius Identity row for visible password identities", () => {
   assertEqual(conn?._identity_eid, bundle.identities[0]?._eid);
 });
 
-run("creates Voltius Identity rows from visible Termius password credentials", () => {
+run("creates RoMix Identity rows from visible Termius password credentials", () => {
   const bundle = bundleFromTermius(snapshot([
     passwordCredential(7308652, "root", "root", "secret"),
   ]));

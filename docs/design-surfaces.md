@@ -1,6 +1,6 @@
 # Surface system
 
-How Voltius keeps one coherent design language across many surfaces.
+How RoMix keeps one coherent design language across many surfaces.
 
 ## The principle
 

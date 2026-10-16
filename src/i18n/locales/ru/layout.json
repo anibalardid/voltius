@@ -20,7 +20,7 @@
       "vaultSetAsideSub": "Резервная копия останется на устройстве",
       "vaultSetAsideToast": "Хранилище отложено как {{file}}",
       "vaultUnreadableRetry": "Попробовать другой пароль",
-      "chooseHowToUse": "Выберите, как вы хотите использовать Voltius",
+      "chooseHowToUse": "Выберите, как вы хотите использовать RoMix",
       "getStarted": "Начать",
       "getStartedSub": "Защищено связкой ключей ОС — пароль не требуется",
       "or": "или",
@@ -141,7 +141,7 @@
     },
     "sync": {
       "title": "Синхронизация",
-      "voltiusSync": "Синхронизация Voltius",
+      "voltiusSync": "Синхронизация RoMix",
       "moreProviders": "Другие провайдеры синхронизации",
       "syncNow": "Синхронизировать сейчас",
       "signInForSync": "Войдите для облачной синхронизации",

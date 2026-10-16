@@ -4,7 +4,7 @@
 #
 #   source "$(dirname "$0")/lib/release-assets.sh"
 #   release_assets_init "$TAG"
-#   sha="$(release_sha "Voltius_${VERSION}_amd64.deb")"
+#   sha="$(release_sha "RoMix_${VERSION}_amd64.deb")"
 #
 # Requires: gh (authenticated), awk.
 #
@@ -27,12 +27,12 @@ release_assets_init() {
 
 # release_asset <suffix>
 # Prints the name of a release asset from its arch/format suffix, e.g.
-#   release_asset amd64.deb      -> Voltius_0.27.0_amd64.deb
-#   release_asset x64-setup.exe  -> Voltius_0.27.0_x64-setup.exe
-# The `Voltius_<version>_` prefix is tauri-action's, and every generator would
+#   release_asset amd64.deb      -> RoMix_0.27.0_amd64.deb
+#   release_asset x64-setup.exe  -> RoMix_0.27.0_x64-setup.exe
+# The `RoMix_<version>_` prefix is tauri-action's, and every generator would
 # otherwise spell it out again.
 release_asset() {
-  printf 'Voltius_%s_%s' "$VERSION" "${1:?usage: release_asset <suffix>}"
+  printf 'RoMix_%s_%s' "$VERSION" "${1:?usage: release_asset <suffix>}"
 }
 
 # release_sha <asset-filename>

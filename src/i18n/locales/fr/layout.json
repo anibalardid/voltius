@@ -20,7 +20,7 @@
       "vaultSetAsideSub": "Conserve une copie de sauvegarde sur cet appareil",
       "vaultSetAsideToast": "Coffre mis de côté sous {{file}}",
       "vaultUnreadableRetry": "Essayer un autre mot de passe",
-      "chooseHowToUse": "Choisissez comment utiliser Voltius",
+      "chooseHowToUse": "Choisissez comment utiliser RoMix",
       "getStarted": "Commencer",
       "getStartedSub": "Sécurisé par le trousseau du système — aucun mot de passe requis",
       "or": "ou",
@@ -141,7 +141,7 @@
     },
     "sync": {
       "title": "Synchronisation",
-      "voltiusSync": "Synchronisation Voltius",
+      "voltiusSync": "Synchronisation RoMix",
       "moreProviders": "Autres fournisseurs de synchronisation",
       "syncNow": "Synchroniser maintenant",
       "signInForSync": "Connectez-vous pour la synchronisation cloud",

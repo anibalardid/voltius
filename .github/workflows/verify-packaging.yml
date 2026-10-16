@@ -78,7 +78,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           scoop install .\voltius.json
-          $exe = "$env:LOCALAPPDATA\Voltius\voltius.exe"
+          $exe = "$env:LOCALAPPDATA\RoMix\RoMix.exe"
           if (-not (Test-Path $exe)) {
             throw "installer ran but $exe is missing — the /S install or the install path assumption is wrong"
           }
@@ -89,14 +89,14 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           scoop uninstall voltius
-          $exe = "$env:LOCALAPPDATA\Voltius\voltius.exe"
+          $exe = "$env:LOCALAPPDATA\RoMix\RoMix.exe"
           if (Test-Path $exe) {
             throw "uninstall left $exe behind — the uninstaller lookup is wrong"
           }
           Write-Host "uninstalled cleanly"
 
   # There is deliberately no homebrew-cask core job. `brew audit --cask --new`
-  # runs a signature scan that Voltius cannot pass while it is ad-hoc signed
+  # runs a signature scan that RoMix cannot pass while it is ad-hoc signed
   # rather than notarized:
   #
   #   Signature verification failed: Scan completed, but failed because the

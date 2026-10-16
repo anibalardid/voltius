@@ -387,10 +387,10 @@
       }
     },
     "diagnostics": {
-      "intro": "Voltius 遇到问题？创建报告并发送给开发者——它有助于追踪难以复现的问题。",
+      "intro": "RoMix 遇到问题？创建报告并发送给开发者——它有助于追踪难以复现的问题。",
       "troubleshootingTitle": "故障排除",
       "verboseLabel": "详细日志（本次会话）",
-      "verboseSub": "记录额外的细节以帮助诊断问题。重启 Voltius 后重置为正常。",
+      "verboseSub": "记录额外的细节以帮助诊断问题。重启 RoMix 后重置为正常。",
       "verboseHint": "详细日志已开启。要捕获问题：\n1. 现在复现问题\n2. 回来创建错误报告",
       "reportTitle": "错误报告",
       "createButton": "创建错误报告",
@@ -398,7 +398,7 @@
       "createdButton": "报告已保存",
       "reportSub": "包含应用日志和系统信息。永远不会包含您的密码、密钥或终端内容。",
       "whatsIncluded": "包含什么？",
-      "includedBody": "包含：\n• 应用日志（Voltius 在做什么，已删除敏感值）\n• 应用版本、操作系统和活跃插件\n不包含：\n• 密码、保险库内容或私钥\n• 终端输出或您输入的任何内容\n报告保存到您的计算机。不会自动发送——您选择分享位置。",
+      "includedBody": "包含：\n• 应用日志（RoMix 在做什么，已删除敏感值）\n• 应用版本、操作系统和活跃插件\n不包含：\n• 密码、保险库内容或私钥\n• 终端输出或您输入的任何内容\n报告保存到您的计算机。不会自动发送——您选择分享位置。",
       "toastSaved": "报告已保存——{{name}}",
       "toastError": "无法创建报告：{{reason}}",
       "toastGenericError": "出错了。"
@@ -406,7 +406,7 @@
     "integrations": {
       "mcp": {
         "title": "MCP",
-        "sub": "允许本地 MCP 客户端（如 Claude Code）在您保险库中的所有主机以及本机上执行命令，读取、写入和删除文件，创建、修改或删除已保存的连接、密钥和身份，在这些主机上运行您保存的代码片段，信任 SSH 主机密钥，读取您输入过的命令，查看、取消或重试您的文件传输，查看已保存主机的可达状态，重新排列您的终端标签页和分屏面板，管理您团队的成员和邀请，与团队共享终端会话或移交其控制权，读取和修改应用的所有设置，以及读取您的订阅信息，以上操作均通过私有 socket 进行。审批在该客户端中进行，而不是在 Voltius 中。默认关闭。它还可以安装、更新和移除插件，并导出或导入你保存的对象。",
+        "sub": "允许本地 MCP 客户端（如 Claude Code）在您保险库中的所有主机以及本机上执行命令，读取、写入和删除文件，创建、修改或删除已保存的连接、密钥和身份，在这些主机上运行您保存的代码片段，信任 SSH 主机密钥，读取您输入过的命令，查看、取消或重试您的文件传输，查看已保存主机的可达状态，重新排列您的终端标签页和分屏面板，管理您团队的成员和邀请，与团队共享终端会话或移交其控制权，读取和修改应用的所有设置，以及读取您的订阅信息，以上操作均通过私有 socket 进行。审批在该客户端中进行，而不是在 RoMix 中。默认关闭。它还可以安装、更新和移除插件，并导出或导入你保存的对象。",
         "running": "运行中",
         "quickSetup": {
           "title": "快速设置",
@@ -426,7 +426,7 @@
             "opencode": "OpenCode"
           },
           "help": {
-            "claudeCode": "运行一次以在 Claude Code 中注册 Voltius。客户端连接前需先启用上方的服务器。",
+            "claudeCode": "运行一次以在 Claude Code 中注册 RoMix。客户端连接前需先启用上方的服务器。",
             "mcpServers": "将此代码块添加到 claude_desktop_config.json（Claude Desktop）或 .cursor/mcp.json（Cursor、Cline、Windsurf）。客户端连接前需先启用上方的服务器。",
             "vscode": "将此代码块添加到 .vscode/mcp.json。VS Code 使用的是 \"servers\"，不是 \"mcpServers\"——粘贴 Cursor 格式的代码块会静默地加载不到任何内容。",
             "opencode": "将此代码块添加到 opencode.json（项目级）或 ~/.config/opencode/opencode.json（全局）。"
@@ -483,7 +483,7 @@
       "reportBug": "报告问题"
     },
     "sync": {
-      "voltiusCloud": "Voltius 云",
+      "voltiusCloud": "RoMix 云",
       "active": {
         "title": "云同步活跃",
         "syncing": "正在同步…",
@@ -713,11 +713,11 @@
       },
       "deepLinkInstall": {
         "title": "安装此插件？",
-        "body": "此链接将安装一个插件。插件会在 Voltius 内部以下列权限运行代码。",
+        "body": "此链接将安装一个插件。插件会在 RoMix 内部以下列权限运行代码。",
         "summary": "{{name}} {{version}}，作者 {{author}}",
         "source": "来自 {{source}} 目录。",
         "action": "安装",
-        "failed": "此链接未指向 Voltius 可安装的插件"
+        "failed": "此链接未指向 RoMix 可安装的插件"
       },
       "permissionModal": {
         "installTitle": "安装 {{name}}？",
@@ -803,7 +803,7 @@
           },
           "mcpContribute": {
             "label": "向外部 AI 代理开放工具",
-            "description": "允许此插件将自己的命令添加到 Voltius MCP 服务器，使已连接的任何外部 AI 代理都能以此插件的权限执行这些命令。"
+            "description": "允许此插件将自己的命令添加到 RoMix MCP 服务器，使已连接的任何外部 AI 代理都能以此插件的权限执行这些命令。"
           },
           "vaultsRead": {
             "label": "查看您的保险库",
@@ -951,7 +951,7 @@
           },
           "pluginsManage": {
             "label": "管理插件",
-            "description": "安装、更新、移除、启用和禁用插件，并添加市场来源。已安装的插件会以其声明的权限在 Voltius 内运行代码。"
+            "description": "安装、更新、移除、启用和禁用插件，并添加市场来源。已安装的插件会以其声明的权限在 RoMix 内运行代码。"
           },
           "importExportRead": {
             "label": "导出你的数据",

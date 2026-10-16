@@ -21,14 +21,13 @@ pnpm build
 
 echo "==> 2/3 device Rust build (aarch64-apple-ios)"
 cargo build \
-  --package voltius \
+  --package romix \
   --manifest-path src-tauri/Cargo.toml \
   --target aarch64-apple-ios \
-  --features "tauri/custom-protocol tauri/custom-protocol" \
   --lib
 
 echo "==> 3/3 full simulator bundle"
-# Tauri renames the archived .app into build/arm64-sim/; a leftover Voltius.app from a
+# Tauri renames the archived .app into build/arm64-sim/; a leftover RoMix.app from a
 # previous run aborts with "Directory not empty (os error 66)". Clear it first, exactly
 # like ios-emulator.sh does.
 rm -rf src-tauri/gen/apple/build

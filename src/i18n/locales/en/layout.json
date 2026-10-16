@@ -20,7 +20,7 @@
       "vaultSetAsideSub": "Keeps a backup copy on this device",
       "vaultSetAsideToast": "Vault set aside as {{file}}",
       "vaultUnreadableRetry": "Try another password",
-      "chooseHowToUse": "Choose how you want to use Voltius",
+      "chooseHowToUse": "Choose how you want to use RoMix",
       "getStarted": "Get started",
       "getStartedSub": "Secured by OS keychain — no password needed",
       "or": "or",
@@ -141,7 +141,7 @@
     },
     "sync": {
       "title": "Sync",
-      "voltiusSync": "Voltius Sync",
+      "voltiusSync": "RoMix Sync",
       "moreProviders": "More sync providers",
       "syncNow": "Sync now",
       "signInForSync": "Sign in for cloud sync",

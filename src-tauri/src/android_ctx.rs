@@ -3,7 +3,7 @@
 //! tao 0.35 stores the Android context in its own statics and no longer populates the
 //! `ndk_context` global, so `ndk_context::android_context()` panics here — and a panic
 //! across the `Java_..._ipc` JNI boundary (no-unwind) aborts the whole process (SIGABRT).
-//! Instead `VoltiusKeychain.nativeInit(context)` (called from `MainActivity.onCreate`,
+//! Instead `RoMixKeychain.nativeInit(context)` (called from `MainActivity.onCreate`,
 //! after the native lib is loaded) hands us the Context, from which we derive the VM.
 //!
 //! Any JNI consumer (keychain store, ANDROID_ID machine fingerprint) goes through
@@ -23,11 +23,11 @@ struct AndroidCtx {
 // JavaVM and GlobalRef are both Send + Sync, so this is too.
 static CTX: OnceLock<AndroidCtx> = OnceLock::new();
 
-/// JNI entry point for `VoltiusKeychain.nativeInit(context)`. Idempotent; stores the VM and
+/// JNI entry point for `RoMixKeychain.nativeInit(context)`. Idempotent; stores the VM and
 /// a global ref to the application Context. Named for the Kotlin class that declares the
 /// `external fun`, but the captured context serves all native consumers.
 #[no_mangle]
-pub extern "system" fn Java_com_voltius_app_VoltiusKeychain_nativeInit<'local>(
+pub extern "system" fn Java_com_romix_app_RoMixKeychain_nativeInit<'local>(
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     context: JObject<'local>,
@@ -78,7 +78,7 @@ pub fn with_env<T>(
     })
 }
 
-/// Resolve an app class by dotted binary name (e.g. `com.voltius.app.VoltiusDownloads`) via
+/// Resolve an app class by dotted binary name (e.g. `com.romix.app.RoMixDownloads`) via
 /// the application class loader captured at `nativeInit`. Use this instead of
 /// `env.find_class`/`call_static_method(<str>, ..)` from threads Rust attaches itself (async
 /// Tauri commands run on tokio workers), where the default `FindClass` only sees the system

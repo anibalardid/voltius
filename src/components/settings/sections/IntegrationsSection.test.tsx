@@ -48,12 +48,12 @@ test("renders the one-liner add-mcp command with the backend-supplied exe path, 
   h.getMcpStatus.mockResolvedValue({
     enabled: false,
     socketPath: "/home/user/.voltius/mcp.sock",
-    exePath: "/home/user/Voltius Apps/voltius",
+    exePath: "/home/user/RoMix Apps/voltius",
   });
   await act(async () => {
     render(<IntegrationsSection />);
   });
-  screen.getByDisplayValue("npx -y add-mcp@2 '/home/user/Voltius Apps/voltius' --args mcp -n voltius -g");
+  screen.getByDisplayValue("npx -y add-mcp@2 '/home/user/RoMix Apps/voltius' --args mcp -n voltius -g");
 });
 
 test("shows the setup command even when the server toggle is off", async () => {
@@ -61,32 +61,32 @@ test("shows the setup command even when the server toggle is off", async () => {
   h.getMcpStatus.mockResolvedValue({
     enabled: false,
     socketPath: "\\\\.\\pipe\\voltius-mcp",
-    exePath: "C:\\Program Files\\Voltius\\voltius.exe",
+    exePath: "C:\\Program Files\\RoMix\\voltius.exe",
   });
   await act(async () => {
     render(<IntegrationsSection />);
   });
-  screen.getByDisplayValue('npx -y add-mcp@2 "C:\\Program Files\\Voltius\\voltius.exe" --args mcp -n voltius -g');
+  screen.getByDisplayValue('npx -y add-mcp@2 "C:\\Program Files\\RoMix\\voltius.exe" --args mcp -n voltius -g');
 });
 
 test("manual setup is collapsed by default and reveals the socket path and per-client snippet once opened", async () => {
   h.getMcpStatus.mockResolvedValue({
     enabled: false,
     socketPath: "/home/user/.voltius/mcp.sock",
-    exePath: "/home/user/Voltius Apps/voltius",
+    exePath: "/home/user/RoMix Apps/voltius",
   });
   await act(async () => {
     render(<IntegrationsSection />);
   });
   expect(screen.queryByDisplayValue("/home/user/.voltius/mcp.sock")).toBeNull();
   expect(
-    screen.queryByDisplayValue("claude mcp add voltius -- '/home/user/Voltius Apps/voltius' mcp"),
+    screen.queryByDisplayValue("claude mcp add voltius -- '/home/user/RoMix Apps/voltius' mcp"),
   ).toBeNull();
 
   fireEvent.click(screen.getByText("settings.integrations.mcp.manualSetup.toggleLabel"));
 
   screen.getByDisplayValue("/home/user/.voltius/mcp.sock");
-  screen.getByDisplayValue("claude mcp add voltius -- '/home/user/Voltius Apps/voltius' mcp");
+  screen.getByDisplayValue("claude mcp add voltius -- '/home/user/RoMix Apps/voltius' mcp");
 });
 
 it("lists a contributing plugin's tools and toggles it off", async () => {

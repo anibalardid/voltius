@@ -14,7 +14,7 @@ export function floorPluginFrom(entry: SeededEntry, icon?: string): MarketplaceP
   return {
     id: manifest.id,
     name: manifest.name,
-    author: "Voltius",
+    author: "RoMix",
     description: manifest.description ?? "",
     repo: "",
     version: manifest.version,

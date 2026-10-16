@@ -150,7 +150,7 @@ export const MCP_TEXT = {
       + "own client is responsible for approval.",
     plugin_install:
       "Install a plugin from the marketplace catalog by id. Runs immediately; your own client is "
-      + "responsible for approval. The plugin's code then runs inside Voltius with the permissions "
+      + "responsible for approval. The plugin's code then runs inside RoMix with the permissions "
       + "its manifest declares — call marketplace_search first and read them.",
     plugin_uninstall:
       "Remove an installed plugin. Runs immediately; your own client is responsible for approval. "
@@ -208,7 +208,7 @@ export function buildMcpTools(
 ): McpTool[] {
   const ports: ToolSurfacePorts = {
     api,
-    // The MCP client's own permission prompt is the gate; Voltius performs no
+    // The MCP client's own permission prompt is the gate; RoMix performs no
     // per-call check by construction. `deriveScope` still runs so the audit row
     // names its real target — a connection, or the team for the membership
     // verbs — rather than a constant.

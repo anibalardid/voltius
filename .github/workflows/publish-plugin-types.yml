@@ -9,7 +9,7 @@ name: publish-plugin-types
 #     types package, which is what a full-release gate did before.
 #   - workflow_dispatch directly, to get types onto npm without cutting a release.
 #
-# Versions track the app (@voltius/plugin-types@0.14.1 ⇄ Voltius 0.14.1), so a
+# Versions track the app (@voltius/plugin-types@0.14.1 ⇄ RoMix 0.14.1), so a
 # dispatch from a non-tag ref should use a prerelease version (e.g. 0.15.0-dev.1).
 # Those publish under the `next` dist-tag so `latest` keeps pointing at a version
 # of the API that a shipped app actually exposes.

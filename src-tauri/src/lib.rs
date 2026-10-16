@@ -407,7 +407,7 @@ pub fn run() {
     let mut builder = tauri::Builder::default();
 
     // Must be the first plugin registered (the plugin's own requirement).
-    // Without it a second launch — the user clicking the icon while Voltius is
+    // Without it a second launch — the user clicking the icon while RoMix is
     // already running — spawns a process that cannot create its webview,
     // because WebView2 refuses the user-data folder the live instance holds
     // ("failed to create webview: 0x800700AA, resource in use"), leaving a dead
@@ -442,7 +442,7 @@ pub fn run() {
                 ))
                 .target(tauri_plugin_log::Target::new(
                     tauri_plugin_log::TargetKind::LogDir {
-                        file_name: Some("voltius".into()),
+                        file_name: Some("romix".into()),
                     },
                 ))
                 .max_file_size(5_000_000)
@@ -522,7 +522,7 @@ pub fn run() {
             #[cfg(all(desktop, debug_assertions))]
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
-                if let Err(e) = app.deep_link().register("voltius") {
+                if let Err(e) = app.deep_link().register("romix") {
                     log::warn!("dev deep-link registration failed: {e}");
                 }
             }
@@ -828,7 +828,7 @@ mod updater_tests {
     #[test]
     fn linux_appimage_self_updates() {
         assert_eq!(
-            classify_install(Os::Linux, true, Path::new("/tmp/Voltius.AppImage"), true),
+            classify_install(Os::Linux, true, Path::new("/tmp/RoMix.AppImage"), true),
             InstallKind::SelfUpdate
         );
     }
@@ -847,7 +847,7 @@ mod updater_tests {
             classify_install(
                 Os::Macos,
                 false,
-                Path::new("/Applications/Voltius.app/Contents/MacOS/Voltius"),
+                Path::new("/Applications/RoMix.app/Contents/MacOS/RoMix"),
                 true
             ),
             InstallKind::SelfUpdate
@@ -860,7 +860,7 @@ mod updater_tests {
             classify_install(
                 Os::Macos,
                 false,
-                Path::new("/Volumes/Voltius/Voltius.app/Contents/MacOS/Voltius"),
+                Path::new("/Volumes/RoMix/RoMix.app/Contents/MacOS/RoMix"),
                 true
             ),
             InstallKind::External
@@ -873,7 +873,9 @@ mod updater_tests {
             classify_install(
                 Os::Macos,
                 false,
-                Path::new("/private/var/folders/x/AppTranslocation/ABC/d/Voltius.app/Contents/MacOS/Voltius"),
+                Path::new(
+                    "/private/var/folders/x/AppTranslocation/ABC/d/RoMix.app/Contents/MacOS/RoMix"
+                ),
                 true
             ),
             InstallKind::External
@@ -886,7 +888,7 @@ mod updater_tests {
             classify_install(
                 Os::Macos,
                 false,
-                Path::new("/Applications/Voltius.app/Contents/MacOS/Voltius"),
+                Path::new("/Applications/RoMix.app/Contents/MacOS/RoMix"),
                 false
             ),
             InstallKind::External
@@ -899,7 +901,7 @@ mod updater_tests {
             classify_install(
                 Os::Windows,
                 false,
-                Path::new(r"C:\Program Files\Voltius\voltius.exe"),
+                Path::new(r"C:\Program Files\RoMix\voltius.exe"),
                 true
             ),
             InstallKind::SelfUpdate
@@ -912,9 +914,7 @@ mod updater_tests {
             classify_install(
                 Os::Windows,
                 false,
-                Path::new(
-                    r"C:\Program Files\WindowsApps\Voltius_0.27.0.0_x64__abcdefg\voltius.exe"
-                ),
+                Path::new(r"C:\Program Files\WindowsApps\RoMix_0.27.0.0_x64__abcdefg\voltius.exe"),
                 true
             ),
             InstallKind::External

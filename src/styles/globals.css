@@ -540,8 +540,8 @@
   pointer-events: none !important;
 }
 
-/* Mobile/compact terminal: no scrollbar — scrolling is swipe-only (handled by
-   MobileTerminalGestures). touch-action:none yields one-finger drags to JS. */
+/* Mobile/compact terminal: the native bar is not grabbable on iOS. A custom
+   rail owns that edge. touch-action:none yields one-finger drags to JS. */
 .terminal-compact .xterm-viewport {
   scrollbar-width: none !important;
 }
@@ -553,8 +553,18 @@
 }
 
 .terminal-compact .xterm,
-.terminal-compact .xterm-screen {
+.terminal-compact .xterm-screen,
+.terminal-compact .xterm-screen canvas {
+  /* touch-action is not inherited. The hit target on iOS is the canvas, and
+     WKWebView swallows the pan unless that element itself opts out. */
   touch-action: none;
+}
+
+/* The helper textarea sits on the cursor and stays focused for the keyboard.
+   If it can take the touch, iOS turns a swipe into caret movement and the
+   shell recalls command history instead of scrolling the output. */
+.terminal-compact .xterm-helper-textarea {
+  pointer-events: none;
 }
 
 .ripple {

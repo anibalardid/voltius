@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install + launch the Voltius debug APK on a connected phone.
+# Install + launch the RoMix debug APK on a connected phone.
 # Usage: scripts/android-deploy.sh /path/to/app-universal-debug.apk
 #
 # Reaches the device through whatever adb you have configured:
@@ -7,7 +7,7 @@
 #  - a Windows-hosted adb server from WSL (export ADB_SERVER_SOCKET=tcp:<win-ip>:5037).
 set -euo pipefail
 APK="${1:?usage: android-deploy.sh <apk-path>}"
-APP_ID="com.voltius.app"
+APP_ID="com.romix.app"
 ACTIVITY="${APP_ID}/.MainActivity"
 
 [ -f "$APK" ] || { echo "ERROR: no such APK: $APK" >&2; exit 1; }

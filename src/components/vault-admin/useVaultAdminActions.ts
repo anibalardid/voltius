@@ -14,7 +14,7 @@ export interface VaultAdminCallbacks {
 async function vaultToast(message: string, severity: "info" | "error") {
   const { useNotificationStore } = await import("@/stores/notificationStore");
   useNotificationStore.getState().addToast({
-    source: { kind: "plugin", id: "system", name: "Voltius" }, type: "toast",
+    source: { kind: "plugin", id: "system", name: "RoMix" }, type: "toast",
     message, severity, duration: severity === "error" ? 6000 : 3000,
   });
 }

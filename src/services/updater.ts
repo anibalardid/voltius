@@ -39,9 +39,9 @@ export async function checkForUpdate() {
   await invoke("updater_check");
 }
 
-/** Open the Voltius download page (used when this install can't self-update). */
+/** Open the RoMix download page (used when this install can't self-update). */
 export async function openDownloadPage() {
-  await openUrl("https://voltius.app/download");
+  await openUrl("https://github.com/anibalardid/voltius/releases/latest");
 }
 
 /** Whether the background updater loop is allowed to run. */

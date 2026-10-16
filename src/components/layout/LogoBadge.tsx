@@ -1,4 +1,4 @@
-import LogoSvg from "/logo.svg?react";
+const logo = "/romix-logo.png";
 
 interface Props {
   size?: number;
@@ -9,26 +9,19 @@ interface Props {
 
 export default function LogoBadge({ size = 12, className = "", active = true, borderRadius }: Props) {
   const px = size * 4;
-  const radius = borderRadius ?? `${size}px`;
-  const borderWidth = Math.max(1, Math.round(size / 6));
+  const radius = borderRadius ?? `${Math.round(px * 0.22)}px`;
   return (
-    <div
-      className={`inline-flex items-center justify-center ${className}`}
+    <img
+      src={logo}
+      alt=""
+      className={className}
       style={{
         width: px,
         height: px,
         borderRadius: radius,
-        backgroundColor: "#010318",
-        border: `${borderWidth}px solid transparent`,
-        backgroundImage: active
-          ? "linear-gradient(#010318, #010318), linear-gradient(to right, #28A5F9, #E98757)"
-          : "none",
-        backgroundOrigin: "border-box",
-        backgroundClip: active ? "padding-box, border-box" : undefined,
-        transition: "border-radius 200ms",
+        opacity: active ? 1 : 0.55,
+        objectFit: "cover",
       }}
-    >
-      <LogoSvg style={{ height: px * 0.62, width: "auto" }} />
-    </div>
+    />
   );
 }

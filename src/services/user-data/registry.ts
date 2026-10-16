@@ -46,7 +46,7 @@ export function buildUserDataBundle(keys?: string[]): UserDataBundle {
   }
 
   return {
-    type: "voltius-user-data",
+    type: "romix-user-data",
     version: 2,
     exported_at: new Date().toISOString(),
     sections,

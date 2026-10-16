@@ -33,7 +33,7 @@ const marketplaceState = vi.hoisted(() => ({
   appVersion: null as string | null,
   loadAppVersion: vi.fn(async () => {}),
 }));
-const FIRST_PARTY_SOURCE = vi.hoisted(() => ({ id: "voltius", name: "Voltius Marketplace", url: "", enabled: true, deletable: false }));
+const FIRST_PARTY_SOURCE = vi.hoisted(() => ({ id: "voltius", name: "RoMix Marketplace", url: "", enabled: true, deletable: false }));
 vi.mock("@/stores/marketplaceStore", () => ({
   useMarketplaceStore: (selector?: (s: typeof marketplaceState) => unknown) =>
     selector ? selector(marketplaceState) : marketplaceState,
@@ -86,7 +86,7 @@ test("a desktopOnly seeded plugin's update is counted and shown on desktop", asy
   loaded.list = [manifest("plugin-ssh-config", { version: "1.0.0", desktopOnly: true })];
   seeded.entries = new Map([["plugin-ssh-config", { folder: "ssh-config", manifest: loaded.list[0] }]]);
   marketplaceState.catalog = [
-    { id: "plugin-ssh-config", name: "SSH Config", author: "Voltius", description: "", repo: "", version: "2.0.0", tags: [], theme: false, sourceId: "voltius" },
+    { id: "plugin-ssh-config", name: "SSH Config", author: "RoMix", description: "", repo: "", version: "2.0.0", tags: [], theme: false, sourceId: "voltius" },
   ];
   render(<PluginsSection />);
   expect(await screen.findByText(/updateCount/)).toBeTruthy();
@@ -97,7 +97,7 @@ test("a desktopOnly seeded plugin's update is NOT counted or shown on Android (n
   loaded.list = [manifest("plugin-ssh-config", { version: "1.0.0", desktopOnly: true })];
   seeded.entries = new Map([["plugin-ssh-config", { folder: "ssh-config", manifest: loaded.list[0] }]]);
   marketplaceState.catalog = [
-    { id: "plugin-ssh-config", name: "SSH Config", author: "Voltius", description: "", repo: "", version: "2.0.0", tags: [], theme: false, sourceId: "voltius" },
+    { id: "plugin-ssh-config", name: "SSH Config", author: "RoMix", description: "", repo: "", version: "2.0.0", tags: [], theme: false, sourceId: "voltius" },
   ];
   render(<PluginsSection />);
   await act(async () => { await Promise.resolve(); await Promise.resolve(); });
@@ -111,7 +111,7 @@ test("a loaded id with no real seeded artifact is never counted, even with a mat
   loaded.list = [manifest("plugin-docker", { version: "1.0.0" })];
   seeded.entries = new Map(); // no artifact behind this id
   marketplaceState.catalog = [
-    { id: "plugin-docker", name: "Docker", author: "Voltius", description: "", repo: "", version: "2.0.0", tags: [], theme: false, sourceId: "voltius" },
+    { id: "plugin-docker", name: "Docker", author: "RoMix", description: "", repo: "", version: "2.0.0", tags: [], theme: false, sourceId: "voltius" },
   ];
   render(<PluginsSection />);
   await act(async () => { await Promise.resolve(); await Promise.resolve(); });
@@ -123,7 +123,7 @@ test("a non-desktopOnly seeded plugin's update is still counted on Android", asy
   loaded.list = [manifest("plugin-docker", { version: "1.0.0" })];
   seeded.entries = new Map([["plugin-docker", { folder: "docker", manifest: loaded.list[0] }]]);
   marketplaceState.catalog = [
-    { id: "plugin-docker", name: "Docker", author: "Voltius", description: "", repo: "", version: "2.0.0", tags: [], theme: false, sourceId: "voltius" },
+    { id: "plugin-docker", name: "Docker", author: "RoMix", description: "", repo: "", version: "2.0.0", tags: [], theme: false, sourceId: "voltius" },
   ];
   render(<PluginsSection />);
   expect(await screen.findByText(/updateCount/)).toBeTruthy();

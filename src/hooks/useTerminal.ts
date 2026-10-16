@@ -26,6 +26,7 @@ import { consumeLatchForChar } from "@/stores/modifierLatchStore";
 import { sampleLineDensities, scrollDeltaForRatio, type TerminalMinimapCell, type TerminalMinimapSample } from "@/components/terminal/minimapMath";
 import { wheelToRows } from "@/components/terminal/terminalWheelCore";
 import { keyToBytes } from "@/services/terminalKeyCore";
+import { isArrowKeySequence, shouldSwallowSwipeArrow, swipeArrowGateActive } from "@/services/swipeArrowGate";
 import { handleDuplicateShortcut } from "@/services/duplicateSession";
 import type { TerminalTheme } from "@/themes/types";
 import type { UnlistenFn } from "@tauri-apps/api/event";
@@ -490,6 +491,12 @@ export function getAppCursorMode(sessionId: string): boolean {
 
 export interface TerminalApi {
   scrollLines(delta: number): void;
+  /** Lines stored in the active buffer, including the visible page. */
+  bufferLength(): number;
+  /** Move the viewport so `line` is the top row, and redraw. */
+  scrollToLine(line: number): void;
+  /** True while a full-screen app (less, vim) owns the screen. No scrollback to move. */
+  inAltScreen(): boolean;
   cols(): number;
   rows(): number;
   /** Absolute buffer line at the top of the viewport. */
@@ -520,7 +527,20 @@ export function getTerminalApi(sessionId: string): TerminalApi | null {
   if (!entry) return null;
   const term = entry.terminal;
   return {
-    scrollLines: (delta) => term.scrollLines(delta),
+    scrollLines: (delta) => {
+      // scrollLines only moves the buffer index. The canvas refresh is wired to
+      // the viewport's own scroll event, which a finger on the overlay never
+      // fires. Without refresh the swipe changes nothing on screen. delta 0
+      // still refreshes so the frame lands when the finger lifts.
+      if (delta !== 0) term.scrollLines(delta);
+      term.refresh(0, Math.max(term.rows - 1, 0));
+    },
+    bufferLength: () => term.buffer.active.length,
+    scrollToLine: (line) => {
+      term.scrollToLine(line);
+      term.refresh(0, Math.max(term.rows - 1, 0));
+    },
+    inAltScreen: () => term.buffer.active.type === "alternate",
     cols: () => term.cols,
     rows: () => term.rows,
     viewportTop: () => term.buffer.active.viewportY,
@@ -909,6 +929,12 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
 
       // Intercept app shortcuts before xterm processes them
       term.attachCustomKeyEventHandler((e: KeyboardEvent) => {
+        if (
+          e.type === "keydown" &&
+          shouldSwallowSwipeArrow(e.key, { ctrl: e.ctrlKey, alt: e.altKey, shift: e.shiftKey, meta: e.metaKey }, Date.now())
+        ) {
+          return false;
+        }
         const layout = useLayoutStore.getState();
         const isSplitPaneTerminal = layout.splitTabActive && getPaneSessionIds(layout.root).includes(sessionId);
         if (isSplitPaneTerminal && e.ctrlKey && e.shiftKey && e.key === "Enter") {
@@ -1105,6 +1131,9 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
       const onDataDispose = term.onData((data) => {
         if (inputGate && !inputGate.current?.()) return;
         if (!entry.connectedRef.current) return;
+        // A finger-drag can arrive here as arrow bytes with no keydown. Drop
+        // them so the shell does not recall history while the viewport scrolls.
+        if (swipeArrowGateActive(Date.now()) && isArrowKeySequence(data)) return;
 
         // Mobile extra-keys row: apply a latched virtual Ctrl/Alt to this typed char
         // (e.g. latch Ctrl, type "c" → Ctrl-C). Inert on desktop (latch never armed).

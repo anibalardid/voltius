@@ -128,12 +128,12 @@ else\n\
   [ -r /etc/bash.bashrc ] && . /etc/bash.bashrc\n\
   [ -r \"$HOME/.bashrc\" ] && . \"$HOME/.bashrc\"\n\
 fi\n\
-__voltius_pwd() { printf '\\e]7;file://%s%s\\a' \"$HOSTNAME\" \"$PWD\"; }\n\
+__romix_pwd() { printf '\\e]7;file://%s%s\\a' \"$HOSTNAME\" \"$PWD\"; }\n\
 case \";${PROMPT_COMMAND-};\" in\n\
-  *\";__voltius_pwd;\"*) ;;\n\
-  *) PROMPT_COMMAND=\"__voltius_pwd${PROMPT_COMMAND:+;${PROMPT_COMMAND}}\" ;;\n\
+  *\";__romix_pwd;\"*) ;;\n\
+  *) PROMPT_COMMAND=\"__romix_pwd${PROMPT_COMMAND:+;${PROMPT_COMMAND}}\" ;;\n\
 esac\n\
-__voltius_pwd 2>/dev/null\n";
+__romix_pwd 2>/dev/null\n";
 
 // .zshenv trampoline (kitty/ghostty technique): restores ZDOTDIR from
 // ZDOTDIR_ORIG then sources the real .zshenv so zsh continues startup with
@@ -145,10 +145,10 @@ const ZSH_ZSHENV: &str =
     "if [ -n \"${ZDOTDIR_ORIG-}\" ]; then ZDOTDIR=\"$ZDOTDIR_ORIG\"; else unset ZDOTDIR; fi\n\
 unset ZDOTDIR_ORIG\n\
 [ -f \"${ZDOTDIR:-$HOME}/.zshenv\" ] && source \"${ZDOTDIR:-$HOME}/.zshenv\"\n\
-__voltius_pwd() { printf '\\e]7;file://%s%s\\a' \"${HOST}\" \"$PWD\"; }\n\
+__romix_pwd() { printf '\\e]7;file://%s%s\\a' \"${HOST}\" \"$PWD\"; }\n\
 typeset -ag precmd_functions\n\
-(($precmd_functions[(I)__voltius_pwd])) || precmd_functions+=(__voltius_pwd)\n\
-__voltius_pwd 2>/dev/null\n";
+(($precmd_functions[(I)__romix_pwd])) || precmd_functions+=(__romix_pwd)\n\
+__romix_pwd 2>/dev/null\n";
 
 // $E = ESC, $P = path with backslashes, $G = >, $S = space. The $E\\ sequence
 // is ESC + backslash = ST (string terminator), closing the OSC 7. The path
@@ -195,10 +195,10 @@ zsh)
 if [ -n "${ZDOTDIR_ORIG-}" ]; then ZDOTDIR="$ZDOTDIR_ORIG"; else unset ZDOTDIR; fi
 unset ZDOTDIR_ORIG
 [ -f "${ZDOTDIR:-$HOME}/.zshenv" ] && source "${ZDOTDIR:-$HOME}/.zshenv"
-__voltius_pwd() { printf '\e]7;file://%s%s\a' "${HOST}" "$PWD"; }
+__romix_pwd() { printf '\e]7;file://%s%s\a' "${HOST}" "$PWD"; }
 typeset -ag precmd_functions
-(($precmd_functions[(I)__voltius_pwd])) || precmd_functions+=(__voltius_pwd)
-__voltius_pwd 2>/dev/null
+(($precmd_functions[(I)__romix_pwd])) || precmd_functions+=(__romix_pwd)
+__romix_pwd 2>/dev/null
 EOF
   ZDOTDIR="$ZDOTDIR_TMP" exec zsh -l -i <&2
   ;;
@@ -220,12 +220,12 @@ else
   [ -r /etc/bash.bashrc ] && . /etc/bash.bashrc
   [ -r "$HOME/.bashrc" ] && . "$HOME/.bashrc"
 fi
-__voltius_pwd() { printf '\e]7;file://%s%s\a' "$HOSTNAME" "$PWD"; }
+__romix_pwd() { printf '\e]7;file://%s%s\a' "$HOSTNAME" "$PWD"; }
 case ";${PROMPT_COMMAND-};" in
-  *";__voltius_pwd;"*) ;;
-  *) PROMPT_COMMAND="__voltius_pwd${PROMPT_COMMAND:+;${PROMPT_COMMAND}}" ;;
+  *";__romix_pwd;"*) ;;
+  *) PROMPT_COMMAND="__romix_pwd${PROMPT_COMMAND:+;${PROMPT_COMMAND}}" ;;
 esac
-__voltius_pwd 2>/dev/null
+__romix_pwd 2>/dev/null
 EOF
   exec bash --rcfile "$RCFILE_TMP" -i <&2
   else
@@ -235,8 +235,8 @@ EOF
   # would loop disconnect/reconnect.
   ENVF=$(mktemp 2>/dev/null) || exec sh -i <&2
   cat > "$ENVF" <<'EOF'
-__voltius_pwd() { printf '\033]7;file://%s%s\007' "${HOSTNAME:-}" "$PWD"; }
-PS1='$(__voltius_pwd)'"${PS1:-$ }"
+__romix_pwd() { printf '\033]7;file://%s%s\007' "${HOSTNAME:-}" "$PWD"; }
+PS1='$(__romix_pwd)'"${PS1:-$ }"
 EOF
   ENV="$ENVF" exec sh -i <&2
   fi
@@ -268,7 +268,7 @@ pub fn ssh_exec_command(prefix: &str) -> String {
 /// auth succeeds (#85). Kept under that with room for the session key.
 pub const MAX_EXEC_COMMAND_LEN: usize = 8192;
 
-const TMUX_SOCKET: &str = "voltius";
+const TMUX_SOCKET: &str = "romix";
 
 /// Non-login SSH exec never sources the profile, so package-manager bins are
 /// invisible to `command -v`. Appended so a tmux already on PATH still wins.
@@ -285,9 +285,9 @@ fn with_mux_path(script: &str) -> String {
 /// is inside a multiplexer (#159). The persistence wrapper is an implementation
 /// detail, but tmux exports `$TMUX` into the shell it starts, and a tmux client
 /// with no `-L`/`-S` takes its socket from `$TMUX` — so a user's own `tmux ls`
-/// listed Voltius's private socket instead of their sessions, and `tmux attach`
+/// listed RoMix's private socket instead of their sessions, and `tmux attach`
 /// refused outright ("sessions should be nested with care, unset $TMUX to
-/// force"). Nothing in Voltius reads these back: every control path names the
+/// force"). Nothing in RoMix reads these back: every control path names the
 /// socket and session explicitly.
 const TMUX_ENV_STRIP: &str = "unset TMUX TMUX_PANE; ";
 
@@ -322,7 +322,7 @@ pub fn tmux_session_key(session_id: &str) -> String {
             }
         })
         .collect();
-    format!("voltius_{sanitized}")
+    format!("romix_{sanitized}")
 }
 
 /// Wrap `inner` (the existing exec bootstrap) in tmux, else screen, else a
@@ -375,8 +375,8 @@ pub fn tmux_session_key(session_id: &str) -> String {
 /// The wrapper is meant to be invisible to whatever the user runs inside it, so
 /// it also gives up the prefix key: `prefix None` leaves `C-b` to the user's own
 /// tmux instead of being swallowed by ours (#159). Nothing here needs a prefix —
-/// the status line is off and every Voltius command addresses the session by
-/// name over the `-L voltius` socket. It is set two ways because a config file
+/// the status line is off and every RoMix command addresses the session by
+/// name over the `-L romix` socket. It is set two ways because a config file
 /// is only read when the server starts: `-f` covers a cold server, and the
 /// `set -g` push covers one an earlier session already left running. Both are
 /// version-gated to tmux 2.1+, the first release that accepts `None` as a key.
@@ -626,14 +626,14 @@ pub fn force_kill_command(session_id: &str) -> String {
     persistent_kill_command(&tmux_session_key(session_id), FORCE_KILL_CLIENTS)
 }
 
-/// One-shot listing of Voltius multiplexers on a host. The host is the source
+/// One-shot listing of RoMix multiplexers on a host. The host is the source
 /// of truth: a tab closed locally can leave the remote session alive, and a
 /// session started on another device never had a local id. Markers keep the
 /// parser from treating `screen -ls` chatter as session names.
 pub fn persistent_list_command() -> String {
     let script = r#"echo '---TMUX---'
 if command -v tmux >/dev/null 2>&1; then
-  tmux -L voltius list-sessions -F '#{session_name} #{session_created} #{session_attached}' 2>/dev/null || true
+  tmux -L romix list-sessions -F '#{session_name} #{session_created} #{session_attached}' 2>/dev/null || true
 fi
 echo '---SCREEN---'
 if command -v screen >/dev/null 2>&1; then
@@ -653,7 +653,7 @@ pub struct ListedPersistentSession {
     pub clients: u32,
 }
 
-/// Parse [`persistent_list_command`] stdout. Names that are not `voltius_<id>`
+/// Parse [`persistent_list_command`] stdout. Names that are not `romix_<id>`
 /// are ignored, so a user's own tmux/screen sessions never show up.
 pub fn parse_persistent_list(output: &str) -> Vec<ListedPersistentSession> {
     let mut out = Vec::new();
@@ -691,7 +691,7 @@ pub fn parse_persistent_list(output: &str) -> Vec<ListedPersistentSession> {
                 },
             );
         } else if section == "screen" && !line.contains("Dead") {
-            let Some(name) = extract_voltius_name(line) else {
+            let Some(name) = extract_romix_name(line) else {
                 continue;
             };
             let Some(id) = session_id_from_mux_name(name) else {
@@ -712,7 +712,7 @@ pub fn parse_persistent_list(output: &str) -> Vec<ListedPersistentSession> {
 }
 
 fn session_id_from_mux_name(name: &str) -> Option<String> {
-    let id = name.strip_prefix("voltius_")?;
+    let id = name.strip_prefix("romix_")?;
     if id.is_empty()
         || !id
             .chars()
@@ -723,8 +723,8 @@ fn session_id_from_mux_name(name: &str) -> Option<String> {
     Some(id.to_string())
 }
 
-fn extract_voltius_name(line: &str) -> Option<&str> {
-    let start = line.find("voltius_")?;
+fn extract_romix_name(line: &str) -> Option<&str> {
+    let start = line.find("romix_")?;
     let rest = &line[start..];
     let end = rest
         .find(|c: char| !(c.is_ascii_alphanumeric() || c == '_' || c == '-'))
@@ -756,29 +756,29 @@ fn encode_wrapper(script: &str) -> String {
 /// Container wrapper (docker exec / pct exec). Like SSH_WRAPPER, but:
 ///   - It must survive minimal images: bash often isn't present, so the
 ///     fallback is a POSIX `sh` whose `$ENV` startup file hooks OSC 7 into PS1
-///     via command substitution (`$(__voltius_pwd)` re-runs every prompt and
+///     via command substitution (`$(__romix_pwd)` re-runs every prompt and
 ///     emits the sequence — portable across dash and busybox ash).
 ///   - No `</dev/tty` is needed: it's run via `eval "$(… | base64 -d)"`, so the
 ///     wrapping shell keeps the container TTY on stdin and `exec sh -i`
 ///     inherits it directly (no pipe to escape from).
 const CONTAINER_WRAPPER: &str = r#"if command -v bash >/dev/null 2>&1; then
-  RC=$(mktemp 2>/dev/null || echo /tmp/.voltius_rc)
+  RC=$(mktemp 2>/dev/null || echo /tmp/.romix_rc)
   cat > "$RC" <<'EOF'
 [ -f "$HOME/.bashrc" ] && . "$HOME/.bashrc"
-__voltius_pwd() { printf '\033]7;file://%s%s\007' "${HOSTNAME:-}" "$PWD"; }
+__romix_pwd() { printf '\033]7;file://%s%s\007' "${HOSTNAME:-}" "$PWD"; }
 case ";${PROMPT_COMMAND-};" in
-  *";__voltius_pwd;"*) ;;
-  *) PROMPT_COMMAND="__voltius_pwd${PROMPT_COMMAND:+;${PROMPT_COMMAND}}" ;;
+  *";__romix_pwd;"*) ;;
+  *) PROMPT_COMMAND="__romix_pwd${PROMPT_COMMAND:+;${PROMPT_COMMAND}}" ;;
 esac
-__voltius_pwd 2>/dev/null
+__romix_pwd 2>/dev/null
 EOF
   exec bash --rcfile "$RC" -i
 else
-  ENVF=$(mktemp 2>/dev/null || echo /tmp/.voltius_env)
+  ENVF=$(mktemp 2>/dev/null || echo /tmp/.romix_env)
   cat > "$ENVF" <<'EOF'
-__voltius_pwd() { printf '\033]7;file://%s%s\007' "${HOSTNAME:-}" "$PWD"; }
-PROMPT_COMMAND="__voltius_pwd"
-PS1='$(__voltius_pwd)'"${PS1:-$ }"
+__romix_pwd() { printf '\033]7;file://%s%s\007' "${HOSTNAME:-}" "$PWD"; }
+PROMPT_COMMAND="__romix_pwd"
+PS1='$(__romix_pwd)'"${PS1:-$ }"
 EOF
   ENV="$ENVF" exec sh -i
 fi
@@ -812,26 +812,26 @@ zsh)
 if [ -n "${ZDOTDIR_ORIG-}" ]; then ZDOTDIR="$ZDOTDIR_ORIG"; else unset ZDOTDIR; fi
 unset ZDOTDIR_ORIG
 [ -f "${ZDOTDIR:-$HOME}/.zshenv" ] && source "${ZDOTDIR:-$HOME}/.zshenv"
-__voltius_pwd() { printf '\e]7;file://wsl.localhost/%s%s\a' "$WSL_DISTRO_NAME" "$PWD"; }
+__romix_pwd() { printf '\e]7;file://wsl.localhost/%s%s\a' "$WSL_DISTRO_NAME" "$PWD"; }
 typeset -ag precmd_functions
-(($precmd_functions[(I)__voltius_pwd])) || precmd_functions+=(__voltius_pwd)
-__voltius_pwd 2>/dev/null
+(($precmd_functions[(I)__romix_pwd])) || precmd_functions+=(__romix_pwd)
+__romix_pwd 2>/dev/null
 EOF
   ZDOTDIR="$ZDOTDIR_TMP" exec zsh -i <&2
   ;;
 fish)
-  exec fish -i -C 'function __voltius_wsl_pwd --on-event fish_prompt; printf "\e]7;file://wsl.localhost/%s%s\a" "$WSL_DISTRO_NAME" "$PWD"; end' <&2
+  exec fish -i -C 'function __romix_wsl_pwd --on-event fish_prompt; printf "\e]7;file://wsl.localhost/%s%s\a" "$WSL_DISTRO_NAME" "$PWD"; end' <&2
   ;;
 *)
   RCFILE_TMP=$(mktemp 2>/dev/null) || exec bash -i <&2
   cat > "$RCFILE_TMP" <<'EOF'
 [ -f "$HOME/.bashrc" ] && source "$HOME/.bashrc"
-__voltius_pwd() { printf '\e]7;file://wsl.localhost/%s%s\a' "$WSL_DISTRO_NAME" "$PWD"; }
+__romix_pwd() { printf '\e]7;file://wsl.localhost/%s%s\a' "$WSL_DISTRO_NAME" "$PWD"; }
 case ";${PROMPT_COMMAND-};" in
-  *";__voltius_pwd;"*) ;;
-  *) PROMPT_COMMAND="__voltius_pwd${PROMPT_COMMAND:+;${PROMPT_COMMAND}}" ;;
+  *";__romix_pwd;"*) ;;
+  *) PROMPT_COMMAND="__romix_pwd${PROMPT_COMMAND:+;${PROMPT_COMMAND}}" ;;
 esac
-__voltius_pwd 2>/dev/null
+__romix_pwd 2>/dev/null
 EOF
   exec bash --rcfile "$RCFILE_TMP" -i <&2
   ;;
@@ -854,8 +854,8 @@ mod tests {
 
     #[test]
     fn session_key_sanitizes_unsafe_chars() {
-        assert_eq!(tmux_session_key("abc-123"), "voltius_abc-123");
-        assert_eq!(tmux_session_key("a.b:c d"), "voltius_a_b_c_d");
+        assert_eq!(tmux_session_key("abc-123"), "romix_abc-123");
+        assert_eq!(tmux_session_key("a.b:c d"), "romix_a_b_c_d");
     }
 
     #[test]
@@ -863,7 +863,7 @@ mod tests {
         // A non-login exec never sources the profile, so `command -v tmux`
         // misses Homebrew on Apple Silicon. Every probe must search those
         // prefixes, not only the create path.
-        let key = "voltius_s1";
+        let key = "romix_s1";
         let scripts = [
             decode_bootstrap(&persistent_exec_command(key, "true")),
             decode_bootstrap(&persistent_attach_command(key)),
@@ -885,14 +885,14 @@ mod tests {
     fn persistent_list_parses_tmux_and_screen_and_ignores_foreign_sessions() {
         let output = "\
 ---TMUX---
-voltius_abc-123 1710000000 2
+romix_abc-123 1710000000 2
 no server running
 other_session 1710000000 1
 ---SCREEN---
 There is a screen on:
-\t362.voltius_463da0cb-5a3a-4a66-9daa-63292f4abb0a\t(Detached)
-\t99.voltius_deadbeef\t(Dead ???)
-\t7.voltius_abc-123\t(Attached)
+\t362.romix_463da0cb-5a3a-4a66-9daa-63292f4abb0a\t(Detached)
+\t99.romix_deadbeef\t(Dead ???)
+\t7.romix_abc-123\t(Attached)
 \t8.my_screen\t(Detached)
 1 Socket in /tmp.
 ";
@@ -919,15 +919,15 @@ There is a screen on:
     #[test]
     fn persistent_wrapper_embeds_inner_and_all_branches() {
         let inner = ssh_exec_command("");
-        let cmd = persistent_exec_command("voltius_s1", &inner);
+        let cmd = persistent_exec_command("romix_s1", &inner);
         let script = decode_bootstrap(&cmd);
         assert!(script.contains("command -v tmux"));
-        assert!(script.contains("tmux -L voltius"));
-        assert!(script.contains("new-session -A -s voltius_s1"));
+        assert!(script.contains("tmux -L romix"));
+        assert!(script.contains("new-session -A -s romix_s1"));
         // Shared sessions: creating must never detach another device's client.
         assert!(!script.contains(" -D -s"));
         assert!(script.contains("command -v screen"));
-        assert!(script.contains("screen -S voltius_s1"));
+        assert!(script.contains("screen -S romix_s1"));
         assert!(script.contains("screen -c"));
         // #118: screen 5.0+ passes RGB through once `truecolor` is on; older
         // screens drop `ESC[38;2;r;g;b` entirely and get the warning instead.
@@ -946,7 +946,7 @@ There is a screen on:
         assert!(script.contains(&format!(r#"V="{SCREEN_ENV_STRIP}$V""#)));
         // #159: C-b belongs to whatever the user runs inside, not to us. Set on
         // both a cold server (via -f) and one left running by a past session.
-        assert!(script.contains(r#"tmux -L voltius set -g prefix None"#));
+        assert!(script.contains(r#"tmux -L romix set -g prefix None"#));
         assert!(script.contains(r#"echo "set -g prefix None" >> "$TMUX_CONF""#));
         assert!(script.contains(r#"*"tmux "2.[1-9]*"#));
         // #159 follow-up: screen's escape key belongs to whatever runs inside,
@@ -955,7 +955,7 @@ There is a screen on:
         // Self-heal: wipe dead entries and collapse same-named duplicates so
         // -D -R can't fail into the "several suitable screens" reconnect loop.
         assert!(script.contains("screen -wipe"));
-        assert!(script.contains("grep -F .voltius_s1"));
+        assert!(script.contains("grep -F .romix_s1"));
         assert!(script.contains("-X quit"));
         assert!(script.contains("msgwait 0"));
         // cnorm/ve stripped of ?12l so multiplexer redraws don't disable the
@@ -990,24 +990,24 @@ There is a screen on:
 
     #[test]
     fn persistent_attach_joins_without_stealing_or_creating() {
-        let script = decode_bootstrap(&persistent_attach_command("voltius_s1"));
-        assert!(script.contains("tmux -L voltius has-session -t voltius_s1"));
-        assert!(script.contains("attach-session -t voltius_s1"));
+        let script = decode_bootstrap(&persistent_attach_command("romix_s1"));
+        assert!(script.contains("tmux -L romix has-session -t romix_s1"));
+        assert!(script.contains("attach-session -t romix_s1"));
         // Co-attach: never detach the other device, never create a session.
         assert!(!script.contains("new-session"));
         assert!(!script.contains("-D"));
-        assert!(script.contains("screen -x -S voltius_s1"));
+        assert!(script.contains("screen -x -S romix_s1"));
         // Re-attach over the stderr pty (`<&2`); modern tmux rejects `</dev/tty`.
         assert!(script.contains("<&2"));
     }
 
     #[test]
     fn persistent_probe_detects_both_multiplexers() {
-        let script = decode_bootstrap(&persistent_probe_command("voltius_s1"));
-        assert!(script.contains("tmux -L voltius has-session -t voltius_s1"));
+        let script = decode_bootstrap(&persistent_probe_command("romix_s1"));
+        assert!(script.contains("tmux -L romix has-session -t romix_s1"));
         // Dead screen entries must not read as present (attach -x would fail).
         assert!(script.contains("screen -wipe"));
-        assert!(script.contains("grep -qF .voltius_s1"));
+        assert!(script.contains("grep -qF .romix_s1"));
         assert!(script.contains("VOLTIUS_PRESENT"));
         assert!(script.trim_end().ends_with("true"));
     }
@@ -1020,9 +1020,9 @@ There is a screen on:
         // Kill only when no client beyond the closer's own is attached.
         assert!(attached.contains("-le 1"));
         assert!(detached.contains("-le 0"));
-        assert!(attached.contains("list-clients -t voltius_s1"));
-        assert!(attached.contains("tmux -L voltius kill-session -t voltius_s1"));
-        assert!(attached.contains("screen -S voltius_s1 -X quit"));
+        assert!(attached.contains("list-clients -t romix_s1"));
+        assert!(attached.contains("tmux -L romix kill-session -t romix_s1"));
+        assert!(attached.contains("screen -S romix_s1 -X quit"));
         // Confirmed kill (or already gone) prints the sentinel for the tombstone.
         assert!(attached.contains("VOLTIUS_KILLED"));
         assert!(attached.trim_end().ends_with("true"));
@@ -1033,15 +1033,15 @@ There is a screen on:
         let decoded = decode_bootstrap(&force_kill_command("s1"));
         // Unconditional: the client-count guard uses the force threshold.
         assert!(decoded.contains("-le 1000000"));
-        assert!(decoded.contains("tmux -L voltius kill-session -t voltius_s1"));
-        assert!(decoded.contains("screen -S voltius_s1 -X quit"));
+        assert!(decoded.contains("tmux -L romix kill-session -t romix_s1"));
+        assert!(decoded.contains("screen -S romix_s1 -X quit"));
         assert!(decoded.contains("VOLTIUS_KILLED"));
     }
 
     #[test]
     fn persistent_wrapper_keeps_pty_redirects() {
         let inner = ssh_exec_command("");
-        let cmd = persistent_exec_command("voltius_s1", &inner);
+        let cmd = persistent_exec_command("romix_s1", &inner);
         let script = decode_bootstrap(&cmd);
         // The multiplexer re-attaches over the stderr pty (`<&2`), not `/dev/tty`.
         assert!(script.contains("<&2"));
@@ -1109,8 +1109,8 @@ There is a screen on:
 
     #[test]
     fn capture_history_dumps_tmux_history_excluding_visible_screen() {
-        let cmd = capture_history_command("voltius_s1", 40);
-        assert!(cmd.contains("tmux -L voltius capture-pane -t voltius_s1"));
+        let cmd = capture_history_command("romix_s1", 40);
+        assert!(cmd.contains("tmux -L romix capture-pane -t romix_s1"));
         // History only: from 50k lines back (-S) to just above the visible
         // screen (-E -1) so the live redraw after attach doesn't duplicate.
         assert!(cmd.contains("-S -50000"));
@@ -1118,7 +1118,7 @@ There is a screen on:
         // -p print to stdout, -e keep SGR colors, -J join wrapped lines.
         assert!(cmd.contains("-peJ"));
         // Only run tmux when the session actually exists on the socket.
-        assert!(cmd.contains("tmux -L voltius has-session -t voltius_s1"));
+        assert!(cmd.contains("tmux -L romix has-session -t romix_s1"));
         // Missing multiplexer/session must not error the channel.
         assert!(cmd.contains("2>/dev/null"));
         assert!(cmd.trim_end().ends_with("true"));
@@ -1126,14 +1126,14 @@ There is a screen on:
 
     #[test]
     fn cwd_probe_queries_tmux_and_descends_screen_proc() {
-        let script = decode_bootstrap(&cwd_probe_command("voltius_s1"));
+        let script = decode_bootstrap(&cwd_probe_command("romix_s1"));
         // tmux: query pane_current_path on our private socket/session.
-        assert!(script.contains("tmux -L voltius has-session -t voltius_s1"));
-        assert!(script.contains("display-message -p -t voltius_s1 '#{pane_current_path}'"));
+        assert!(script.contains("tmux -L romix has-session -t romix_s1"));
+        assert!(script.contains("display-message -p -t romix_s1 '#{pane_current_path}'"));
         // screen has no cwd query: find the server pid, descend the process
         // tree, and read /proc/<pid>/cwd.
         assert!(script.contains("screen -ls"));
-        assert!(script.contains("grep -F .voltius_s1"));
+        assert!(script.contains("grep -F .romix_s1"));
         assert!(script.contains("pgrep -P"));
         assert!(script.contains("ps -o pid= --ppid"));
         assert!(script.contains("readlink /proc/$pid/cwd"));
@@ -1233,9 +1233,9 @@ There is a screen on:
 
     #[test]
     fn capture_history_falls_back_to_screen_hardcopy() {
-        let cmd = capture_history_command("voltius_s1", 40);
+        let cmd = capture_history_command("romix_s1", 40);
         // screen has no stdout dump; hardcopy -h writes scrollback to a temp file.
-        assert!(cmd.contains("screen -S voltius_s1 -X hardcopy -h"));
+        assert!(cmd.contains("screen -S romix_s1 -X hardcopy -h"));
         // Trim the live viewport (pty_rows) so the attach redraw isn't duplicated.
         assert!(cmd.contains("head -n -40"));
         // Gated behind screen availability, after the tmux branch.

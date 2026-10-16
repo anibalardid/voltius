@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Record a video of the headless Voltius app while a WebDriver "scene" script drives it.
+# Record a video of the headless RoMix app while a WebDriver "scene" script drives it.
 # Runs INSIDE the tauri-headless container. Copy to /tmp, point SCENE at your scene .mjs.
 #
 #   docker cp record-video.sh tauri-headless:/tmp/  &&  docker cp scene.mjs tauri-headless:/tmp/

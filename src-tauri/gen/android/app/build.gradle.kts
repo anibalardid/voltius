@@ -15,7 +15,7 @@ val tauriProperties = Properties().apply {
 
 android {
     compileSdk = 36
-    namespace = "com.voltius.app"
+    namespace = "com.romix.app"
     signingConfigs {
         getByName("debug") {
             storeFile = file("$rootDir/../../../keystore/voltius-debug.keystore")
@@ -37,7 +37,7 @@ android {
     }
     defaultConfig {
         manifestPlaceholders["usesCleartextTraffic"] = "false"
-        applicationId = "com.voltius.app"
+        applicationId = "com.romix.app"
         minSdk = 24
         targetSdk = 36
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
@@ -59,7 +59,7 @@ android {
         getByName("release") {
             // R8 off: it barely shrinks this app (size is the native .so libs, which
             // release strips regardless) and can rename/remove JNI-called Kotlin
-            // (nativeInit, VoltiusKeychain) → launch crash. Keep behavior identical
+            // (nativeInit, RoMixKeychain) → launch crash. Keep behavior identical
             // to the on-device-verified debug build; only signing/debuggable differ.
             isMinifyEnabled = false
             // Only attach the release signing config when CI provided a keystore;
@@ -87,9 +87,9 @@ dependencies {
     implementation("androidx.activity:activity-ktx:1.10.1")
     implementation("com.google.android.material:material:1.12.0")
     implementation("androidx.lifecycle:lifecycle-process:2.10.0")
-    // Hardware-backed secret storage for the OS keychain (see VoltiusKeychain.kt).
+    // Hardware-backed secret storage for the OS keychain (see RoMixKeychain.kt).
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
-    // SAF tree writes for the SFTP download directory (see VoltiusDownloads.kt).
+    // SAF tree writes for the SFTP download directory (see RoMixDownloads.kt).
     implementation("androidx.documentfile:documentfile:1.0.1")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.4")

@@ -80,7 +80,7 @@
     "convert": {
       "title": "Partager « {{vault}} » avec d'autres personnes ?",
       "body": "Ceci transforme votre coffre-fort privé en coffre-fort d'équipe. Tout ce qu'il contient déjà y est transféré, et devient donc visible par les personnes que vous ajoutez.",
-      "offlineWarning": "Ne s'ouvre que si Voltius joint le serveur de synchronisation — pas d'accès hors ligne.",
+      "offlineWarning": "Ne s'ouvre que si RoMix joint le serveur de synchronisation — pas d'accès hors ligne.",
       "keyCustody": "Chaque personne ajoutée reçoit une copie de la clé. La retirer plus tard ne la reprend pas.",
       "change": "Il n'y a pas de retour possible au statut privé.",
       "cancel": "Annuler",
@@ -200,7 +200,7 @@
       "copyInviteLink": "Copier le lien d'invitation",
       "revoke": "Révoquer l'invitation",
       "remove": "Retirer du coffre-fort",
-      "inviteLinkCopied": "Lien d'invitation copié — il ouvre leur invitation dans Voltius."
+      "inviteLinkCopied": "Lien d'invitation copié — il ouvre leur invitation dans RoMix."
     },
     "cta": {
       "signInTitle": "Connectez-vous pour utiliser les fonctionnalités d'équipe",

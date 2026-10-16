@@ -113,7 +113,7 @@
       "emptyHint": "Terminals your teammates share appear here. Got an invite code? Paste it into search to join.",
       "live": "LIVE",
       "pasteInviteCode": "Paste an invite link or code to join a private session:",
-      "inviteCodePlaceholder": "voltius://join?… or sessionId:token",
+      "inviteCodePlaceholder": "romix://join?… or sessionId:token",
       "join": "Join",
       "resume": "Resume",
       "invalidCodeFormat": "Invalid invite — paste the link or code the host shared with you",

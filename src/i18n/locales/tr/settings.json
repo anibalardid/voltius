@@ -391,7 +391,7 @@
       }
     },
     "sync": {
-      "voltiusCloud": "Voltius Cloud",
+      "voltiusCloud": "RoMix Cloud",
       "active": {
         "title": "Bulut eşitleme etkin",
         "syncing": "Eşitleniyor…",
@@ -563,10 +563,10 @@
       }
     },
     "diagnostics": {
-      "intro": "Voltius ile sorun mu yaşıyorsunuz? Bir rapor oluşturup geliştiriciye gönderin — yeniden üretilmesi zor hataların bulunmasına yardımcı olur.",
+      "intro": "RoMix ile sorun mu yaşıyorsunuz? Bir rapor oluşturup geliştiriciye gönderin — yeniden üretilmesi zor hataların bulunmasına yardımcı olur.",
       "troubleshootingTitle": "Sorun Giderme",
       "verboseLabel": "Ayrıntılı günlük kaydı (bu oturum)",
-      "verboseSub": "Sorunların tanılanmasına yardımcı olmak için ek ayrıntıları kaydeder. Voltius'u yeniden başlattığınızda normale döner.",
+      "verboseSub": "Sorunların tanılanmasına yardımcı olmak için ek ayrıntıları kaydeder. RoMix'u yeniden başlattığınızda normale döner.",
       "verboseHint": "Ayrıntılı günlük kaydı açık. Sorunu yakalamak için:\n1. Sorunu şimdi yeniden oluşturun\n2. Buraya dönüp hata raporu oluşturun",
       "reportTitle": "Hata raporu",
       "createButton": "Hata raporu oluştur",
@@ -574,7 +574,7 @@
       "createdButton": "Rapor kaydedildi",
       "reportSub": "Uygulama günlüklerini ve sistem bilgilerini içerir. Parolalarınızı, anahtarlarınızı veya terminal içeriğinizi asla içermez.",
       "whatsIncluded": "Neler dâhil?",
-      "includedBody": "Dâhil edilenler:\n• Uygulama günlükleri (Voltius'un yaptığı işlemler; hassas değerler çıkarılmıştır)\n• Uygulama sürümü, işletim sistemi ve etkin eklentiler\nDâhil edilmeyenler:\n• Parolalar, kasa içeriği veya özel anahtarlar\n• Terminal çıktısı veya yazdığınız herhangi bir şey\nRapor bilgisayarınıza kaydedilir. Hiçbir şey otomatik olarak gönderilmez — nerede paylaşacağınızı siz seçersiniz.",
+      "includedBody": "Dâhil edilenler:\n• Uygulama günlükleri (RoMix'un yaptığı işlemler; hassas değerler çıkarılmıştır)\n• Uygulama sürümü, işletim sistemi ve etkin eklentiler\nDâhil edilmeyenler:\n• Parolalar, kasa içeriği veya özel anahtarlar\n• Terminal çıktısı veya yazdığınız herhangi bir şey\nRapor bilgisayarınıza kaydedilir. Hiçbir şey otomatik olarak gönderilmez — nerede paylaşacağınızı siz seçersiniz.",
       "toastSaved": "Rapor kaydedildi — {{name}}",
       "toastError": "Rapor oluşturulamadı: {{reason}}",
       "toastGenericError": "Bir sorun oluştu."
@@ -582,7 +582,7 @@
     "integrations": {
       "mcp": {
         "title": "MCP",
-        "sub": "Yerel MCP istemcilerinin (Claude Code gibi) özel bir soket üzerinden kasanızdaki tüm sunucularda ve bu bilgisayarda komut çalıştırmasına; dosya okumasına, yazmasına ve silmesine; kayıtlı bağlantıları, anahtarları ve kimlikleri oluşturmasına, değiştirmesine veya silmesine; kayıtlı kod parçacıklarınızı bu sunucularda çalıştırmasına; SSH sunucu anahtarlarını yetkilendirmesine; yazdığınız komutları okumasına; dosya aktarımlarınızı görmesine, iptal etmesine veya yeniden denemesine; kayıtlı sunucularınızdan hangilerine erişilebildiğini görmesine; terminal sekmelerinizi ve bölmelerinizi yeniden düzenlemesine; ekibinizin üyeliklerini ve davetlerini yönetmesine; terminal oturumlarınızı ekibinizle paylaşmasına veya kontrollerini devretmesine; bu uygulamadaki tüm ayarları okuyup değiştirmesine ve aboneliğinizi okumasına izin verir. Onay Voltius'ta değil, ilgili istemcide verilir. Varsayılan olarak kapalıdır. Ayrıca eklenti kurabilir, güncelleyebilir ve kaldırabilir; kayıtlı nesnelerinizi dışa veya içe aktarabilir.",
+        "sub": "Yerel MCP istemcilerinin (Claude Code gibi) özel bir soket üzerinden kasanızdaki tüm sunucularda ve bu bilgisayarda komut çalıştırmasına; dosya okumasına, yazmasına ve silmesine; kayıtlı bağlantıları, anahtarları ve kimlikleri oluşturmasına, değiştirmesine veya silmesine; kayıtlı kod parçacıklarınızı bu sunucularda çalıştırmasına; SSH sunucu anahtarlarını yetkilendirmesine; yazdığınız komutları okumasına; dosya aktarımlarınızı görmesine, iptal etmesine veya yeniden denemesine; kayıtlı sunucularınızdan hangilerine erişilebildiğini görmesine; terminal sekmelerinizi ve bölmelerinizi yeniden düzenlemesine; ekibinizin üyeliklerini ve davetlerini yönetmesine; terminal oturumlarınızı ekibinizle paylaşmasına veya kontrollerini devretmesine; bu uygulamadaki tüm ayarları okuyup değiştirmesine ve aboneliğinizi okumasına izin verir. Onay RoMix'ta değil, ilgili istemcide verilir. Varsayılan olarak kapalıdır. Ayrıca eklenti kurabilir, güncelleyebilir ve kaldırabilir; kayıtlı nesnelerinizi dışa veya içe aktarabilir.",
         "running": "Çalışıyor",
         "quickSetup": {
           "title": "Hızlı kurulum",
@@ -602,7 +602,7 @@
             "opencode": "OpenCode"
           },
           "help": {
-            "claudeCode": "Voltius'u Claude Code'a kaydetmek için bunu bir kez çalıştırın. İstemcinin bağlanabilmesi için yukarıdaki sunucu etkin olmalıdır.",
+            "claudeCode": "RoMix'u Claude Code'a kaydetmek için bunu bir kez çalıştırın. İstemcinin bağlanabilmesi için yukarıdaki sunucu etkin olmalıdır.",
             "mcpServers": "Bu bloğu claude_desktop_config.json (Claude Desktop) veya .cursor/mcp.json (Cursor, Cline, Windsurf) dosyasına ekleyin. İstemcinin bağlanabilmesi için yukarıdaki sunucu etkin olmalıdır.",
             "vscode": "Bu bloğu .vscode/mcp.json dosyasına ekleyin. VS Code \"mcpServers\" değil \"servers\" kullanır — Cursor biçimindeki bir bloğu buraya yapıştırırsanız hiçbir şey yüklenmez ve hata da gösterilmez.",
             "opencode": "Bu bloğu opencode.json (proje) veya ~/.config/opencode/opencode.json (genel) dosyasına ekleyin."
@@ -1002,11 +1002,11 @@
       },
       "deepLinkInstall": {
         "title": "Bu eklenti kurulsun mu?",
-        "body": "Bu bağlantı bir eklenti kurar. Eklentiler, aşağıda listelenen izinlerle Voltius içinde kod çalıştırır.",
+        "body": "Bu bağlantı bir eklenti kurar. Eklentiler, aşağıda listelenen izinlerle RoMix içinde kod çalıştırır.",
         "summary": "{{name}} {{version}} · Geliştirici: {{author}}",
         "source": "Kaynak katalog: {{source}}.",
         "action": "Kur",
-        "failed": "Bu bağlantı, Voltius'un kurabileceği bir eklentiyi belirtmiyor"
+        "failed": "Bu bağlantı, RoMix'un kurabileceği bir eklentiyi belirtmiyor"
       },
       "permissionModal": {
         "installTitle": "{{name}} kurulsun mu?",
@@ -1092,7 +1092,7 @@
           },
           "mcpContribute": {
             "label": "Harici yapay zekâ ajanlarına araç sun",
-            "description": "Bu eklentinin Voltius MCP sunucusuna kendi komutlarını eklemesine izin verir; böylece bağladığınız herhangi bir harici yapay zekâ ajanı bu komutları, bu eklentinin kendi izinleriyle çalıştırabilir."
+            "description": "Bu eklentinin RoMix MCP sunucusuna kendi komutlarını eklemesine izin verir; böylece bağladığınız herhangi bir harici yapay zekâ ajanı bu komutları, bu eklentinin kendi izinleriyle çalıştırabilir."
           },
           "vaultsRead": {
             "label": "Kasalarınızı gör",
@@ -1240,7 +1240,7 @@
           },
           "pluginsManage": {
             "label": "Eklentileri yönet",
-            "description": "Eklentileri kurar, günceller, kaldırır, etkinleştirir ve devre dışı bırakır; mağaza kaynakları ekler. Kurulan bir eklenti, Voltius içinde bildirdiği izinlerle kod çalıştırır."
+            "description": "Eklentileri kurar, günceller, kaldırır, etkinleştirir ve devre dışı bırakır; mağaza kaynakları ekler. Kurulan bir eklenti, RoMix içinde bildirdiği izinlerle kod çalıştırır."
           },
           "importExportRead": {
             "label": "Verilerinizi dışa aktar",

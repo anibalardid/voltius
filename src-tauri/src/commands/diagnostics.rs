@@ -17,11 +17,11 @@ pub fn set_verbose_logging(enabled: bool) {
 }
 
 const README_TEXT: &str = "\
-Voltius bug report
+RoMix bug report
 ==================
 
 Included:
-  - App logs (what Voltius was doing, with sensitive values removed)
+  - App logs (what RoMix was doing, with sensitive values removed)
   - App version, operating system, and active plugins
 
 NOT included:
@@ -29,7 +29,7 @@ NOT included:
   - Terminal output or anything you typed
 
 This report was saved on your computer. Nothing is sent automatically.
-Send this file to the Voltius developer at contact@voltius.app or on GitHub.
+Send this file to the RoMix developer at contact@voltius.app or on GitHub.
 ";
 
 #[tauri::command]

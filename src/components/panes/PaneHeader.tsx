@@ -16,7 +16,7 @@ import { useSessionStore } from "@/stores/sessionStore";
 import { useAllConnections } from "@/hooks/useAllConnections";
 import { getConnectionIcon, getConnectionIconColor, getDistroColor, getDistroIcon, getDistroLabel } from "@/utils/icons";
 import { sshGetSystemInfo, type SystemInfo } from "@/services/ssh";
-import { closeSession } from "@/services/closeSession";
+import { requestCloseTab } from "@/services/closeSession";
 import { sessionMenuItems } from "@/utils/sessionMenuItems";
 import { sessionLabel } from "@/utils/sessionLabel";
 import { focusSession } from "@/hooks/useTerminal";
@@ -214,7 +214,7 @@ export function PaneHeader({ paneId, session, active }: { paneId: string; sessio
   };
 
   const handleClosePane = () => {
-    closeSession(session.id);
+    requestCloseTab(session.id);
     const layout = useLayoutStore.getState();
     const nextLeaf = findLeaf(layout.root, layout.activePaneId);
     if (nextLeaf) useSessionStore.getState().setActive(nextLeaf.sessionId);
@@ -230,7 +230,7 @@ export function PaneHeader({ paneId, session, active }: { paneId: string; sessio
     const candidate = sessions.find((s) => !findSessionPane(splitTabs, s.id));
     if (!candidate) {
       useNotificationStore.getState().addToast({
-        source: { kind: "plugin", id: "core", name: "Voltius" },
+        source: { kind: "plugin", id: "core", name: "RoMix" },
         type: "toast",
         message: t("panes.header.noSessionToSplit"),
         severity: "info",

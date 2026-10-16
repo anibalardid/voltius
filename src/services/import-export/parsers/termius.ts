@@ -236,7 +236,7 @@ function buildKeys(idx: Indexed): KeyBuildResult {
 }
 
 function buildFolders(idx: Indexed): FolderBuildResult {
-  // Each group maps to a Voltius folder; folder hierarchy via group's
+  // Each group maps to a RoMix folder; folder hierarchy via group's
   // `parent_group` foreign key.
   const folderEidByGroupId = new Map<number, string>();
   const folders = Array.from(idx.groups.values()).map((g, i) => {
@@ -268,7 +268,7 @@ function buildIdentities(idx: Indexed, keyEidByTermiusId: Map<number, string>): 
     if (identity) identityBySshConfigId.set(sshConfigId, identity);
   }
 
-  // Only visible identities become Voltius Identity rows.
+  // Only visible identities become RoMix Identity rows.
   const identities: IdentityExport[] = [];
   const identityEidByTermiusId = new Map<number, string>();
   const pushIdentity = (termiusId: number, identity: Omit<IdentityExport, "_eid" | "tags"> & { tags?: string[] }) => {

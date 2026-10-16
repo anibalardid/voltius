@@ -28,7 +28,7 @@ const marketplaceState = {
   appVersion: null as string | null,
   loadAppVersion: vi.fn(async () => {}),
 };
-const FIRST_PARTY_SOURCE = vi.hoisted(() => ({ id: "voltius", name: "Voltius Marketplace", url: "", enabled: true, deletable: false }));
+const FIRST_PARTY_SOURCE = vi.hoisted(() => ({ id: "voltius", name: "RoMix Marketplace", url: "", enabled: true, deletable: false }));
 vi.mock("@/stores/marketplaceStore", () => ({
   useMarketplaceStore: (selector?: (s: typeof marketplaceState) => unknown) =>
     selector ? selector(marketplaceState) : marketplaceState,

@@ -113,7 +113,7 @@
       "emptyHint": "队友共享的终端会显示在这里。有邀请码？粘贴到搜索框即可加入。",
       "live": "实时",
       "pasteInviteCode": "粘贴邀请链接或代码以加入私有会话：",
-      "inviteCodePlaceholder": "voltius://join?… 或 sessionId:token",
+      "inviteCodePlaceholder": "romix://join?… 或 sessionId:token",
       "join": "加入",
       "resume": "继续",
       "invalidCodeFormat": "无效邀请——请粘贴主机分享的链接或代码",

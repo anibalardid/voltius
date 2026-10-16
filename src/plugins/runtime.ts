@@ -303,7 +303,7 @@ async function ensureQuitHandler() {
       ]);
     } finally {
       clearTimeout(fallback);
-      // Single-instance raises the window when the user relaunches Voltius
+      // Single-instance raises the window when the user relaunches RoMix
       // mid-wait. Exiting then would close an app the user just reopened.
       const reopened = hidden && (await settleWithin(win.isVisible(), 1000, false));
       if (!reopened) quit();

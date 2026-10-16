@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { getTerminalApi } from "@/hooks/useTerminal";
+import { focusSession, getTerminalApi } from "@/hooks/useTerminal";
 import { sendSpecialKey } from "@/services/terminalInput";
 import { showAndroidKeyboard, hideAndroidKeyboard, setAndroidKeyboardTarget } from "@/services/androidKeyboard";
 import { useIsAndroid } from "@/utils/platform";
@@ -8,7 +8,6 @@ import { isDoubleTap, type TapPoint } from "./doubleTap";
 import {
   cellFromPoint,
   fontSizeFromPinch,
-  linesFromPixelDelta,
   touchDistance,
   wordRangeAt,
   isBlankCell,
@@ -54,7 +53,6 @@ export default function MobileTerminalGestures({ sessionId, active }: { sessionI
   const phase = useRef<Phase>("idle");
   const start = useRef<{ x: number; y: number; t: number } | null>(null);
   const lastY = useRef(0);
-  const carry = useRef(0);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressFired = useRef(false);
   const lastTap = useRef<TapPoint | null>(null);
@@ -101,7 +99,9 @@ export default function MobileTerminalGestures({ sessionId, active }: { sessionI
 
   useEffect(() => {
     if (!active) return;
-    const container = rootRef.current?.parentElement;
+    // The overlay itself must be the hit target. On iOS the xterm canvas keeps
+    // the touch, so a listener on the parent never sees the swipe.
+    const container = rootRef.current;
     if (!container) return;
 
     const clearLongPress = () => {
@@ -142,7 +142,6 @@ export default function MobileTerminalGestures({ sessionId, active }: { sessionI
       phase.current = "idle";
       pinch.current = null;
       start.current = null;
-      carry.current = 0;
       longPressFired.current = false;
       dragHandle.current = null;
       dragFixed.current = null;
@@ -179,10 +178,13 @@ export default function MobileTerminalGestures({ sessionId, active }: { sessionI
         return;
       }
       if (e.touches.length !== 1) { reset(); return; }
+      // iOS only delivers the rest of a pan if touchstart is cancelled. A plain
+      // tap still focuses below, because preventDefault also swallows the click.
+      e.preventDefault();
+      e.stopPropagation();
       const t = e.touches[0];
       start.current = { x: t.clientX, y: t.clientY, t: e.timeStamp };
       lastY.current = t.clientY;
-      carry.current = 0;
       longPressFired.current = false;
       phase.current = "pending";
       clearLongPress();
@@ -243,13 +245,24 @@ export default function MobileTerminalGestures({ sessionId, active }: { sessionI
 
       if (phase.current === "scrolling") {
         e.preventDefault();
-        const m = metrics();
-        if (!m) return;
+        e.stopPropagation();
         const dy = t.clientY - lastY.current;
         lastY.current = t.clientY;
-        const acc = linesFromPixelDelta(dy, m.cellHeight, carry.current);
-        carry.current = acc.carry;
-        if (acc.lines !== 0) getTerminalApi(sessionId)?.scrollLines(-acc.lines);
+        if (dy === 0) return;
+        // Same event the desktop trackpad produces. xterm then either scrolls
+        // its own buffer or, on an alternate screen (tmux, screen, less), sends
+        // the mouse-wheel report the app already understands.
+        const screen = getTerminalApi(sessionId)?.screenEl();
+        // Finger down pulls older output into view, opposite of a Mac trackpad.
+        screen?.dispatchEvent(new WheelEvent("wheel", {
+          deltaY: -dy,
+          deltaX: 0,
+          deltaMode: 0,
+          bubbles: true,
+          cancelable: true,
+          clientX: t.clientX,
+          clientY: t.clientY,
+        }));
       }
       if (phase.current === "selecting") {
         e.preventDefault();
@@ -314,6 +327,7 @@ export default function MobileTerminalGestures({ sessionId, active }: { sessionI
         // Plain tap: xterm's textarea has inputmode=none on Android, so raise the native
         // keyboard overlay ourselves (idempotent; see services/androidKeyboard.ts).
         if (isAndroid) showAndroidKeyboard(sessionId);
+        else focusSession(sessionId);
       }
       reset();
     };
@@ -352,7 +366,7 @@ export default function MobileTerminalGestures({ sessionId, active }: { sessionI
   useEffect(() => { toolbarOpen.current = toolbar !== null; }, [toolbar]);
 
   return (
-    <div ref={rootRef} className="absolute inset-0 pointer-events-none flex items-center justify-center z-20">
+    <div ref={rootRef} className="absolute top-0 bottom-0 left-0 pointer-events-auto touch-none flex items-center justify-center z-20" style={{ right: 22 }}>
       {hintKey > 0 && (
         <span
           key={hintKey}

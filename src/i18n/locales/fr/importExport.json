@@ -92,7 +92,7 @@
     "userData": {
       "import": {
         "openFileLabel": "Ouvrir un fichier…",
-        "placeholder": "Collez un JSON de paramètres Voltius ici, ou déposez un fichier…\n\n{ \"type\": \"voltius-user-data\", \"version\": 2, \"sections\": { ... } }",
+        "placeholder": "Collez un JSON de paramètres RoMix ici, ou déposez un fichier…\n\n{ \"type\": \"romix-user-data\", \"version\": 2, \"sections\": { ... } }",
         "foundSections_one": "{{count}} section de paramètres trouvée",
         "foundSections_other": "{{count}} sections de paramètres trouvées",
         "applying": "Application…",

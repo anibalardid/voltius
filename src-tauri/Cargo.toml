@@ -1,15 +1,22 @@
 [package]
-name = "voltius"
-version = "0.40.0"
+name = "romix"
+version = "1.0.0"
 description = "Open-Source SSH & SFTP Client"
-authors = ["Voltius Contributors"]
+authors = ["RoMix Contributors"]
 edition = "2021"
+# Desktop scripts and the debug binary still expect this name. The Xcode
+# project must match package.name, which is why the package is romix.
+default-run = "voltius"
 
 [lib]
 name = "voltius_lib"
 # `staticlib` is what iOS links into the app bundle — a dylib cannot be embedded
 # in an .ipa, so Tauri needs the .a here. Android still uses the cdylib (.so).
 crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "voltius"
+path = "src/main.rs"
 
 # NOTE: profiles are defined at the workspace root (Cargo.toml). Cargo ignores
 # `[profile.*]` in non-root members, so they must not live here.

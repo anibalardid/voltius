@@ -53,7 +53,7 @@ interface SessionStore {
   connect: (connectionId: string, options?: OpenOptions) => Promise<string>;
   /** Attach a tab to a multiplexer that is already alive on the host. */
   resumePersistent: (connectionId: string, sessionId: string) => Promise<void>;
-  /** Destroy one remote Voltius session. Does not open a tab. */
+  /** Destroy one remote RoMix session. Does not open a tab. */
   killPersistent: (connectionId: string, sessionId: string) => Promise<void>;
   /** connect() without the wait: the session appears now, connects in the background. */
   beginSession: (connectionId: string, initialCwd?: string) => string;
@@ -71,7 +71,7 @@ interface SessionStore {
    * config, so the user can hand the device to another tool and reopen (#192). */
   closeSerialPort: (sessionId: string) => Promise<void>;
   setSerialAutoReconnect: (sessionId: string, enabled: boolean) => Promise<void>;
-  disconnect: (sessionId: string) => Promise<void>;
+  disconnect: (sessionId: string, endRemote?: boolean) => Promise<void>;
   setActive: (sessionId: string) => void;
   markDisconnected: (sessionId: string) => void;
   markConnecting: (sessionId: string) => void;
@@ -887,7 +887,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     }));
   },
 
-  disconnect: async (sessionId) => {
+  disconnect: async (sessionId, endRemote = false) => {
     cancelBackoff(sessionId);
     const session = get().sessions.find((s) => s.id === sessionId);
     // Awaited below, after the session row is removed: the tab closes immediately
@@ -907,11 +907,14 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     } else {
       const connection = session?.connectionId ? findConnection(session.connectionId) : undefined;
       const wasAttached = session?.status === "connected";
-      // Detach, don't kill. The remote multiplexer stays so it can be resumed
-      // from this app or another device. Explicit destroy goes through killPersistent.
+      // Default is detach: the remote multiplexer stays so it can be resumed.
+      // endRemote matches Ctrl+D: EOF the shell, then kill the multiplexer.
       void (async () => {
         const postCmd = connection ? resolveHostCommand(connection, "post") : null;
         try {
+          if (endRemote && wasAttached) {
+            await sshSendInput(sessionId, new Uint8Array([0x04])).catch(() => {});
+          }
           if (connection && postCmd?.kind === "snippet") {
             await runHostCommand(connection, "post", sessionId, session?.type ?? "ssh");
           }
@@ -920,7 +923,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
             await sshDisconnect(
               sessionId,
               postCmd?.kind === "inline" ? postCmd.text : undefined,
-              false,
+              endRemote,
               wasAttached,
             );
           } catch {

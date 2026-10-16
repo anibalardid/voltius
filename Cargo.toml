@@ -7,6 +7,12 @@ members = [
 ]
 resolver = "2"
 
+# tao 0.35.2 frees UISceneConfiguration before UIKit retains it. Release iOS
+# builds then crash on launch. The upstream fix shipped in tao 0.36, which
+# tauri 2.11 cannot take. Drop this patch when tao is upgraded past that.
+[patch.crates-io]
+tao = { path = "patches/tao" }
+
 # Workspace-root release profile. Must live here: Cargo silently ignores
 # `[profile.*]` declared in non-root members.
 #

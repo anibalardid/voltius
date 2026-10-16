@@ -28,7 +28,7 @@ export interface PageClipboardAdapter extends ClipboardAdapter {
 
 function toast(message: string, severity: "warning" | "error" = "warning") {
   useNotificationStore.getState().addToast({
-    source: { kind: "plugin", id: "system", name: "Voltius" },
+    source: { kind: "plugin", id: "system", name: "RoMix" },
     type: "toast",
     message,
     severity,

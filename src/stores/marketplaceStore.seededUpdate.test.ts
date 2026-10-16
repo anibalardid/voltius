@@ -34,7 +34,7 @@ const SEEDED_MANIFEST = { id: "plugin-docker", name: "Docker", version: "1.1.0",
 
 function catalogEntry(over: Partial<MarketplacePlugin> = {}): MarketplacePlugin {
   return {
-    id: "plugin-docker", name: "Docker", author: "Voltius", description: "d",
+    id: "plugin-docker", name: "Docker", author: "RoMix", description: "d",
     repo: "voltiusApp/plugin-docker", version: "1.2.0", tags: [], theme: false, sourceId: FIRST_PARTY_SOURCE.id,
     ...over,
   };

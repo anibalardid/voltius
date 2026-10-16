@@ -2,7 +2,7 @@
 name = "crypto-wasm"
 version = "0.4.0"
 edition = "2021"
-description = "WASM bindings for Voltius crypto (auth_key only)"
+description = "WASM bindings for RoMix crypto (auth_key only)"
 license = "AGPL-3.0"
 
 [lib]

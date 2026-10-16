@@ -142,7 +142,7 @@ export default function SplashScreen({ onReady }: Props) {
     >
       <div className="mb-10 text-center">
         <LogoBadge size={14} className="mb-4" />
-        <h1 className="text-xl font-bold tracking-wide text-(--t-text-bright)">Voltius</h1>
+        <h1 className="text-xl font-bold tracking-wide text-(--t-text-bright)">RoMix</h1>
         <p className="text-xs mt-1 text-(--t-text-muted)">{t("layout.splash.sshClient")}</p>
       </div>
 

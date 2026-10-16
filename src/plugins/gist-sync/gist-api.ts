@@ -62,7 +62,7 @@ export async function createGist(
     method: "POST",
     headers: headers(pat),
     body: JSON.stringify({
-      description: "Voltius Sync — do not edit manually",
+      description: "RoMix Sync — do not edit manually",
       public: false,
       files: {
         "manifest.json": { content: JSON.stringify(manifest, null, 2) },
@@ -160,16 +160,16 @@ export async function deleteDeviceFile(
   await patchFiles(http, pat, gistId, { [filename]: null });
 }
 
-export async function listVoltiusGists(http: Http, pat: string): Promise<{ id: string; url: string }[]> {
+export async function listRoMixGists(http: Http, pat: string): Promise<{ id: string; url: string }[]> {
   const results: { id: string; url: string }[] = [];
   let page = 1;
   while (true) {
     const res = await http.stream(`${BASE}/gists?per_page=100&page=${page}`, { headers: headers(pat) });
-    await checkResponse(res, "listVoltiusGists");
+    await checkResponse(res, "listRoMixGists");
     const data: { id: string; html_url: string; description: string }[] = await res.json();
     if (data.length === 0) break;
     for (const g of data) {
-      if (g.description === "Voltius Sync — do not edit manually")
+      if (g.description === "RoMix Sync — do not edit manually")
         results.push({ id: g.id, url: g.html_url });
     }
     if (data.length < 100) break;

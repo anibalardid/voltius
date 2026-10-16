@@ -1,11 +1,11 @@
-# Contributing to Voltius
+# Contributing to RoMix
 
 Contributions are welcome — bug fixes, features, and improvements of all sizes.
 
 ## Reporting issues
 
 - Search existing issues before opening a new one.
-- Include your OS, Voltius version, and steps to reproduce.
+- Include your OS, RoMix version, and steps to reproduce.
 - For security vulnerabilities, **do not open a public issue** — email [contact@voltius.app](mailto:contact@voltius.app) instead.
 
 ## Development setup

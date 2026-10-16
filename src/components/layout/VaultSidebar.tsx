@@ -10,6 +10,7 @@ import { useRipple } from "@/hooks/useRipple";
 import { SidebarAccountButton } from "./SidebarAccountButton";
 import { CreateVaultModal } from "@/components/shared/CreateVaultModal";
 import { getUpdaterState, onUpdaterStateChange, type UpdaterStatus } from "@/services/updater";
+import { SHOW_CHANGELOG_MODAL } from "@/services/changelog";
 import { useVaultAdmin } from "@/components/vault-admin/useVaultAdmin";
 import { VaultAdminSurface } from "@/components/vault-admin/VaultAdminSurface";
 import type { VaultAdminTarget } from "@/components/vault-admin/vaultAdminTarget";
@@ -125,8 +126,7 @@ export default function VaultSidebar() {
       {/* Account */}
       <SidebarAccountButton />
 
-      {/* What's new */}
-      <WhatsNewButton onClick={() => openWhatsNew()} />
+      {SHOW_CHANGELOG_MODAL && <WhatsNewButton onClick={() => openWhatsNew()} />}
 
       {/* Settings */}
       <SettingsButton onClick={() => openSettings()} />

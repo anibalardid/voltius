@@ -140,7 +140,7 @@ export function buildCatalogFragment(ids, { resourcesDir = RESOURCES_DIR, appVer
     const entry = {
       id: manifest.id,
       name: manifest.name,
-      author: "Voltius",
+      author: "RoMix",
       description: manifest.description ?? "",
       repo: releaseRepoFor(manifest.id, manifest.version),
       version: manifest.version,

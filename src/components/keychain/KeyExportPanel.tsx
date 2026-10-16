@@ -80,7 +80,7 @@ export function KeyExportPanel({ sshKey, onClose }: { sshKey: SshKey; onClose: (
       await addKeyToHost({ sshKey, connection: selectedHost, location, filename, script });
       // Said where the eye already is rather than in a panel that is closing.
       useNotificationStore.getState().addToast({
-        source: { kind: "plugin", id: "system", name: "Voltius" },
+        source: { kind: "plugin", id: "system", name: "RoMix" },
         type: "toast",
         message: t("keychain.exportPanel.successMessage"),
         severity: "success",

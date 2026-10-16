@@ -20,7 +20,7 @@
       "vaultSetAsideSub": "在本设备保留备份副本",
       "vaultSetAsideToast": "保险库已搁置为 {{file}}",
       "vaultUnreadableRetry": "尝试其他密码",
-      "chooseHowToUse": "选择您想如何使用 Voltius",
+      "chooseHowToUse": "选择您想如何使用 RoMix",
       "getStarted": "开始使用",
       "getStartedSub": "由操作系统密钥链保护——无需密码",
       "or": "或",
@@ -141,7 +141,7 @@
     },
     "sync": {
       "title": "同步",
-      "voltiusSync": "Voltius 同步",
+      "voltiusSync": "RoMix 同步",
       "moreProviders": "更多同步方式",
       "syncNow": "立即同步",
       "signInForSync": "登录以进行云同步",

@@ -18,7 +18,7 @@ import { mergeTitlebarItems } from "@/utils/titlebarOrder";
 import { useAllConnections } from "@/hooks/useAllConnections";
 import { useStatusBarContributions } from "@/hooks/useStatusBarContributions";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/components/shared/ContextMenu";
-import { closeSession, closeSessionTabs } from "@/services/closeSession";
+import { closeSession, requestCloseTab } from "@/services/closeSession";
 import { activateSessionTab, activateSplitTabPane } from "@/services/tabActivation";
 import { pinHostList } from "@/services/hostStack";
 import { sessionMenuItems, pinListExtra } from "@/utils/sessionMenuItems";
@@ -143,7 +143,7 @@ export default function TitleBar() {
   };
 
   const closeTabById = (sessionId: string) => {
-    closeSessionTabs([sessionId]);
+    requestCloseTab(sessionId);
   };
 
   const handleTabClose = (e: React.MouseEvent, sessionId: string) => {
@@ -165,7 +165,7 @@ export default function TitleBar() {
     const tab = useLayoutStore.getState().splitTabs.find((candidate) => candidate.id === tabId);
     const ids = tab ? getPaneSessionIds(tab.root) : [];
     closeSplitTab(tabId);
-    ids.forEach(closeSession);
+    ids.forEach((id) => closeSession(id));
     if (sessions.length <= ids.length) setActiveNav("hosts");
   };
 

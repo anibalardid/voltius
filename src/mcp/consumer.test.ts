@@ -54,7 +54,7 @@ describe("MCP consumer", () => {
     expect(buildMcpTools(api(), new Set()).map((t) => t.name).sort()).toEqual(ALL_TOOLS);
   });
 
-  it("no description claims Voltius prompts: the MCP client is the only gate", () => {
+  it("no description claims RoMix prompts: the MCP client is the only gate", () => {
     for (const t of buildMcpTools(api(), new Set())) {
       expect(t.description.toLowerCase()).not.toContain("prompt");
       expect(t.description.toLowerCase()).not.toContain("agent");
@@ -225,7 +225,7 @@ describe("MCP consumer", () => {
     expect(out).toEqual({ ok: false, error: "vault locked" });
   });
 
-  it("approves every prompt-risk call without asking: Voltius raises no card, the MCP client is the gate", async () => {
+  it("approves every prompt-risk call without asking: RoMix raises no card, the MCP client is the gate", async () => {
     const seen: Array<{ tool: string; decision: unknown }> = [];
     const original = toolSurface.buildCoreTools;
     vi.spyOn(toolSurface, "buildCoreTools").mockImplementation((ports) =>

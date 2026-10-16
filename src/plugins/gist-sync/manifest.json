@@ -3,7 +3,7 @@
   "name": "GitHub Gist Sync",
   "version": "1.2.2",
   "minAppVersion": "0.38.2",
-  "description": "Sync your data across devices via encrypted GitHub Gist — no Voltius account required.",
+  "description": "Sync your data across devices via encrypted GitHub Gist — no RoMix account required.",
   "icon": "custom:github",
   "permissions": [
     "vault:read",

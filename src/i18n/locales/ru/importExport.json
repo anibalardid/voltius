@@ -114,7 +114,7 @@
     "userData": {
       "import": {
         "openFileLabel": "Открыть файл…",
-        "placeholder": "Вставьте сюда JSON с настройками Voltius или перетащите файл…\n\n{ \"type\": \"voltius-user-data\", \"version\": 2, \"sections\": { ... } }",
+        "placeholder": "Вставьте сюда JSON с настройками RoMix или перетащите файл…\n\n{ \"type\": \"romix-user-data\", \"version\": 2, \"sections\": { ... } }",
         "foundSections_one": "Найден {{count}} раздел настроек",
         "foundSections_few": "Найдено {{count}} раздела настроек",
         "foundSections_many": "Найдено {{count}} разделов настроек",

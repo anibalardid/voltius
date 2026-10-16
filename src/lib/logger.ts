@@ -62,7 +62,7 @@ export function installGlobalErrorLogging(): void {
         import("@/stores/uiStore"),
       ]);
       useNotificationStore.getState().addToast({
-        source: { kind: "plugin", id: "core", name: "Voltius" },
+        source: { kind: "plugin", id: "core", name: "RoMix" },
         type: "toast",
         message: i18n.t("settings.diagnostics.toastGenericError"),
         severity: "error",

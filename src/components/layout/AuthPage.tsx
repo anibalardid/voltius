@@ -52,7 +52,7 @@ export default function AuthPage({ isLocked, vaultUnreadable, onReady }: Props) 
         const { quarantineVault } = await import("@/services/vault");
         const backup = await quarantineVault();
         addToast({
-          source: { kind: "plugin", id: "system", name: "Voltius" },
+          source: { kind: "plugin", id: "system", name: "RoMix" },
           type: "toast",
           message: t("layout.auth.vaultSetAsideToast", { file: backup }),
           severity: "info",
@@ -165,7 +165,7 @@ function Layout({ children, onBack }: { children: React.ReactNode; onBack?: () =
 
       <div className="mb-8 text-center">
         <LogoBadge size={12} className="mb-3" />
-        <h1 className="text-lg font-bold text-(--t-text-bright)">Voltius</h1>
+        <h1 className="text-lg font-bold text-(--t-text-bright)">RoMix</h1>
       </div>
 
       <div className="w-72">{children}</div>

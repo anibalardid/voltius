@@ -27,7 +27,7 @@ export function buildMcpRegisterCommand(exePath: string): string {
  * npx's own install-consent prompt, which guards nothing here — the package is
  * already named in the command. add-mcp's own `-y` skips the confirmation
  * showing which agents it will touch, and is deliberately omitted: that step
- * writes config files on a machine where Voltius holds SSH credentials.
+ * writes config files on a machine where RoMix holds SSH credentials.
  */
 export function buildAddMcpCommand(exePath: string): string {
   return `npx -y add-mcp@2 ${quotePath(exePath)} --args mcp -n voltius -g`;

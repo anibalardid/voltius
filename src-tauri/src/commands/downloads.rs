@@ -20,7 +20,7 @@ mod android {
 
     // Dotted name for the app class loader (see `android_ctx::load_class`): these commands are
     // `async`, so they run on tokio threads whose default `FindClass` can't see app classes.
-    const CLASS: &str = "com.voltius.app.VoltiusDownloads";
+    const CLASS: &str = "com.romix.app.RoMixDownloads";
     static PICK_TX: Mutex<Option<oneshot::Sender<Option<String>>>> = Mutex::new(None);
 
     fn opt_string(env: &mut JNIEnv, v: JObject) -> Result<Option<String>, jni::errors::Error> {
@@ -122,9 +122,9 @@ mod android {
         rx.await.map_err(|_| "folder picker cancelled".to_string())
     }
 
-    /// JNI entry for `VoltiusDownloads.nativeDirPicked(uri)`. Fulfils the pending picker.
+    /// JNI entry for `RoMixDownloads.nativeDirPicked(uri)`. Fulfils the pending picker.
     #[no_mangle]
-    pub extern "system" fn Java_com_voltius_app_VoltiusDownloads_nativeDirPicked<'local>(
+    pub extern "system" fn Java_com_romix_app_RoMixDownloads_nativeDirPicked<'local>(
         mut env: JNIEnv<'local>,
         _class: JClass<'local>,
         uri: JString<'local>,

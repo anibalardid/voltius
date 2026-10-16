@@ -92,7 +92,7 @@
     "userData": {
       "import": {
         "openFileLabel": "Dosya aç…",
-        "placeholder": "Voltius ayarları JSON'unu buraya yapıştırın veya bir dosya bırakın…\n\n{ \"type\": \"voltius-user-data\", \"version\": 2, \"sections\": { ... } }",
+        "placeholder": "RoMix ayarları JSON'unu buraya yapıştırın veya bir dosya bırakın…\n\n{ \"type\": \"romix-user-data\", \"version\": 2, \"sections\": { ... } }",
         "foundSections_one": "{{count}} ayar bölümü bulundu",
         "foundSections_other": "{{count}} ayar bölümü bulundu",
         "applying": "Uygulanıyor…",
